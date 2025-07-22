@@ -762,7 +762,7 @@ install_acme() {
     LOGI "正在安装 acme.sh..." 
     cd ~ || return 1 # 确保可以切换到主目录
  
-    curl -s `https://get.acme.sh` | sh 
+    curl -s https://get.acme.sh | sh 
     if [ $? -ne 0 ]; then 
         LOGE "安装 acme.sh 失败。" 
         return 1 
