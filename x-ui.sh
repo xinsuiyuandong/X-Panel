@@ -752,238 +752,430 @@ update_geo() {
     before_show_menu
 }
 
-install_acme() {
-    cd ~
-    LOGI "install acme..."
-    curl https://get.acme.sh | sh
-    if [ $? -ne 0 ]; then
-        LOGE "安装 acme 失败"
-        return 1
-    else
-        LOGI "安装 acme 成功"
-    fi
-    return 0
-}
+install_acme() { 
+    # 检查是否已安装 acme.sh
+    if command -v ~/.acme.sh/acme.sh &>/dev/null; then 
+        LOGI "acme.sh 已经安装。" 
+        return 0 
+    fi 
+ 
+    LOGI "正在安装 acme.sh..." 
+    cd ~ || return 1 # 确保可以切换到主目录
+ 
+    curl -s `https://get.acme.sh` | sh 
+    if [ $? -ne 0 ]; then 
+        LOGE "安装 acme.sh 失败。" 
+        return 1 
+    else 
+        LOGI "安装 acme.sh 成功。" 
+    fi 
+ 
+    return 0 
+} 
 
-ssl_cert_issue_main() {
-    echo -e "${green}\t1.${plain} 获取 SSL 证书"
-    echo -e "${green}\t2.${plain} 吊销证书"
-    echo -e "${green}\t3.${plain} 续签证书"
-    echo -e "${green}\t0.${plain} 返回主菜单"
-    read -p "请输入选项: " choice
-    case "$choice" in
-    0)
-        show_menu
-        ;;
-    1)
-        ssl_cert_issue
-        ;;
-    2)
-        local domain=""
-        read -p "请输入您的域名以吊销证书: " domain
-        ~/.acme.sh/acme.sh --revoke -d ${domain}
-        LOGI "证书吊销成功"
-        ;;
-    3)
-        local domain=""
-        read -p "请输入您的域名以续签 SSL 证书: " domain
-        ~/.acme.sh/acme.sh --renew -d ${domain} --force
-        ;;
-    *) echo "无效选项" ;;
-    esac
-}
+ssl_cert_issue_main() { 
+    echo -e "${green}\t1.${plain} 获取 SSL 证书" 
+    echo -e "${green}\t2.${plain} 撤销证书" 
+    echo -e "${green}\t3.${plain} 强制更新证书" 
+    echo -e "${green}\t4.${plain} 显示现有域名" 
+    echo -e "${green}\t5.${plain} 为面板设置证书路径" 
+    echo -e "${green}\t0.${plain} 返回主菜单" 
+ 
+    read -rp "请选择一个选项：" choice 
+    case "$choice" in 
+    0) 
+        show_menu 
+        ;; 
+    1) 
+        ssl_cert_issue 
+        ssl_cert_issue_main 
+        ;; 
+    2) 
+        local domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
+        if [ -z "$domains" ]; then 
+            echo "未找到可撤销的证书。" 
+        else 
+            echo "现有域名：" 
+            echo "$domains" 
+            read -rp "请从列表中输入要撤销证书的域名：" domain 
+            if echo "$domains" | grep -qw "$domain"; then 
+                ~/.acme.sh/acme.sh --revoke -d ${domain} 
+                LOGI "已撤销域名的证书：$domain" 
+            else 
+                echo "输入的域名无效。" 
+            fi 
+        fi 
+        ssl_cert_issue_main 
+        ;; 
+    3) 
+        local domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
+        if [ -z "$domains" ]; then 
+            echo "未找到可更新的证书。" 
+        else 
+            echo "现有域名：" 
+            echo "$domains" 
+            read -rp "请从列表中输入要强制更新 SSL 证书的域名：" domain 
+            if echo "$domains" | grep -qw "$domain"; then 
+                ~/.acme.sh/acme.sh --renew -d ${domain} --force 
+                LOGI "已强制更新域名的证书：$domain" 
+            else 
+                echo "输入的域名无效。" 
+            fi 
+        fi 
+        ssl_cert_issue_main 
+        ;; 
+    4) 
+        local domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
+        if [ -z "$domains" ]; then 
+            echo "未找到证书。" 
+        else 
+            echo "现有域名及其路径：" 
+            for domain in $domains; do 
+                local cert_path="/root/cert/${domain}/fullchain.pem" 
+                local key_path="/root/cert/${domain}/privkey.pem" 
+                if [[ -f "${cert_path}" && -f "${key_path}" ]]; then 
+                    echo -e "域名：${domain}" 
+                    echo -e "\t证书路径：${cert_path}" 
+                    echo -e "\t私钥路径：${key_path}" 
+                else 
+                    echo -e "域名：${domain} - 证书或私钥文件缺失。" 
+                fi 
+            done 
+        fi 
+        ssl_cert_issue_main 
+        ;; 
+    5) 
+        local domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;) 
+        if [ -z "$domains" ]; then 
+            echo "未找到证书。" 
+        else 
+            echo "可用域名：" 
+            echo "$domains" 
+            read -rp "请选择要为面板设置路径的域名：" domain 
+ 
+            if echo "$domains" | grep -qw "$domain"; then 
+                local webCertFile="/root/cert/${domain}/fullchain.pem" 
+                local webKeyFile="/root/cert/${domain}/privkey.pem" 
+ 
+                if [[ -f "${webCertFile}" && -f "${webKeyFile}" ]]; then 
+                    /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
+                    echo "已为域名设置面板路径：$domain" 
+                    echo "  - 证书文件：$webCertFile" 
+                    echo "  - 私钥文件：$webKeyFile" 
+                    restart 
+                else 
+                    echo "未找到域名的证书或私钥：$domain" 
+                fi 
+            else 
+                echo "输入的域名无效。" 
+            fi 
+        fi 
+        ssl_cert_issue_main 
+        ;; 
+ 
+    *) 
+        echo -e "${red}无效选项。请选择有效的数字。${plain}\n" 
+        ssl_cert_issue_main 
+        ;; 
+    esac 
+} 
 
-ssl_cert_issue() {
-    # check for acme.sh first
-    if ! command -v ~/.acme.sh/acme.sh &>/dev/null; then
-        echo "未找到 acme.sh, 正在安装"
-        install_acme
-        if [ $? -ne 0 ]; then
-            LOGE "安装 acme 失败，请检查日志"
-            exit 1
-        fi
-    fi
-    # install socat second
-    case "${release}" in
-    ubuntu | debian | armbian)
-        apt update && apt install socat -y
-        ;;
-    centos | almalinux | rocky | oracle)
-        yum -y update && yum -y install socat
-        ;;
-    fedora)
-        dnf -y update && dnf -y install socat
-        ;;
-    arch | manjaro)
-        pacman -Sy --noconfirm socat
-        ;;
-    *)
-        echo -e "${red}不支持的操作系统，请检查脚本并手动安装必要的软件包。${plain}\n"
-        exit 1
-        ;;
-    esac
-    if [ $? -ne 0 ]; then
+ssl_cert_issue() { 
+    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath: .+' | awk '{print $2}') 
+    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port: .+' | awk '{print $2}') 
+    # 首先检查 acme.sh
+    if ! command -v ~/.acme.sh/acme.sh &>/dev/null; then 
+        echo "未找到 acme.sh，将进行安装" 
+        install_acme 
+        if [ $? -ne 0 ]; then 
+            LOGE "安装 acme 失败，请检查日志" 
+            exit 1 
+        fi 
+    fi 
+ 
+    # 安装 socat
+    case "${release}" in 
+    ubuntu | debian | armbian) 
+        apt update && apt install socat -y 
+        ;; 
+    centos | rhel | almalinux | rocky | ol) 
+        yum -y update && yum -y install socat 
+        ;; 
+    fedora | amzn | virtuozzo) 
+        dnf -y update && dnf -y install socat 
+        ;; 
+    arch | manjaro | parch) 
+        pacman -Sy --noconfirm socat 
+        ;; 
+    *) 
+        echo -e "${red}不支持的操作系统。请检查脚本并手动安装必要的软件包。${plain}\n" 
+        exit 1 
+        ;; 
+    esac 
+    if [ $? -ne 0 ]; then 
         LOGE "安装 socat 失败，请检查日志"
-        exit 1
-    else
-        LOGI "安装 socat 成功..."
-    fi
-
-    # get the domain here,and we need verify it
-    local domain=""
-    read -p "请输入您的域名:" domain
-    LOGD "您的域名是：${domain}，正在检查..."
-    # here we need to judge whether there exists cert already
-    local currentCert=$(~/.acme.sh/acme.sh --list | tail -1 | awk '{print $1}')
-
-    if [ ${currentCert} == ${domain} ]; then
-        local certInfo=$(~/.acme.sh/acme.sh --list)
-        LOGE "系统已经有证书，无法再次颁发，当前证书详细信息:"
-        LOGI "$certInfo"
-        echo ""
-        echo -e "${green}如果要申请安装证书并每3个月〔自动续签〕证书，请确保${red} 80 ${green}和 ${red}443 ${green}端口已打开放行${plain}"
-        exit 1
-    else
-        LOGI "您的域现在已准备好颁发证书..."
-    fi
-
-    # create a directory for install cert
-    certPath="/root/cert/${domain}"
-    if [ ! -d "$certPath" ]; then
-        mkdir -p "$certPath"
-    else
-        rm -rf "$certPath"
-        mkdir -p "$certPath"
-    fi
-
-    # get needed port here
-    local WebPort=80
-    read -p "请选择您使用的端口，默认为 80 端口:" WebPort
-    if [[ ${WebPort} -gt 65535 || ${WebPort} -lt 1 ]]; then
-        LOGE "您输入的端口 ${WebPort} 无效，将使用默认端口"
-    fi
-    LOGI "将使用端口：${WebPort} 来颁发证书，请确保该端口已开启..."
-    # NOTE:This should be handled by user
-    # open the port and kill the occupied progress
-    ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
-    ~/.acme.sh/acme.sh --issue -d ${domain} --listen-v6 --standalone --httpport ${WebPort}
-    if [ $? -ne 0 ]; then
-        LOGE "颁发证书失败，请检查日志"
-        rm -rf ~/.acme.sh/${domain}
-        exit 1
-    else
-        LOGE "颁发证书成功，安装证书..."
-    fi
-    # install cert
-    ~/.acme.sh/acme.sh --installcert -d ${domain} \
-        --key-file /root/cert/${domain}/privkey.pem \
-        --fullchain-file /root/cert/${domain}/fullchain.pem
-
-    if [ $? -ne 0 ]; then
-        LOGE "安装证书失败"
-        rm -rf ~/.acme.sh/${domain}
-        exit 1
-    else
-        LOGI "安装证书成功，启用自动续订..."
-        echo ""
-        echo -e "${green}如果要申请安装证书并每3个月〔自动续签〕证书，请确保${red} 80 ${green}和 ${red}443 ${green}端口已打开放行${plain}"
-    fi
-
-    ~/.acme.sh/acme.sh --upgrade --auto-upgrade
-    if [ $? -ne 0 ]; then
-        LOGE "自动续订失败，证书详细信息:"
-        ls -lah cert/*
-        chmod 755 $certPath/*
-        exit 1
-    else
-        LOGI "自动续订成功，证书详细信息:"
-        ls -lah cert/*
-        chmod 755 $certPath/*
-        echo ""
-        echo -e "${green}如果要申请安装证书并每3个月〔自动续签〕证书，请确保${red} 80 ${green}和 ${red}443 ${green}端口已打开放行${plain}"
-    fi
-}
-
-ssl_cert_issue_CF() {
-    echo -E ""
-    LOGD "******使用说明******"
-    LOGI "此 Acme 脚本需要以下数据："
-    LOGI "1. Cloudflare 注册邮箱"
-    LOGI "2. Cloudflare 全局 API 密钥"
-    LOGI "3. Cloudflare 已解析 dns 到当前服务器的域名"
-    LOGI "4. 脚本申请证书，默认安装路径为 /root/cert "
-    confirm "确认申请? [y/n]" "y"
-    if [ $? -eq 0 ]; then
-        # check for acme.sh first
-        if ! command -v ~/.acme.sh/acme.sh &>/dev/null; then
-            echo "未找到 acme.sh, 正在安装"
-            install_acme
-            if [ $? -ne 0 ]; then
-                LOGE "安装 acme 失败，请检查日志"
-                exit 1
-            fi
-        fi
-        CF_Domain=""
-        CF_GlobalKey=""
-        CF_AccountEmail=""
-        certPath=/root/cert
-        if [ ! -d "$certPath" ]; then
-            mkdir $certPath
-        else
-            rm -rf $certPath
-            mkdir $certPath
-        fi
-        LOGD "请设置域名:"
-        read -p "在此输入您的域名:" CF_Domain
-        LOGD "您的域名为: ${CF_Domain}"
-        LOGD "请设置 CF Global API Key:"
-        read -p "在此输入您的 API Key:" CF_GlobalKey
-        LOGD "您的 API 密钥是: ${CF_GlobalKey}"
-        LOGD "请设置注册邮箱:"
-        read -p "在此输入您的邮箱:" CF_AccountEmail
-        LOGD "您的账号邮箱地址是: ${CF_AccountEmail}"
-        ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
-        if [ $? -ne 0 ]; then
-            LOGE "默认 CA: Lets'Encrypt 失败，脚本退出..."
-            exit 1
-        fi
-        export CF_Key="${CF_GlobalKey}"
-        export CF_Email=${CF_AccountEmail}
-        ~/.acme.sh/acme.sh --issue --dns dns_cf -d ${CF_Domain} -d *.${CF_Domain} --log
-        if [ $? -ne 0 ]; then
-            LOGE "证书颁发失败，脚本退出..."
-            exit 1
-        else
-            LOGI "证书颁发成功，正在安装..."
-        fi
-        ~/.acme.sh/acme.sh --installcert -d ${CF_Domain} -d *.${CF_Domain} --ca-file /root/cert/ca.cer \
-            --cert-file /root/cert/${CF_Domain}.cer --key-file /root/cert/${CF_Domain}.key \
-            --fullchain-file /root/cert/fullchain.cer
-        if [ $? -ne 0 ]; then
-            LOGE "证书安装失败，脚本退出..."
-            exit 1
-        else
-            LOGI "证书安装成功，开启自动更新..."
-            echo ""
-            echo -e "${green}如果要申请安装证书并每3个月〔自动续签〕证书，请确保${red} 80 ${green}和 ${red}443 ${green}端口已打开放行${plain}"
-        fi
-        ~/.acme.sh/acme.sh --upgrade --auto-upgrade
-        if [ $? -ne 0 ]; then
-            LOGE "自动更新设置失败，脚本退出..."
-            ls -lah cert
-            chmod 755 $certPath
-            exit 1
-        else
-            LOGI "证书已安装并开启自动续订，具体信息如下:"
-            ls -lah cert
-            chmod 755 $certPath
-            echo ""
-            echo -e "${green}如果要申请安装证书并每3个月〔自动续签〕证书，请确保${red} 80 ${green}和 ${red}443 ${green}端口已打开放行${plain}"
-        fi
-    else
-        show_menu
-    fi
-}
+exit 1 
+     else 
+         LOGI "安装 socat 成功..." 
+     fi 
+ 
+     # 在这里获取域名，我们需要验证它 
+     local domain="" 
+     read -rp "请输入您的域名: " domain 
+     LOGD "您的域名是: ${domain}, 正在检查..." 
+ 
+     # 检查是否已存在证书 
+     local currentCert=$(~/.acme.sh/acme.sh --list | tail -1 | awk '{print $1}') 
+     if [ "${currentCert}" == "${domain}" ]; then 
+         local certInfo=$(~/.acme.sh/acme.sh --list) 
+         LOGE "系统已存在此域名的证书。无法再次签发。当前证书详情:" 
+         LOGI "$certInfo" 
+         exit 1 
+     else 
+         LOGI "您的域名现在可以签发证书了..." 
+     fi 
+ 
+     # 为证书创建一个目录 
+     certPath="/root/cert/${domain}" 
+     if [ ! -d "$certPath" ]; then 
+         mkdir -p "$certPath" 
+     else 
+         rm -rf "$certPath" 
+         mkdir -p "$certPath" 
+     fi 
+ 
+     # 获取独立服务器的端口号 
+     local WebPort=80 
+     read -rp "请选择要使用的端口 (默认为 80): " WebPort 
+     if [[ ${WebPort} -gt 65535 || ${WebPort} -lt 1 ]]; then 
+         LOGE "您输入的 ${WebPort} 无效，将使用默认端口 80。" 
+         WebPort=80 
+     fi 
+     LOGI "将使用端口: ${WebPort} 来签发证书。请确保此端口已开放。" 
+ 
+     # 签发证书 
+     ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt 
+     ~/.acme.sh/acme.sh --issue -d ${domain} --listen-v6 --standalone --httpport ${WebPort} --force 
+     if [ $? -ne 0 ]; then 
+         LOGE "签发证书失败，请检查日志。" 
+         rm -rf ~/.acme.sh/${domain} 
+         exit 1 
+     else 
+         LOGE "签发证书成功，正在安装证书..." 
+     fi 
+ 
+     reloadCmd="x-ui restart" 
+ 
+     LOGI "ACME 的默认 --reloadcmd 是: ${yellow}x-ui restart" 
+     LOGI "此命令将在每次证书签发和续订时运行。" 
+     read -rp "您想修改 ACME 的 --reloadcmd 吗? (y/n): " setReloadcmd 
+     if [[ "$setReloadcmd" == "y" || "$setReloadcmd" == "Y" ]]; then 
+         echo -e "\n${green}\t1.${plain} 预设: systemctl reload nginx ; x-ui restart" 
+         echo -e "${green}\t2.${plain} 输入您自己的命令" 
+         echo -e "${green}\t0.${plain} 保留默认的 reloadcmd" 
+         read -rp "请选择一个选项: " choice 
+         case "$choice" in 
+         1) 
+             LOGI "Reloadcmd 是: systemctl reload nginx ; x-ui restart" 
+             reloadCmd="systemctl reload nginx ; x-ui restart" 
+             ;; 
+         2)  
+             LOGD "建议将 x-ui restart 放在末尾，这样如果其他服务失败，它不会引发错误" 
+             read -rp "请输入您的 reloadcmd (例如: systemctl reload nginx ; x-ui restart): " reloadCmd 
+             LOGI "您的 reloadcmd 是: ${reloadCmd}" 
+             ;; 
+         *) 
+             LOGI "保留默认的 reloadcmd" 
+             ;; 
+         esac 
+     fi
+# 安装证书
+     ~/.acme.sh/acme.sh --installcert -d ${domain} \ 
+         --key-file /root/cert/${domain}/privkey.pem \ 
+         --fullchain-file /root/cert/${domain}/fullchain.pem --reloadcmd "${reloadCmd}" 
+ 
+     if [ $? -ne 0 ]; then 
+         LOGE "安装证书失败，正在退出。" 
+         rm -rf ~/.acme.sh/${domain} 
+         exit 1 
+     else 
+         LOGI "安装证书成功，正在启用自动续订..." 
+     fi 
+ 
+     # 启用自动续订
+     ~/.acme.sh/acme.sh --upgrade --auto-upgrade 
+     if [ $? -ne 0 ]; then 
+         LOGE "自动续订失败，证书详情：" 
+         ls -lah cert/* 
+         chmod 755 $certPath/* 
+         exit 1 
+     else 
+         LOGI "自动续订成功，证书详情：" 
+         ls -lah cert/* 
+         chmod 755 $certPath/* 
+     fi 
+ 
+     # 成功安装证书后提示用户设置面板路径
+     read -rp "您想为面板设置此证书吗？ (y/n): " setPanel 
+     if [[ "$setPanel" == "y" || "$setPanel" == "Y" ]]; then 
+         local webCertFile="/root/cert/${domain}/fullchain.pem" 
+         local webKeyFile="/root/cert/${domain}/privkey.pem" 
+ 
+         if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then 
+             /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
+             LOGI "已为域名设置面板路径: $domain" 
+             LOGI "  - 证书文件: $webCertFile" 
+             LOGI "  - 私钥文件: $webKeyFile" 
+             echo -e "${green}访问 URL: https://${domain}:${existing_port}${existing_webBasePath}${plain}" 
+             restart 
+         else 
+             LOGE "错误：未找到域名的证书或私钥文件: $domain。" 
+         fi 
+     else 
+         LOGI "跳过面板路径设置。" 
+     fi 
+ } 
+ssl_cert_issue_CF() { 
+     local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath: .+' | awk '{print $2}') 
+     local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port: .+' | awk '{print $2}') 
+     LOGI "****** 使用说明 ******" 
+     LOGI "请按照以下步骤完成操作：" 
+     LOGI "1. 准备好在 Cloudflare 注册的电子邮箱。" 
+     LOGI "2. 准备好 Cloudflare Global API 密钥。" 
+     LOGI "3. 准备好域名。" 
+     LOGI "4. 证书颁发后，系统将提示您为面板设置证书（可选）。" 
+     LOGI "5. 安装后，脚本还支持自动续订 SSL 证书。" 
+ 
+     confirm "您确认信息并希望继续吗？[y/n]" "y" 
+ 
+     if [ $? -eq 0 ]; then 
+         # 首先检查 acme.sh
+         if ! command -v ~/.acme.sh/acme.sh &>/dev/null; then 
+             echo "未找到 acme.sh。我们将为您安装。" 
+             install_acme 
+             if [ $? -ne 0 ]; then 
+                 LOGE "安装 acme 失败，请检查日志。" 
+                 exit 1 
+             fi 
+         fi 
+ 
+         CF_Domain="" 
+ 
+         LOGD "请设置一个域名：" 
+         read -rp "在此输入您的域名: " CF_Domain 
+         LOGD "您的域名设置为：${CF_Domain}" 
+ 
+         # 设置 Cloudflare API 详细信息
+         CF_GlobalKey="" 
+         CF_AccountEmail="" 
+         LOGD "请设置 API 密钥：" 
+         read -rp "在此输入您的密钥: " CF_GlobalKey 
+         LOGD "您的 API 密钥是：${CF_GlobalKey}" 
+ 
+         LOGD "请设置注册的电子邮箱：" 
+         read -rp "在此输入您的电子邮箱: " CF_AccountEmail 
+         LOGD "您注册的电子邮箱地址是：${CF_AccountEmail}" 
+ 
+         # 将默认 CA 设置为 Let's Encrypt
+         ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt 
+         if [ $? -ne 0 ]; then 
+             LOGE "设置默认 CA 为 Let's Encrypt 失败，脚本正在退出..." 
+             exit 1 
+         fi 
+ 
+         export CF_Key="${CF_GlobalKey}" 
+         export CF_Email="${CF_AccountEmail}" 
+ 
+         # 使用 Cloudflare DNS 颁发证书
+         ~/.acme.sh/acme.sh --issue --dns dns_cf -d ${CF_Domain} -d *.${CF_Domain} --log --force 
+         if [ $? -ne 0 ]; then 
+             LOGE "证书颁发失败，脚本正在退出..." 
+             exit 1 
+         else 
+             LOGI "证书颁发成功，正在安装..." 
+         fi
+# 安装证书
+         certPath="/root/cert/${CF_Domain}" 
+         if [ -d "$certPath" ]; then 
+             rm -rf ${certPath} 
+         fi 
+ 
+         mkdir -p ${certPath} 
+         if [ $? -ne 0 ]; then 
+             LOGE "创建目录失败: ${certPath}" 
+             exit 1 
+         fi 
+ 
+         reloadCmd="x-ui restart" 
+ 
+         LOGI "ACME 的默认 --reloadcmd 是: ${yellow}x-ui restart" 
+         LOGI "此命令将在每次证书颁发和续订时运行。" 
+         read -rp "您想修改 ACME 的 --reloadcmd 吗？ (y/n): " setReloadcmd 
+         if [[ "$setReloadcmd" == "y" || "$setReloadcmd" == "Y" ]]; then 
+             echo -e "\n${green}\t1.${plain} 预设: systemctl reload nginx ; x-ui restart" 
+             echo -e "${green}\t2.${plain} 输入您自己的命令" 
+             echo -e "${green}\t0.${plain} 保留默认的 reloadcmd" 
+             read -rp "请选择一个选项: " choice 
+             case "$choice" in 
+             1) 
+                 LOGI "Reloadcmd 是: systemctl reload nginx ; x-ui restart" 
+                 reloadCmd="systemctl reload nginx ; x-ui restart" 
+                 ;; 
+             2)  
+                 LOGD "建议将 x-ui restart 放在末尾，这样如果其他服务失败，它不会引发错误" 
+                 read -rp "请输入您的 reloadcmd (例如: systemctl reload nginx ; x-ui restart): " reloadCmd 
+                 LOGI "您的 reloadcmd 是: ${reloadCmd}" 
+                 ;; 
+             *) 
+                 LOGI "保留默认的 reloadcmd" 
+                 ;; 
+             esac 
+         fi 
+         ~/.acme.sh/acme.sh --installcert -d ${CF_Domain} -d *.${CF_Domain} \ 
+             --key-file ${certPath}/privkey.pem \ 
+             --fullchain-file ${certPath}/fullchain.pem --reloadcmd "${reloadCmd}" 
+         
+         if [ $? -ne 0 ]; then 
+             LOGE "证书安装失败，脚本正在退出..." 
+             exit 1 
+         else 
+             LOGI "证书安装成功，正在开启自动更新..." 
+         fi 
+ 
+         # 启用自动更新
+         ~/.acme.sh/acme.sh --upgrade --auto-upgrade 
+         if [ $? -ne 0 ]; then 
+             LOGE "自动更新设置失败，脚本正在退出..." 
+             exit 1 
+         else 
+             LOGI "证书已安装并开启自动续订。具体信息如下：" 
+             ls -lah ${certPath}/* 
+             chmod 755 ${certPath}/* 
+         fi 
+ 
+         # 成功安装证书后提示用户设置面板路径
+         read -rp "您想为面板设置此证书吗？ (y/n): " setPanel 
+         if [[ "$setPanel" == "y" || "$setPanel" == "Y" ]]; then 
+             local webCertFile="${certPath}/fullchain.pem" 
+             local webKeyFile="${certPath}/privkey.pem" 
+ 
+             if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then 
+                 /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
+                 LOGI "已为域名设置面板路径: $CF_Domain" 
+                 LOGI "  - 证书文件: $webCertFile" 
+                 LOGI "  - 私钥文件: $webKeyFile" 
+                 echo -e "${green}访问 URL: https://${CF_Domain}:${existing_port}${existing_webBasePath}${plain}" 
+                 restart 
+             else 
+                 LOGE "错误：未找到域名的证书或私钥文件: $CF_Domain。" 
+             fi 
+         else 
+             LOGI "跳过面板路径设置。" 
+         fi 
+     else 
+         show_menu 
+     fi 
+ } 
 
 warp_cloudflare() {
     echo -e "${green}\t1.${plain} 安装 WARP socks5 代理"
