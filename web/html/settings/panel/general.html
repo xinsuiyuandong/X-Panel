@@ -1,4 +1,10 @@
 {{define "settings/panel/general"}}
+<style>
+.red-placeholder input::-webkit-input-placeholder { color: red !important; }
+.red-placeholder input::-moz-placeholder { color: red !important; }
+.red-placeholder input:-ms-input-placeholder { color: red !important; }
+.red-placeholder input::placeholder { color: red !important; }
+</style>
 <a-collapse default-active-key="1">
     <a-collapse-panel key="1" header='{{ i18n "pages.xray.generalConfigs"}}'>
         <a-setting-list-item paddings="small">
@@ -97,14 +103,14 @@
             <template #title>{{ i18n "pages.settings.publicKeyPath"}}</template>
             <template #description>{{ i18n "pages.settings.publicKeyPathDesc"}}</template>
             <template #control>
-                <a-input type="text" v-model="allSetting.webCertFile"></a-input>
+                <a-input type="text" v-model="allSetting.webCertFile" placeholder="/root/.acme.sh/域名_ecc/域名.cer（路径演示）" class="red-placeholder"></a-input>
             </template>
         </a-setting-list-item>
         <a-setting-list-item paddings="small">
             <template #title>{{ i18n "pages.settings.privateKeyPath"}}</template>
             <template #description>{{ i18n "pages.settings.privateKeyPathDesc"}}</template>
             <template #control>
-                <a-input type="text" v-model="allSetting.webKeyFile"></a-input>
+                <a-input type="text" v-model="allSetting.webKeyFile" placeholder="/root/.acme.sh/域名_ecc/域名.key（路径演示）" class="red-placeholder"></a-input>
             </template>
         </a-setting-list-item>
     </a-collapse-panel>
