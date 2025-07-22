@@ -276,7 +276,7 @@ reset_webbasepath() {
     read -rp "请设置新的访问路径（若回车默认或输入y则为随机路径）: " config_webBasePath
     
     if [[ $config_webBasePath == "y" ]]; then
-        config_webBasePath=$(gen_random_string 10)
+        config_webBasePath=$(gen_random_string 18)
     fi
     
     # Apply the new web base path setting
