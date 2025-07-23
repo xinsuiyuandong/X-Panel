@@ -881,8 +881,8 @@ ssl_cert_issue_main() {
 } 
 
 ssl_cert_issue() { 
-    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath: .+' | awk '{print $2}') 
-    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port: .+' | awk '{print $2}') 
+    local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
+    local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
     # 首先检查 acme.sh
     if ! command -v ~/.acme.sh/acme.sh &>/dev/null; then 
         echo "未找到 acme.sh，将进行安装" 
@@ -1028,7 +1028,7 @@ ssl_cert_issue() {
              LOGI "已为域名设置面板路径: $domain" 
              LOGI "  - 证书文件: $webCertFile" 
              LOGI "  - 私钥文件: $webKeyFile" 
-             echo -e "${green}访问 URL: https://${domain}:${existing_port}${existing_webBasePath}${plain}" 
+             echo -e "${green}访问 URL: https://${domain}:${existing_port}/${existing_webBasePath}${plain}" 
              restart 
          else 
              LOGE "错误：未找到域名的证书或私钥文件: $domain。" 
@@ -1038,8 +1038,8 @@ ssl_cert_issue() {
      fi 
  } 
 ssl_cert_issue_CF() { 
-     local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath: .+' | awk '{print $2}') 
-     local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port: .+' | awk '{print $2}') 
+     local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
+     local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
      LOGI "****** 使用说明 ******" 
      LOGI "请按照以下步骤完成操作：" 
      LOGI "1. 准备好在 Cloudflare 注册的电子邮箱。" 
@@ -1168,7 +1168,7 @@ ssl_cert_issue_CF() {
                  LOGI "已为域名设置面板路径: $CF_Domain" 
                  LOGI "  - 证书文件: $webCertFile" 
                  LOGI "  - 私钥文件: $webKeyFile" 
-                 echo -e "${green}访问 URL: https://${CF_Domain}:${existing_port}${existing_webBasePath}${plain}" 
+                 echo -e "${green}访问 URL: https://${CF_Domain}:${existing_port}/${existing_webBasePath}${plain}" 
                  restart 
              else 
                  LOGE "错误：未找到域名的证书或私钥文件: $CF_Domain。" 
