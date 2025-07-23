@@ -1028,7 +1028,7 @@ ssl_cert_issue() {
              LOGI "已为域名设置面板路径: $domain" 
              LOGI "  - 证书文件: $webCertFile" 
              LOGI "  - 私钥文件: $webKeyFile" 
-             echo -e "${green}访问 URL: https://${domain}:${existing_port}/${existing_webBasePath}${plain}" 
+             echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}/${existing_webBasePath}${plain}" 
              restart 
          else 
              LOGE "错误：未找到域名的证书或私钥文件: $domain。" 
@@ -1168,7 +1168,7 @@ ssl_cert_issue_CF() {
                  LOGI "已为域名设置面板路径: $CF_Domain" 
                  LOGI "  - 证书文件: $webCertFile" 
                  LOGI "  - 私钥文件: $webKeyFile" 
-                 echo -e "${green}访问 URL: https://${CF_Domain}:${existing_port}/${existing_webBasePath}${plain}" 
+                 echo -e "${green}登录访问面板URL: https://${CF_Domain}:${existing_port}/${existing_webBasePath}${plain}" 
                  restart 
              else 
                  LOGE "错误：未找到域名的证书或私钥文件: $CF_Domain。" 
