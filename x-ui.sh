@@ -914,7 +914,7 @@ ssl_cert_issue() {
     esac 
     if [ $? -ne 0 ]; then 
         LOGE "安装 socat 失败，请检查日志"
-exit 1 
+        exit 1 
      else 
          LOGI "安装 socat 成功..." 
      fi 
@@ -989,7 +989,8 @@ exit 1
              ;; 
          esac 
      fi
-# 安装证书
+     
+     # 安装证书
      ~/.acme.sh/acme.sh --installcert -d ${domain} \ 
          --key-file /root/cert/${domain}/privkey.pem \ 
          --fullchain-file /root/cert/${domain}/fullchain.pem --reloadcmd "${reloadCmd}" 
@@ -1094,7 +1095,8 @@ ssl_cert_issue_CF() {
          else 
              LOGI "证书颁发成功，正在安装..." 
          fi
-# 安装证书
+         
+          # 安装证书
          certPath="/root/cert/${CF_Domain}" 
          if [ -d "$certPath" ]; then 
              rm -rf ${certPath} 
