@@ -991,10 +991,7 @@ ssl_cert_issue() {
      fi
      
      # 安装证书
-     ~/.acme.sh/acme.sh --installcert -d ${domain} \
-       --key-file /root/cert/${domain}/privkey.pem \
-       --fullchain-file /root/cert/${domain}/fullchain.pem \
-       --reloadcmd "${reloadCmd}"
+     ~/.acme.sh/acme.sh --installcert -d ${domain} --key-file /root/cert/${domain}/privkey.pem --fullchain-file /root/cert/${domain}/fullchain.pem --reloadcmd "${reloadCmd}"
  
      if [ $? -ne 0 ]; then 
          LOGE "安装证书失败，正在退出。" 
@@ -1134,10 +1131,7 @@ ssl_cert_issue_CF() {
                  ;; 
              esac 
          fi 
-         ~/.acme.sh/acme.sh --installcert -d ${CF_Domain} -d *.${CF_Domain} \ 
-             --key-file ${certPath}/privkey.pem \ 
-             --fullchain-file ${certPath}/fullchain.pem \ 
-             --reloadcmd "${reloadCmd}" 
+         ~/.acme.sh/acme.sh --installcert -d ${CF_Domain} -d *.${CF_Domain} --key-file ${certPath}/privkey.pem --fullchain-file ${certPath}/fullchain.pem --reloadcmd "${reloadCmd}" 
          
          if [ $? -ne 0 ]; then 
              LOGE "证书安装失败，脚本正在退出..." 
