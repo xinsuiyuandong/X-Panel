@@ -1026,9 +1026,14 @@ ssl_cert_issue() {
          if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then 
              /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
              LOGI "已为域名设置面板路径: $domain" 
+             echo ""
              LOGI "  - 证书文件: $webCertFile" 
              LOGI "  - 私钥文件: $webKeyFile" 
-             echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}/${existing_webBasePath}${plain}" 
+             echo ""
+             echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${existing_webBasePath}${plain}" 
+             echo ""
+             echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
+             echo ""
              restart 
          else 
              LOGE "错误：未找到域名的证书或私钥文件: $domain。" 
@@ -1166,9 +1171,14 @@ ssl_cert_issue_CF() {
              if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then 
                  /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
                  LOGI "已为域名设置面板路径: $CF_Domain" 
+                 echo ""
                  LOGI "  - 证书文件: $webCertFile" 
                  LOGI "  - 私钥文件: $webKeyFile" 
-                 echo -e "${green}登录访问面板URL: https://${CF_Domain}:${existing_port}/${existing_webBasePath}${plain}" 
+                 echo ""
+                 echo -e "${green}登录访问面板URL: https://${CF_Domain}:${existing_port}${existing_webBasePath}${plain}" 
+                 echo ""
+                 echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
+                 echo ""
                  restart 
              else 
                  LOGE "错误：未找到域名的证书或私钥文件: $CF_Domain。" 
