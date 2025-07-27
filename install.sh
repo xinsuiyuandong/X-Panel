@@ -7,6 +7,7 @@ yellow='\033[0;33m'
 plain='\033[0m'
 
 cur_dir=$(pwd)
+show_ip_service_lists=("https://api.ipify.org" "https://4.ident.me")
 
 # check root
 [[ $EUID -ne 0 ]] && echo -e "${red}致命错误: ${plain} 请使用 root 权限运行此脚本\n" && exit 1
@@ -228,6 +229,7 @@ echo ""
 install_x-ui() {
     cd /usr/local/
 
+    # Download resources
     if [ $# == 0 ]; then
         last_version=$(curl -Ls "https://api.github.com/repos/xeefei/3x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
         if [[ ! -n "$last_version" ]]; then
@@ -272,7 +274,9 @@ install_x-ui() {
             exit 1
         fi
     fi
+    wget -O /usr/bin/x-ui-temp https://raw.githubusercontent.com/MHSanaei/3x-ui/main/x-ui.sh
 
+    # Stop x-ui service and remove old resources
     if [[ -e /usr/local/x-ui/ ]]; then
         systemctl stop x-ui
         rm /usr/local/x-ui/ -rf
@@ -283,19 +287,20 @@ install_x-ui() {
     echo ""
     tar zxvf x-ui-linux-$(arch).tar.gz
     rm x-ui-linux-$(arch).tar.gz -f
+    
     cd x-ui
     chmod +x x-ui
+    chmod +x x-ui.sh
 
     # Check the system's architecture and rename the file accordingly
     if [[ $(arch) == "armv5" || $(arch) == "armv6" || $(arch) == "armv7" ]]; then
         mv bin/xray-linux-$(arch) bin/xray-linux-arm
         chmod +x bin/xray-linux-arm
     fi
-
     chmod +x x-ui bin/xray-linux-$(arch)
-    cp -f x-ui.service /etc/systemd/system/
-    wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/xeefei/3x-ui/main/x-ui.sh
-    chmod +x /usr/local/x-ui/x-ui.sh
+
+    # Update x-ui cli and se set permission
+    mv -f /usr/bin/x-ui-temp /usr/bin/x-ui
     chmod +x /usr/bin/x-ui
     sleep 2
     echo -e "${green}------->>>>>>>>>>>保存成功${plain}"
@@ -303,6 +308,7 @@ install_x-ui() {
     echo ""
     config_after_install
 
+    cp -f x-ui.service /etc/systemd/system/
     systemctl daemon-reload
     systemctl enable x-ui
     systemctl start x-ui
