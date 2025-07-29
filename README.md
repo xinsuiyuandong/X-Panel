@@ -742,7 +742,10 @@ XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/x-ui" go build main.go
 ------------
 ## 特别感谢
 
+- [MHSanaei](https://github.com/MHSanaei/)
 - [alireza0](https://github.com/alireza0/)
+- [FranzKafkaYu](https://github.com/FranzKafkaYu/)
+- [vaxilu](https://github.com/vaxilu/)
 
 ------------
 ## 致谢
