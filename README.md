@@ -245,6 +245,14 @@ VERSION=v2.4.5 && bash <(curl -Ls "https://raw.githubusercontent.com/xeefei/3x-u
 ![20](./media/20.png)
 
 ------------
+## 常见的翻墙软件/工具：
+- [1、Windows系统v2rayN：](https://github.com/2dust/v2rayN)
+- [2、安卓手机版【v2rayNG】：](https://github.com/2dust/v2rayNG)
+- [3、苹果手机IOS【小火箭】：](https://apple02.com/)
+- [4、苹果MacOS电脑【Clash Verge】：](https://github.com/clash-verge-rev/clash-verge-rev/releases)
+  [或v2rayN：](https://github.com/2dust/v2rayN)
+
+------------
 ## 如何保护自己的IP不被墙被封？
 ##### 1、使用的代理协议要安全，加密是必备，推荐使用vless+reality+vision协议组合，
 ##### 2、因为有时节点会共享，在不同的地区，多个省份之间不要共同连接同一个IP，
