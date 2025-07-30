@@ -246,11 +246,11 @@ VERSION=v2.4.5 && bash <(curl -Ls "https://raw.githubusercontent.com/xeefei/3x-u
 
 ------------
 ## 常见的翻墙软件/工具：
-- [1、Windows系统v2rayN：](https://github.com/2dust/v2rayN)
-- [2、安卓手机版【v2rayNG】：](https://github.com/2dust/v2rayNG)
-- [3、苹果手机IOS【小火箭】：](https://apple02.com/)
-- [4、苹果MacOS电脑【Clash Verge】：](https://github.com/clash-verge-rev/clash-verge-rev/releases)
-  [或v2rayN：](https://github.com/2dust/v2rayN)
+- [1、Windows系统v2rayN：https://github.com/2dust/v2rayN](https://github.com/2dust/v2rayN)
+- [2、安卓手机版【v2rayNG】：https://github.com/2dust/v2rayNG](https://github.com/2dust/v2rayNG)
+- [3、苹果手机IOS【小火箭】：https://apple02.com/（自己购买）](https://apple02.com/)
+- [4、苹果MacOS电脑【Clash Verge】：https://github.com/clash-verge-rev/clash-verge-rev/releases](https://github.com/clash-verge-rev/clash-verge-rev/releases)
+  [或v2rayN：https://github.com/2dust/v2rayN](https://github.com/2dust/v2rayN)
 
 ------------
 ## 如何保护自己的IP不被墙被封？
