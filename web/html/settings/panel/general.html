@@ -103,14 +103,14 @@
             <template #title>{{ i18n "pages.settings.publicKeyPath"}}</template>
             <template #description>{{ i18n "pages.settings.publicKeyPathDesc"}}</template>
             <template #control>
-                <a-input type="text" v-model="allSetting.webCertFile" placeholder="/root/.acme.sh/域名_ecc/域名.cer（路径演示）" class="red-placeholder"></a-input>
+                <a-input type="text" v-model="allSetting.webCertFile" placeholder="/root/cert/域名/fullchain.pem" class="red-placeholder"></a-input>
             </template>
         </a-setting-list-item>
         <a-setting-list-item paddings="small">
             <template #title>{{ i18n "pages.settings.privateKeyPath"}}</template>
             <template #description>{{ i18n "pages.settings.privateKeyPathDesc"}}</template>
             <template #control>
-                <a-input type="text" v-model="allSetting.webKeyFile" placeholder="/root/.acme.sh/域名_ecc/域名.key（路径演示）" class="red-placeholder"></a-input>
+                <a-input type="text" v-model="allSetting.webKeyFile" placeholder="/root/cert/域名/privkey.pem" class="red-placeholder"></a-input>
             </template>
         </a-setting-list-item>
     </a-collapse-panel>
