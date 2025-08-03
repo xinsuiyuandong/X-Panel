@@ -1641,7 +1641,7 @@ show_menu() {
   ${green}〔3X-UI〕优化版项目地址${plain}
   ${yellow}https://github.com/xeefei/3x-ui${plain}
   ${green}详细〔安装配置〕教程${plain}
-  ${yellow}https://xeefei.github.io/xufei/2024/05/3x-ui${plain}
+  ${yellow}https://xeefei.blogspot.com/2025/07/3x-ui.html${plain}
 ——————————————————————
 "
     show_status
