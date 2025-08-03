@@ -321,7 +321,7 @@ check_config() {
     if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
         echo -e "${green}面板已安装证书采用SSL保护${plain}"
         echo ""
-        echo -e "${green}登录访问面板URL: https://你的域名:${existing_port}${existing_webBasePath}${plain}" 
+        echo -e "${green}登录访问面板URL: https://你的域名:${existing_port}${green}${existing_webBasePath}${plain}" 
     fi
     echo ""
     if [[ -z "$existing_cert" && -z "$existing_key" ]]; then
