@@ -40,21 +40,22 @@ arch() {
     esac
 }
 
+echo "Arch: $(arch)"
 echo ""
-check_glibc_version() {
-    glibc_version=$(ldd --version | head -n1 | awk '{print $NF}')
+# check_glibc_version() {
+#    glibc_version=$(ldd --version | head -n1 | awk '{print $NF}')
 
-    required_version="2.32"
-    if [[ "$(printf '%s\n' "$required_version" "$glibc_version" | sort -V | head -n1)" != "$required_version" ]]; then
-        echo -e "${red}------>>>GLIBC版本 $glibc_version 太旧了！ 要求2.32或以上版本${plain}"
-        echo -e "${green}-------->>>>请升级到较新版本的操作系统以便获取更高版本的GLIBC${plain}"
-        exit 1
-    fi
-        echo -e "${green}-------->>>>GLIBC版本： $glibc_version（符合高于2.32的要求）${plain}"
-}
-check_glibc_version
+#    required_version="2.32"
+#    if [[ "$(printf '%s\n' "$required_version" "$glibc_version" | sort -V | head -n1)" != "$required_version" ]]; then
+#        echo -e "${red}------>>>GLIBC版本 $glibc_version 太旧了！ 要求2.32或以上版本${plain}"
+#        echo -e "${green}-------->>>>请升级到较新版本的操作系统以便获取更高版本的GLIBC${plain}"
+#        exit 1
+#    fi
+#        echo -e "${green}-------->>>>GLIBC版本： $glibc_version（符合高于2.32的要求）${plain}"
+# }
+# check_glibc_version
 
-echo ""
+# echo ""
 echo -e "${yellow}---------->>>>>当前系统的架构为: $(arch)${plain}"
 echo ""
 last_version=$(curl -Ls "https://api.github.com/repos/xeefei/3x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
