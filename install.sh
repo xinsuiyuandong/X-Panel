@@ -40,7 +40,6 @@ arch() {
     esac
 }
 
-echo "Arch: $(arch)"
 echo ""
 # check_glibc_version() {
 #    glibc_version=$(ldd --version | head -n1 | awk '{print $NF}')
