@@ -22,7 +22,7 @@ class AllSetting {
         this.tgBotBackup = false;
         this.tgBotLoginNotify = true;
         this.tgCpu = 80;
-        this.tgLang = "en-US";
+        this.tgLang = "zh-CN";
         this.twoFactorEnable = false;
         this.twoFactorToken = "";
         this.xrayTemplateConfig = "";
