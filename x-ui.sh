@@ -1616,7 +1616,7 @@ show_menu() {
   ${green}4.${plain} 自定义版本
   ${green}5.${plain} 卸载面板
 ——————————————————————
-  ${green}6.${plain} 重置用户名、密码和Secret Token
+  ${green}6.${plain} 重置用户名、密码
   ${green}7.${plain} 修改访问路径
   ${green}8.${plain} 重置面板设置
   ${green}9.${plain} 修改面板端口
