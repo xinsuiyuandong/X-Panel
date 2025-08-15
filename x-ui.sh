@@ -475,18 +475,6 @@ show_log() {
     fi
 }
 
-show_banlog() {
-    if test -f "${iplimit_banned_log_path}"; then
-        if [[ -s "${iplimit_banned_log_path}" ]]; then
-            cat ${iplimit_banned_log_path}
-        else
-            echo -e "${red}日志文件为空${plain}\n"
-        fi
-    else
-        echo -e "${red}未找到日志文件。 请先安装 Fail2ban 和 IP Limit${plain}\n"
-    fi
-}
-
 bbr_menu() {
     echo -e "${green}\t1.${plain} 启用 BBR"
     echo -e "${green}\t2.${plain} 禁用 BBR"
@@ -1319,78 +1307,6 @@ run_speedtest() {
     speedtest
 }
 
-create_iplimit_jails() {
-    # Use default bantime if not passed => 15 minutes
-    local bantime="${1:-15}"
-
-    # Uncomment 'allowipv6 = auto' in fail2ban.conf
-    sed -i 's/#allowipv6 = auto/allowipv6 = auto/g' /etc/fail2ban/fail2ban.conf
-
-    #On Debian 12+ fail2ban's default backend should be changed to systemd
-    if [[  "${release}" == "debian" && ${os_version} -ge 12 ]]; then
-        sed -i '0,/action =/s/backend = auto/backend = systemd/' /etc/fail2ban/jail.conf
-    fi
-
-    cat << EOF > /etc/fail2ban/jail.d/3x-ipl.conf
-[3x-ipl]
-enabled=true
-backend=auto
-filter=3x-ipl
-action=3x-ipl
-logpath=${iplimit_log_path}
-maxretry=2
-findtime=32
-bantime=${bantime}m
-EOF
-
-    cat << EOF > /etc/fail2ban/filter.d/3x-ipl.conf
-[Definition]
-datepattern = ^%%Y/%%m/%%d %%H:%%M:%%S
-failregex   = \[LIMIT_IP\]\s*Email\s*=\s*<F-USER>.+</F-USER>\s*\|\|\s*SRC\s*=\s*<ADDR>
-ignoreregex =
-EOF
-
-    cat << EOF > /etc/fail2ban/action.d/3x-ipl.conf
-[INCLUDES]
-before = iptables-allports.conf
-
-[Definition]
-actionstart = <iptables> -N f2b-<name>
-              <iptables> -A f2b-<name> -j <returntype>
-              <iptables> -I <chain> -p <protocol> -j f2b-<name>
-
-actionstop = <iptables> -D <chain> -p <protocol> -j f2b-<name>
-             <actionflush>
-             <iptables> -X f2b-<name>
-
-actioncheck = <iptables> -n -L <chain> | grep -q 'f2b-<name>[ \t]'
-
-actionban = <iptables> -I f2b-<name> 1 -s <ip> -j <blocktype>
-            echo "\$(date +"%%Y/%%m/%%d %%H:%%M:%%S")   BAN   [Email] = <F-USER> [IP] = <ip> banned for <bantime> seconds." >> ${iplimit_banned_log_path}
-
-actionunban = <iptables> -D f2b-<name> -s <ip> -j <blocktype>
-              echo "\$(date +"%%Y/%%m/%%d %%H:%%M:%%S")   UNBAN   [Email] = <F-USER> [IP] = <ip> unbanned." >> ${iplimit_banned_log_path}
-
-[Init]
-EOF
-
-    echo -e "${green}使用 ${bantime} 分钟的禁止时间以创建的 IP Limit 限制文件。${plain}"
-}
-
-iplimit_remove_conflicts() {
-    local jail_files=(
-        /etc/fail2ban/jail.conf
-        /etc/fail2ban/jail.local
-    )
-
-    for file in "${jail_files[@]}"; do
-        # Check for [3x-ipl] config in jail file then remove it
-        if test -f "${file}" && grep -qw '3x-ipl' ${file}; then
-            sed -i "/\[3x-ipl\]/,/^$/d" ${file}
-            echo -e "${yellow}消除系统环境中 [3x-ipl] 的冲突 (${file})!${plain}\n"
-        fi
-    done
-}
 
 iplimit_main() {
     echo -e "\n${green}\t1.${plain} 安装 Fail2ban 并配置 IP 限制"
@@ -1459,14 +1375,22 @@ install_iplimit() {
         # Check the OS and install necessary packages
         case "${release}" in
         ubuntu)
+            apt-get update
             if [[ "${os_version}" -ge 24 ]]; then
-                apt update && apt install python3-pip -y
+                apt-get install python3-pip -y
                 python3 -m pip install pyasynchat --break-system-packages
             fi
-            apt update && apt install fail2ban -y
+            apt-get install fail2ban -y
             ;;
-        debian | armbian)
-            apt update && apt install fail2ban -y
+        debian)
+            apt-get update
+            if [ "$os_version" -ge 12 ]; then
+                apt-get install -y python3-systemd
+            fi
+            apt-get install -y fail2ban
+            ;;
+        armbian)
+            apt-get update && apt-get install fail2ban -y
             ;;
         centos | almalinux | rocky | oracle)
             yum update -y && yum install epel-release -y
@@ -1577,6 +1501,113 @@ remove_iplimit() {
         remove_iplimit
         ;;
     esac
+}
+
+show_banlog() {
+    local system_log="/var/log/fail2ban.log"
+
+    echo -e "${green}正在检查禁止日志...${plain}\n"
+
+    if ! systemctl is-active --quiet fail2ban; then
+        echo -e "${red}Fail2ban 服务未运行！${plain}\n"
+        return 1
+    fi
+
+    if [[ -f "$system_log" ]]; then
+        echo -e "${green}来自 fail2ban.log 的最近系统禁止活动:${plain}"
+        grep "3x-ipl" "$system_log" | grep -E "Ban|Unban" | tail -n 10 || echo -e "${yellow}未发现近期系统禁止活动${plain}"
+        echo ""
+    fi
+
+    if [[ -f "${iplimit_banned_log_path}" ]]; then
+        echo -e "${green}3X-IPL禁止日志文件条目:${plain}"
+        if [[ -s "${iplimit_banned_log_path}" ]]; then
+            grep -v "INIT" "${iplimit_banned_log_path}" | tail -n 10 || echo -e "${yellow}未找到禁止条目${plain}"
+        else
+            echo -e "${yellow}禁止日志文件为空${plain}"
+        fi
+    else
+        echo -e "${red}未找到禁止日志文件: ${iplimit_banned_log_path}${plain}"
+    fi
+
+    echo -e "\n${green}目前的限制情况:${plain}"
+    fail2ban-client status 3x-ipl || echo -e "${yellow}无法获取限制状态${plain}"
+}
+
+create_iplimit_jails() {
+    # Use default bantime if not passed => 30 minutes
+    local bantime="${1:-30}"
+
+    # Uncomment 'allowipv6 = auto' in fail2ban.conf
+    sed -i 's/#allowipv6 = auto/allowipv6 = auto/g' /etc/fail2ban/fail2ban.conf
+
+    # On Debian 12+ fail2ban's default backend should be changed to systemd
+    if [[  "${release}" == "debian" && ${os_version} -ge 12 ]]; then
+        sed -i '0,/action =/s/backend = auto/backend = systemd/' /etc/fail2ban/jail.conf
+    fi
+
+    cat << EOF > /etc/fail2ban/jail.d/3x-ipl.conf
+[3x-ipl]
+enabled=true
+backend=auto
+filter=3x-ipl
+action=3x-ipl
+logpath=${iplimit_log_path}
+maxretry=2
+findtime=32
+bantime=${bantime}m
+EOF
+
+    cat << EOF > /etc/fail2ban/filter.d/3x-ipl.conf
+[Definition]
+datepattern = ^%%Y/%%m/%%d %%H:%%M:%%S
+failregex   = \[LIMIT_IP\]\s*Email\s*=\s*<F-USER>.+</F-USER>\s*\|\|\s*SRC\s*=\s*<ADDR>
+ignoreregex =
+EOF
+
+    cat << EOF > /etc/fail2ban/action.d/3x-ipl.conf
+[INCLUDES]
+before = iptables-allports.conf
+
+[Definition]
+actionstart = <iptables> -N f2b-<name>
+              <iptables> -A f2b-<name> -j <returntype>
+              <iptables> -I <chain> -p <protocol> -j f2b-<name>
+
+actionstop = <iptables> -D <chain> -p <protocol> -j f2b-<name>
+             <actionflush>
+             <iptables> -X f2b-<name>
+
+actioncheck = <iptables> -n -L <chain> | grep -q 'f2b-<name>[ \t]'
+
+actionban = <iptables> -I f2b-<name> 1 -s <ip> -j <blocktype>
+            echo "\$(date +"%%Y/%%m/%%d %%H:%%M:%%S")   BAN   [Email] = <F-USER> [IP] = <ip> banned for <bantime> seconds." >> ${iplimit_banned_log_path}
+
+actionunban = <iptables> -D f2b-<name> -s <ip> -j <blocktype>
+              echo "\$(date +"%%Y/%%m/%%d %%H:%%M:%%S")   UNBAN   [Email] = <F-USER> [IP] = <ip> unbanned." >> ${iplimit_banned_log_path}
+
+[Init]
+name = default
+protocol = tcp
+chain = INPUT
+EOF
+
+    echo -e "${green}创建的 IP Limit 限制文件禁止时间为 ${bantime} 分钟。${plain}"
+}
+
+iplimit_remove_conflicts() {
+    local jail_files=(
+        /etc/fail2ban/jail.conf
+        /etc/fail2ban/jail.local
+    )
+
+    for file in "${jail_files[@]}"; do
+        # Check for [3x-ipl] config in jail file then remove it
+        if test -f "${file}" && grep -qw '3x-ipl' ${file}; then
+            sed -i "/\[3x-ipl\]/,/^$/d" ${file}
+            echo -e "${yellow}消除系统环境中 [3x-ipl] 的冲突 (${file})!${plain}\n"
+        fi
+    done
 }
 
 show_usage() {
