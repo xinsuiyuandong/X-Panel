@@ -321,7 +321,9 @@ ssh_forwarding() {
     if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
         echo -e "${green}面板已安装证书采用SSL保护${plain}"
         echo ""
-        echo -e "${green}登录访问面板URL: https://你的域名:${existing_port}${green}${existing_webBasePath}${plain}" 
+        local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+        domain=$(basename "$(dirname "$existing_cert")")
+        echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}"
     fi
     echo ""
     if [[ -z "$existing_cert" && -z "$existing_key" ]]; then
