@@ -817,11 +817,11 @@ class LanguageManager {
                 if (LanguageManager.isSupportLanguage(lang)) {
                     CookieManager.setCookie("lang", lang, 150);
                 } else {
-                    CookieManager.setCookie("lang", "en-US", 150);
+                    CookieManager.setCookie("lang", "zh-CN", 150);
                     window.location.reload();
                 }
             } else {
-                CookieManager.setCookie("lang", "en-US", 150);
+                CookieManager.setCookie("lang", "zh-CN", 150);
                 window.location.reload();
             }
         }
@@ -831,7 +831,7 @@ class LanguageManager {
 
     static setLanguage(language) {
         if (!LanguageManager.isSupportLanguage(language)) {
-            language = "en-US";
+            language = "zh-CN";
         }
 
         CookieManager.setCookie("lang", language, 150);
