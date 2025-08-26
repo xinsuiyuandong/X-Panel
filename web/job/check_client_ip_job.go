@@ -180,13 +180,13 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 	defer j.xrayApi.Close()
 
 	// 中文注释: 优化 - 在一次循环中同时获取 tag 和 protocol
-	inboundInfo := make(map[int]struct {
+	inboundInfoMap := make(map[int]struct {
 		Limit    int
 		Tag      string
 		Protocol model.Protocol
 	})
 	for _, inbound := range inbounds {
-		inboundInfo[inbound.Id] = struct {
+		inboundInfoMap[inbound.Id] = struct {
 			Limit    int
 			Tag      string
 			Protocol model.Protocol
@@ -198,13 +198,14 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 	defer activeClientsLock.RUnlock()
 	defer clientStatusLock.Unlock()
 
+	// 第一步: 处理当前在线的用户
 	for email, ips := range ActiveClientIPs {
 		traffic, err := j.inboundService.GetClientTrafficByEmail(email)
 		if err != nil || traffic == nil {
 			continue
 		}
 
-		info, ok := inboundInfo[traffic.InboundId]
+		info, ok := inboundInfoMap[traffic.InboundId]
 		if !ok || info.Limit <= 0 {
 			continue
 		}
@@ -213,76 +214,114 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 		isBanned := ClientStatus[email]
 		activeIPCount := len(ips)
 
-		// 情况一: IP数量超限，且用户当前未被封禁 -> 执行封禁 (UUID 替换)
+                                  // 调用封禁函数
 		if activeIPCount > info.Limit && !isBanned {
-			_, client, err := j.inboundService.GetClientByEmail(email)
-			if err != nil || client == nil {
-				continue
-			}
-			logger.Infof("设备限制超限: 用户 %s. 限制: %d, 当前活跃: %d. 禁用该用户。", email, info.Limit, activeIPCount)
-
-			// 中文注释: 步骤一：先从 Xray-Core 中删除该用户。
-			err = j.xrayApi.RemoveUser(info.Tag, email)
-			if err != nil {
-				// 中文注释: 即便删除失败（例如，因为某些原因Xray内存中已无此用户），也应继续尝试添加封禁用的临时用户。
-				logger.Warningf("尝试为用户 %s 启动设备限制时，删除原始用户失败(可忽略): %v", email, err)
-			}
-
-			// 中文注释: 创建一个带有随机UUID/Password的临时客户端配置用于“封禁”
-			tempClient := *client
-                                                   
-                                                   // 适用于 VMess/VLESS
-			if tempClient.ID != "" {
-				tempClient.ID = RandomUUID()
-			}
-
-                                                   // 适用于 Trojan/Shadowsocks/Socks
-			if tempClient.Password != "" {
-				tempClient.Password = RandomUUID()
-			}
-			var clientMap map[string]interface{}
-			clientJson, _ := json.Marshal(tempClient)
-			json.Unmarshal(clientJson, &clientMap)
-
-			// 中文注释: 步骤二：将这个带有错误UUID/Password的临时用户添加回去。
-			// 客户端持有的还是旧的UUID，自然就无法通过验证，从而达到了“封禁”的效果。
-			err = j.xrayApi.AddUser(string(info.Protocol), info.Tag, clientMap)
-			if err != nil {
-				logger.Warningf("通过API限制用户 %s 失败: %v", email, err)
-			} else {
-				// 中文注释: 封禁成功后，在内存中标记该用户为“已封禁”状态。
-				ClientStatus[email] = true
-			}
+			j.banUser(email, &info)
 		}
 
-		// 情况二: IP数量已恢复正常，但用户当前处于封禁状态 -> 执行解封 (恢复原始 UUID)
+                                  // 调用解封函数
 		if activeIPCount <= info.Limit && isBanned {
-			_, client, err := j.inboundService.GetClientByEmail(email)
-			if err != nil || client == nil {
+			j.unbanUser(email, &info)
+		}
+	}
+
+	// 第二步: 专门处理那些“已被封禁”但“已不在线”的用户，为他们解封
+	for email, isBanned := range ClientStatus {
+		if !isBanned {
+			continue
+		}
+		if _, online := ActiveClientIPs[email]; !online {
+			traffic, err := j.inboundService.GetClientTrafficByEmail(email)
+			if err != nil || traffic == nil {
 				continue
 			}
-			logger.Infof("设备数量已恢复: 用户 %s. 限制: %d, 当前活跃: %d. 恢复用户。", email, info.Limit, activeIPCount)
-
-			// 中文注释: 步骤一：先从 Xray-Core 中删除用于“封禁”的那个临时用户。
-			err = j.xrayApi.RemoveUser(info.Tag, email)
-			if err != nil {
-				// 中文注释: 同样，这里的删除失败也可以容忍，最终目的是恢复用户。
-				logger.Warningf("尝试为用户 %s 解除设备限制时，删除临时用户失败(可忽略): %v", email, err)
+			info, ok := inboundInfoMap[traffic.InboundId]
+			if !ok {
+				continue
 			}
+			logger.Infof("已封禁用户 %s 已完全下线，执行解封操作。", email)
 
-			var clientMap map[string]interface{}
-			clientJson, _ := json.Marshal(client)
-			json.Unmarshal(clientJson, &clientMap)
-
-			// 中文注释: 步骤二：将数据库中原始的、正确的用户信息重新添加回 Xray-Core，从而实现“解封”。
-			err = j.xrayApi.AddUser(string(info.Protocol), info.Tag, clientMap)
-			if err != nil {
-				logger.Warningf("通过API恢复用户 %s 失败: %v", email, err)
-			} else {
-				// 中文注释: 解封成功后，从内存中移除该用户的“已封禁”状态标记。
-				delete(ClientStatus, email)
-			}
+                                                  // 调用解封函数
+			j.unbanUser(email, &info)
 		}
+	}
+}
+
+// banUser 中文注释: 封装的封禁用户函数；IP数量超限，且用户当前未被封禁 -> 执行封禁 (UUID 替换)
+func (j *CheckDeviceLimitJob) banUser(email string, info *struct {
+	Limit    int
+	Tag      string
+	Protocol model.Protocol
+}) {
+	_, client, err := j.inboundService.GetClientByEmail(email)
+	if err != nil || client == nil {
+		return
+	}
+		logger.Infof("〔设备限制〕超限: 用户 %s. 限制: %d. 执行封禁掐网。", email, info.Limit)
+	
+	// 中文注释: 步骤一：先从 Xray-Core 中删除该用户。
+	j.xrayApi.RemoveUser(info.Tag, email)
+    
+    // =================================================================
+	// 中文注释: 增加 5000 毫秒延时，解决竞态条件问题
+	time.Sleep(5000 * time.Millisecond)
+    // =================================================================
+
+	// 中文注释: 创建一个带有随机UUID/Password的临时客户端配置用于“封禁”
+	tempClient := *client
+
+                 // 适用于 VMess/VLESS
+	if tempClient.ID != "" { tempClient.ID = RandomUUID() }
+
+                 // 适用于 Trojan/Shadowsocks/Socks
+	if tempClient.Password != "" { tempClient.Password = RandomUUID() }
+
+	var clientMap map[string]interface{}
+	clientJson, _ := json.Marshal(tempClient)
+	json.Unmarshal(clientJson, &clientMap)
+
+                 // 中文注释: 步骤二：将这个带有错误UUID/Password的临时用户添加回去。
+                 // 客户端持有的还是旧的UUID，自然就无法通过验证，从而达到了“封禁”的效果。
+	err = j.xrayApi.AddUser(string(info.Protocol), info.Tag, clientMap)
+	if err != nil {
+		logger.Warningf("通过API封禁用户 %s 失败: %v", email, err)
+	} else {
+	                 // 中文注释: 封禁成功后，在内存中标记该用户为“已封禁”状态。
+		ClientStatus[email] = true
+	}
+}
+
+// unbanUser 中文注释: 封装的解封用户函数；IP数量已恢复正常，但用户处于封禁状态 -> 执行解封 (恢复原始 UUID)
+func (j *CheckDeviceLimitJob) unbanUser(email string, info *struct {
+	Limit    int
+	Tag      string
+	Protocol model.Protocol
+}) {
+	_, client, err := j.inboundService.GetClientByEmail(email)
+	if err != nil || client == nil {
+		return
+	}
+                 logger.Infof("〔设备数量〕已恢复: 用户 %s. 限制: %d. 恢复用户。", email, info.Limit)	
+
+                 // 中文注释: 步骤一：先从 Xray-Core 中删除用于“封禁”的那个临时用户。
+	j.xrayApi.RemoveUser(info.Tag, email)
+    
+    // =================================================================
+	// 中文注释: 同样增加 5000 毫秒延时，确保解封操作的稳定性
+	time.Sleep(5000 * time.Millisecond)
+    // =================================================================
+
+	var clientMap map[string]interface{}
+	clientJson, _ := json.Marshal(client)
+	json.Unmarshal(clientJson, &clientMap)
+
+                 // 中文注释: 步骤二：将数据库中原始的、正确的用户信息重新添加回 Xray-Core，从而实现“解封”。
+	err = j.xrayApi.AddUser(string(info.Protocol), info.Tag, clientMap)
+	if err != nil {
+		logger.Warningf("通过API恢复用户 %s 失败: %v", email, err)
+	} else {
+                                  // 中文注释: 解封成功后，从内存中移除该用户的“已封禁”状态标记。
+		delete(ClientStatus, email)
 	}
 }
 
