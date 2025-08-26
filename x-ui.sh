@@ -1265,14 +1265,188 @@ warp_cloudflare() {
     esac
 }
 
+# --------- 【订阅转换】模块 ---------- 
 subconverter() {
-        bash <(curl -fsSL https://get.docker.com | bash -s docker) 
-        ipv4=$(curl -s4m8 ip.p3terx.com -k | sed -n 1p)
-        docker run -d --name sub --restart always -p 18080:80 -p 25500:25500 -v /PATH/sub/conf:/usr/share/nginx/html/conf stilleshan/sub
-    echo -e "${yellow}【链接转换模块】安装完成！！！"
-    echo -e "${green}【订阅转换功能】访问地址为：${plain}${green}http://$ipv4:18080"
-    echo -e "${green}【后端服务】拉取地址为：${plain}${green}http://$ipv4:25500"
-    show_menu
+echo ""
+echo -e "${green}==============================================="
+echo -e "〔订阅转换〕一键部署"
+echo -e "1. 自动申请 SSL 证书"
+echo -e "2. 自动安装 Docker + Nginx"
+echo -e "3. 自动部署 stilleshan/sub 容器"
+echo -e "4. 自动配置反向代理 + SSL 证书"
+echo -e "5. 自动检测域名解析是否正确"
+echo -e "作者：〔3X-UI中文优化版〕专属定制"
+echo -e "===============================================${plain}"
+echo ""
+
+# --------- 域名输入 ----------
+read -rp "请输入订阅转换访问域名（例如: sub.xxxxx.com 请务必以sub开头）: " SUB_DOMAIN
+read -rp "请输入订阅后端 API 域名（例如: api.xxxxx.com 请务必以api开头）: " API_DOMAIN
+echo ""
+
+# --------- 检测域名格式 ----------
+domain_regex="^([a-zA-Z0-9][-a-zA-Z0-9]{0,62}\.)+[a-zA-Z]{2,}$"
+if [[ ! $SUB_DOMAIN =~ $domain_regex ]]; then
+    echo -e "${red}错误: 域名格式不正确 → $SUB_DOMAIN${plain}"
+    exit 1
+fi
+if [[ ! $API_DOMAIN =~ $domain_regex ]]; then
+    echo -e "${red}错误: 域名格式不正确 → $API_DOMAIN${plain}"
+    exit 1
+fi
+
+# --------- 获取本机公网 IP ----------
+LOCAL_IP=$(curl -s4m8 ip.p3terx.com -k | sed -n 1p)
+
+# --------- 检测域名解析 ----------
+echo -e "${yellow}正在检测域名解析情况...${plain}"
+SUB_IP=$(dig +short $SUB_DOMAIN | tail -n1)
+API_IP=$(dig +short $API_DOMAIN | tail -n1)
+echo ""
+
+if [[ -z $SUB_IP ]]; then
+    echo -e "${red}错误: 无法解析订阅转换访问域名 $SUB_DOMAIN，请检查 DNS 设置！${plain}"
+    exit 1
+fi
+if [[ -z $API_IP ]]; then
+    echo -e "${red}错误: 无法解析后端 API 域名 $API_DOMAIN，请检查 DNS 设置！${plain}"
+    exit 1
+fi
+if [[ "$SUB_IP" != "$LOCAL_IP" ]]; then
+    echo -e "${red}错误: 域名 $SUB_DOMAIN 解析到 $SUB_IP，但本机 IP 是 $LOCAL_IP${plain}"
+    exit 1
+fi
+if [[ "$API_IP" != "$LOCAL_IP" ]]; then
+    echo -e "${red}错误: 域名 $API_DOMAIN 解析到 $API_IP，但本机 IP 是 $LOCAL_IP${plain}"
+    exit 1
+fi
+echo -e "${green}域名解析检测通过！${plain}"
+echo ""
+echo -e "订阅转换访问域名: ${yellow}$SUB_DOMAIN ($SUB_IP)${plain}"
+echo ""
+echo -e "订阅后端 API 域名: ${yellow}$API_DOMAIN ($API_IP)${plain}"
+echo ""
+
+# --------- 安装 acme.sh ----------
+if [ ! -f ~/.acme.sh/acme.sh ]; then
+    echo -e "${yellow}acme.sh 未安装，正在安装...${plain}"
+    curl https://get.acme.sh | sh
+    ~/.acme.sh/acme.sh --upgrade --auto-upgrade
+else
+    echo -e "${green}检测到 acme.sh 已安装，跳过安装步骤${plain}"
+fi
+
+# --------- 申请 SSL 证书（standalone 占用 80 端口） ----------
+for domain in $SUB_DOMAIN $API_DOMAIN; do
+    if [ ! -f ~/.acme.sh/${domain}_ecc/${domain}.cer ]; then
+        echo -e "${yellow}-------------->>>>>>>>为域名 $domain 申请 SSL 证书...${plain}"
+        ~/.acme.sh/acme.sh --issue -d "$domain" --standalone --keylength ec-256
+    else
+        echo -e "${green}检测到域名 $domain 已存在证书，跳过申请${plain}"
+    fi
+done
+
+# --------- 安装 Docker ----------
+if ! command -v docker &>/dev/null; then
+    echo -e "${yellow}-------------->>>>>>>>未检测到 Docker，正在安装...${plain}"
+    curl -fsSL https://get.docker.com | bash -s docker
+    systemctl enable docker
+    systemctl start docker
+else
+    echo -e "${green}检测到 Docker 已安装，跳过安装步骤${plain}"
+fi
+
+# --------- 安装 Nginx ----------
+if ! command -v nginx &>/dev/null; then
+    echo -e "${yellow}-------------->>>>>>>>未检测到 Nginx，正在安装...${plain}"
+    apt update && apt install -y nginx
+    systemctl enable nginx
+    systemctl start nginx
+else
+    echo -e "${green}检测到 Nginx 已安装，跳过安装步骤${plain}"
+fi
+
+# --------- 部署证书到 Nginx ----------
+mkdir -p /etc/nginx/ssl
+for domain in $SUB_DOMAIN $API_DOMAIN; do
+    ~/.acme.sh/acme.sh --install-cert -d "$domain" --ecc \
+        --key-file /etc/nginx/ssl/${domain}.key \
+        --fullchain-file /etc/nginx/ssl/${domain}.crt \
+        --reloadcmd "systemctl reload nginx"
+done
+
+# --------- 配置 Nginx 反向代理 ----------
+NGINX_CONF="/etc/nginx/conf.d/subconverter.conf"
+cat > $NGINX_CONF <<EOF
+server {
+    listen 80;
+    server_name $SUB_DOMAIN $API_DOMAIN;
+    return 301 https://\$host\$request_uri;
+}
+
+# Web 界面：sub 域名 -> 容器 18080
+server {
+    listen 443 ssl http2;
+    server_name $SUB_DOMAIN;
+
+    ssl_certificate /etc/nginx/ssl/${SUB_DOMAIN}.crt;
+    ssl_certificate_key /etc/nginx/ssl/${SUB_DOMAIN}.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    location / {
+        proxy_pass http://127.0.0.1:18080/;   # 末尾加 / 更稳妥
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    }
+}
+
+# API：api 域名 -> 容器 25500
+server {
+    listen 443 ssl http2;
+    server_name $API_DOMAIN;
+
+    ssl_certificate /etc/nginx/ssl/${API_DOMAIN}.crt;
+    ssl_certificate_key /etc/nginx/ssl/${API_DOMAIN}.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    location / {
+        proxy_pass http://127.0.0.1:25500/;   # 关键：走到后端服务
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    }
+}
+EOF
+
+# --------- 检查并重启 Nginx ----------
+nginx -t && systemctl restart nginx
+
+
+# --------- 启动 Docker 容器 ----------
+docker rm -f sub >/dev/null 2>&1
+
+docker run -d --name sub --restart always \
+  -p 18080:80 \
+  -p 25500:25500 \
+  -e SITE_NAME="sub" \
+  -e API_URL="https://${API_DOMAIN}" \
+  stilleshan/sub:latest
+
+# --------- 完成提示 ----------
+echo ""
+echo -e "${green}【订阅转换模块】安装完成！！！${plain}"
+echo ""
+echo -e "${green}Web 界面访问地址：https://${SUB_DOMAIN}${plain}"
+echo ""
+echo -e "${green}后端 API 拉取地址：https://${API_DOMAIN}${plain}"
+echo ""
+echo -e "${green}PS：即使 VPS 重启，Docker 容器会自动启动，无需手动操作${plain}"
+
+# --------- 返回菜单 ----------
+show_menu
 }
 
 run_speedtest() {
