@@ -35,6 +35,9 @@ type Inbound struct {
 	Remark      string               `json:"remark" form:"remark"`
 	Enable      bool                 `json:"enable" form:"enable"`
 	ExpiryTime  int64                `json:"expiryTime" form:"expiryTime"`
+	// 中文注释: 新增设备限制字段，用于存储每个入站的设备数限制。
+	// gorm:"column:device_limit;default:0" 定义了数据库中的字段名和默认值。
+	DeviceLimit int                  `json:"deviceLimit" form:"deviceLimit" gorm:"column:device_limit;default:0"`
 	ClientStats []xray.ClientTraffic `gorm:"foreignKey:InboundId;references:Id" json:"clientStats" form:"clientStats"`
 
 	// config part
