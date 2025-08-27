@@ -1281,6 +1281,7 @@ echo ""
 
 # --------- 域名输入 ----------
 read -rp "请输入订阅转换访问域名（例如: sub.xxxxx.com 请务必以sub开头）: " SUB_DOMAIN
+echo ""
 read -rp "请输入订阅后端 API 域名（例如: api.xxxxx.com 请务必以api开头）: " API_DOMAIN
 echo ""
 
@@ -1301,6 +1302,7 @@ LOCAL_IP=$(curl -s4m8 ip.p3terx.com -k | sed -n 1p)
 # --------- 检测域名解析 ----------
 echo -e "${yellow}正在检测域名解析情况...${plain}"
 SUB_IP=$(dig +short $SUB_DOMAIN | tail -n1)
+echo ""
 API_IP=$(dig +short $API_DOMAIN | tail -n1)
 echo ""
 
@@ -1329,7 +1331,7 @@ echo ""
 
 # --------- 安装 acme.sh ----------
 if [ ! -f ~/.acme.sh/acme.sh ]; then
-    echo -e "${yellow}acme.sh 未安装，正在安装...${plain}"
+    echo -e "${yellow}-------------->>>>>>>>acme.sh 未安装，正在安装...${plain}"
     curl https://get.acme.sh | sh
     ~/.acme.sh/acme.sh --upgrade --auto-upgrade
 else
