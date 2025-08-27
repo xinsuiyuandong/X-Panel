@@ -11,14 +11,14 @@ import (
 	"sort"
 	"time"
 	"sync"
-                 "crypto/rand"
-                 "encoding/hex"
+    "crypto/rand"
+    "encoding/hex"
 
 	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/xray"
-                 "x-ui/web/service"
+    "x-ui/web/service"
 )
 
 // =================================================================
@@ -216,12 +216,14 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 
                                   // 调用封禁函数
 		if activeIPCount > info.Limit && !isBanned {
-			j.banUser(email, &info)
+			// 中文注释: 调用封禁函数时，传入当前的IP数用于记录日志
+			j.banUser(email, activeIPCount, &info)
 		}
 
                                   // 调用解封函数
 		if activeIPCount <= info.Limit && isBanned {
-			j.unbanUser(email, &info)
+			// 中文注释: 调用解封函数时，传入当前的IP数用于记录日志
+			j.unbanUser(email, activeIPCount, &info)
 		}
 	}
 
@@ -241,23 +243,30 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 			}
 			logger.Infof("已封禁用户 %s 已完全下线，执行解封操作。", email)
 
-                                                  // 调用解封函数
-			j.unbanUser(email, &info)
+			// 调用解封函数，这种情况下：活跃IP数为0，我们直接传入0用于记录日志
+			j.unbanUser(email, 0, &info)
 		}
 	}
 }
 
 // banUser 中文注释: 封装的封禁用户函数；IP数量超限，且用户当前未被封禁 -> 执行封禁 (UUID 替换)
-func (j *CheckDeviceLimitJob) banUser(email string, info *struct {
+func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *struct {
 	Limit    int
 	Tag      string
 	Protocol model.Protocol
 }) {
+    // =================================================================
+    // 这一行代码是整个解封逻辑的灵魂！
+    // GetClientByEmail 函数会去查询您的数据库 (x-ui.db)，
+    // 找到 `inbounds` 表，解析其中的 `settings` 字段，并从中去，
+    // 读取出您最初设置的、最原始、最正确的用户信息（包括最原始的UUID），
+    // 然后把它赋值给 `client` 这个变量；此时，`client` 变量就持有了那个“老链接”的正确原始 UUID。
+    // =================================================================
 	_, client, err := j.inboundService.GetClientByEmail(email)
 	if err != nil || client == nil {
 		return
 	}
-		logger.Infof("〔设备限制〕超限: 用户 %s. 限制: %d. 执行封禁掐网。", email, info.Limit)
+	logger.Infof("〔设备限制〕超限：用户 %s. 限制: %d, 当前活跃: %d. 执行封禁掐网。", email, info.Limit, activeIPCount)
 	
 	// 中文注释: 步骤一：先从 Xray-Core 中删除该用户。
 	j.xrayApi.RemoveUser(info.Tag, email)
@@ -292,7 +301,7 @@ func (j *CheckDeviceLimitJob) banUser(email string, info *struct {
 }
 
 // unbanUser 中文注释: 封装的解封用户函数；IP数量已恢复正常，但用户处于封禁状态 -> 执行解封 (恢复原始 UUID)
-func (j *CheckDeviceLimitJob) unbanUser(email string, info *struct {
+func (j *CheckDeviceLimitJob) unbanUser(email string, activeIPCount int, info *struct {
 	Limit    int
 	Tag      string
 	Protocol model.Protocol
@@ -301,7 +310,7 @@ func (j *CheckDeviceLimitJob) unbanUser(email string, info *struct {
 	if err != nil || client == nil {
 		return
 	}
-                 logger.Infof("〔设备数量〕已恢复: 用户 %s. 限制: %d. 恢复用户。", email, info.Limit)	
+	logger.Infof("〔设备数量〕已恢复：用户 %s. 限制: %d, 当前活跃: %d. 执行解封/恢复用户。", email, info.Limit, activeIPCount)	
 
                  // 中文注释: 步骤一：先从 Xray-Core 中删除用于“封禁”的那个临时用户。
 	j.xrayApi.RemoveUser(info.Tag, email)
