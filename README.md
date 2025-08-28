@@ -249,6 +249,8 @@ VERSION=v2.4.5 && bash <(curl -Ls "https://raw.githubusercontent.com/xeefei/3x-u
 ![38](./media/38.png)
 ##### 3、具体要查看【设备限制】功能的封禁情况，就进入〔3X-UI中文版〕后台用日志查看。
 ![39](./media/39.png)
+##### 4、以下图片里面，详细阐述了我们的〔设备限制〕功能，跟3X-UI原本就有的〔IP Limit〕之间的区别对比。
+![40](./media/40.png)
 
 ------------
 ## 用3x-ui如何开启【每月流量自动重置】？
