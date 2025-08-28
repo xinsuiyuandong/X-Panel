@@ -405,7 +405,6 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	oldInbound.Settings = inbound.Settings
 	oldInbound.StreamSettings = inbound.StreamSettings
 	oldInbound.Sniffing = inbound.Sniffing
-	oldInbound.Allocate = inbound.Allocate
 	if inbound.Listen == "" || inbound.Listen == "0.0.0.0" || inbound.Listen == "::" || inbound.Listen == "::0" {
 		oldInbound.Tag = fmt.Sprintf("inbound-%v", inbound.Port)
 	} else {
@@ -2039,7 +2038,6 @@ func (s *InboundService) MigrationRequirements() {
 			tx.Rollback()
 		}
 	}()
-	
 
 	// Calculate and backfill all_time from up+down for inbounds and clients
 	err = tx.Exec(`

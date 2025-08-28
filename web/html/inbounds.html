@@ -1099,7 +1099,6 @@
                     settings: Inbound.Settings.getSettings(baseInbound.protocol).toString(),
                     streamSettings: baseInbound.stream.toString(),
                     sniffing: baseInbound.sniffing.toString(),
-                    allocate: baseInbound.allocate.toString(),
                 };
                 await this.submit('/panel/inbound/add', data, inModal);
             },
@@ -1151,7 +1150,6 @@
                   data.streamSettings = JSON.stringify({ sockopt: inbound.stream.sockopt.toJson() }, null, 2);
                 }
                 data.sniffing = inbound.sniffing.toString();
-                data.allocate = inbound.allocate.toString();
 
                 await this.submit('/panel/inbound/add', data, inModal);
             },
@@ -1177,7 +1175,6 @@
                   data.streamSettings = JSON.stringify({ sockopt: inbound.stream.sockopt.toJson() }, null, 2);
                 }
                 data.sniffing = inbound.sniffing.toString();
-                data.allocate = inbound.allocate.toString();
 
                 await this.submit(`/panel/inbound/update/${dbInbound.id}`, data, inModal);
             },
