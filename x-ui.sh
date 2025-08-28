@@ -1324,9 +1324,9 @@ if [[ "$API_IP" != "$LOCAL_IP" ]]; then
 fi
 echo -e "${green}域名解析检测通过！${plain}"
 echo ""
-echo -e "订阅转换访问域名: ${yellow}$SUB_DOMAIN ($SUB_IP)${plain}"
+echo -e "订阅转换访问域名: ${yellow}https://${SUB_DOMAIN}:8443${plain}"
 echo ""
-echo -e "订阅后端 API 域名: ${yellow}$API_DOMAIN ($API_IP)${plain}"
+echo -e "订阅后端 API 域名: ${yellow}https://${API_DOMAIN}:8443${plain}"
 echo ""
 
 # --------- 安装 acme.sh ----------
@@ -1381,14 +1381,14 @@ done
 NGINX_CONF="/etc/nginx/conf.d/subconverter.conf"
 cat > $NGINX_CONF <<EOF
 server {
-    listen 80;
+    listen 8080;
     server_name $SUB_DOMAIN $API_DOMAIN;
-    return 301 https://\$host\$request_uri;
+    return 301 https://\$host:8443\$request_uri;
 }
 
 # Web 界面：sub 域名 -> 容器 18080
 server {
-    listen 443 ssl http2;
+    listen 8443 ssl http2;
     server_name $SUB_DOMAIN;
 
     ssl_certificate /etc/nginx/ssl/${SUB_DOMAIN}.crt;
@@ -1398,6 +1398,8 @@ server {
     location / {
         proxy_pass http://127.0.0.1:18080/;   # 末尾加 / 更稳妥
         proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -1406,7 +1408,7 @@ server {
 
 # API：api 域名 -> 容器 25500
 server {
-    listen 443 ssl http2;
+    listen 8443 ssl http2;
     server_name $API_DOMAIN;
 
     ssl_certificate /etc/nginx/ssl/${API_DOMAIN}.crt;
@@ -1416,6 +1418,8 @@ server {
     location / {
         proxy_pass http://127.0.0.1:25500/;   # 关键：走到后端服务
         proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -1426,6 +1430,14 @@ EOF
 # --------- 检查并重启 Nginx ----------
 nginx -t && systemctl restart nginx
 
+# ================================
+# 【新增】为后端创建独立的配置文件
+# ================================
+mkdir -p /opt/sub/conf
+cat > /opt/sub/conf/config.yml <<EOF
+listen: 0.0.0.0:25500
+api_access: true
+EOF
 
 # --------- 启动 Docker 容器 ----------
 docker rm -f sub >/dev/null 2>&1
@@ -1434,16 +1446,22 @@ docker run -d --name sub --restart always \
   -p 18080:80 \
   -p 25500:25500 \
   -e SITE_NAME="sub" \
-  -e API_URL="https://${API_DOMAIN}" \
+  -e API_URL="https://${API_DOMAIN}:8443" \
+  -v /opt/sub/conf/config.yml:/base/config.yml \
   stilleshan/sub:latest
+
+# 【重要】开放防火墙端口
+echo ""
+echo -e "${yellow}请务必手动放行 8080 和 8443 端口，以及 18080 和 25500 端口！！${plain}"
+echo ""
 
 # --------- 完成提示 ----------
 echo ""
 echo -e "${green}【订阅转换模块】安装完成！！！${plain}"
 echo ""
-echo -e "${green}Web 界面访问地址：https://${SUB_DOMAIN}${plain}"
+echo -e "${green}Web 界面访问地址：https://${SUB_DOMAIN}:8443${plain}"
 echo ""
-echo -e "${green}后端 API 拉取地址：https://${API_DOMAIN}${plain}"
+echo -e "${green}后端 API 拉取地址：https://${API_DOMAIN}:8443${plain}"
 echo ""
 echo -e "${green}PS：即使 VPS 重启，Docker 容器会自动启动，无需手动操作${plain}"
 
