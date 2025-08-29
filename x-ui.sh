@@ -1297,6 +1297,10 @@ else
     exit 1
 fi
 
+# --------- 安装/部署sublink服务 ----------
+
+bash <(curl -Ls https://raw.githubusercontent.com/xeefei/sublink/main/install.sh)
+
 
 # --------- 安装 Nginx ----------
 if ! command -v nginx &>/dev/null; then
@@ -1317,11 +1321,6 @@ cp "${acme_path}/${domain}.key" "/etc/nginx/ssl/${domain}.key"
 
 # 重载 nginx，让新证书生效
 systemctl reload nginx
-
-# --------- 安装/部署sublink服务 ----------
-
-bash <(curl -Ls https://raw.githubusercontent.com/xeefei/sublink/main/install.sh)
-
 
 # --------- 配置 Nginx 反向代理 ----------
 NGINX_CONF="/etc/nginx/conf.d/sublink.conf"
@@ -1356,6 +1355,8 @@ echo ""
 # --------- 完成提示 ----------
 echo ""
 echo -e "${green}【订阅转换模块】安装完成！！！${plain}"
+echo ""
+echo -e "${green}登录用户名：admin，密码：123456，请进后台自行修改${plain}"
 echo ""
 echo -e "${green}Web 界面访问地址：https://${domain}:15268${plain}"
 echo ""
