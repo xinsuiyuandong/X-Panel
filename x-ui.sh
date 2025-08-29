@@ -1377,46 +1377,73 @@ for domain in $SUB_DOMAIN $API_DOMAIN; do
         --reloadcmd "systemctl reload nginx"
 done
 
+# --------- 【订阅转换】模块 ---------- 
+subconverter() {
+echo ""
+echo -e "${green}==============================================="
+echo -e "〔订阅转换〕一键部署"
+echo -e "1. 自动安装/部署Nginx"
+echo -e "2. 自动调用面板的证书"
+echo -e "3. 自动部署sublink服务"
+echo -e "4. 自动配置Nginx反向代理"
+echo -e "5. 可直观在前端页面配置订阅"
+echo -e "作者：〔3X-UI中文优化版〕专属定制"
+echo -e "===============================================${plain}"
+echo ""
+    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
+
+    if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
+    echo -e "${green}面板已安装证书采用SSL保护${plain}"
+    echo ""
+    domain=$(basename "$(dirname "$existing_cert")")
+    echo -e "${green}------------->>>>接下来进行sublink订阅转换服务的安装  ........${plain}"
+    echo ""
+else
+    echo -e "${red}警告：未找到证书和密钥，面板不安全！${plain}"
+    echo ""
+    echo -e "${green}------->>>>且不能安装sublink订阅转换服务<<<<-------${plain}"
+    echo ""
+    sleep 5
+    exit 1
+fi
+
+
+# --------- 安装 Nginx ----------
+if ! command -v nginx &>/dev/null; then
+    echo -e "${yellow}-------------->>>>>>>>未检测到 Nginx，正在安装...${plain}"
+    apt update && apt install -y nginx
+    systemctl enable nginx
+    systemctl start nginx
+else
+    echo -e "${green}检测到 Nginx 已安装，跳过安装步骤${plain}"
+fi
+
+# --------- 拷贝3X-UI已有证书到 Nginx ----------
+mkdir -p /etc/nginx/ssl
+acme_path="/root/.acme.sh/${domain}_ecc"
+
+cp "${acme_path}/fullchain.cer" "/etc/nginx/ssl/${domain}.cer"
+cp "${acme_path}/${domain}.key" "/etc/nginx/ssl/${domain}.key"
+
+# 重载 nginx，让新证书生效
+systemctl reload nginx
+
 # --------- 配置 Nginx 反向代理 ----------
-NGINX_CONF="/etc/nginx/conf.d/subconverter.conf"
+NGINX_CONF="/etc/nginx/conf.d/sublink.conf"
 cat > $NGINX_CONF <<EOF
 server {
-    listen 8080;
-    server_name $SUB_DOMAIN $API_DOMAIN;
-    return 301 https://\$host:8443\$request_uri;
-}
+    listen 15268 ssl http2;
+    server_name ${domain};
 
-# Web 界面：sub 域名 -> 容器 18080
-server {
-    listen 8443 ssl http2;
-    server_name $SUB_DOMAIN;
+    # 证书路径（从 acme.sh 复制到 /etc/nginx/ssl/ 下）
+    ssl_certificate     /etc/nginx/ssl/${domain}.cer;
+    ssl_certificate_key /etc/nginx/ssl/${domain}.key;
 
-    ssl_certificate /etc/nginx/ssl/${SUB_DOMAIN}.crt;
-    ssl_certificate_key /etc/nginx/ssl/${SUB_DOMAIN}.key;
     ssl_protocols TLSv1.2 TLSv1.3;
 
     location / {
-        proxy_pass http://127.0.0.1:18080/;   # 末尾加 / 更稳妥
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    }
-}
-
-# API：api 域名 -> 容器 25500
-server {
-    listen 8443 ssl http2;
-    server_name $API_DOMAIN;
-
-    ssl_certificate /etc/nginx/ssl/${API_DOMAIN}.crt;
-    ssl_certificate_key /etc/nginx/ssl/${API_DOMAIN}.key;
-    ssl_protocols TLSv1.2 TLSv1.3;
-
-    location / {
-        proxy_pass http://127.0.0.1:25500/;   # 关键：走到后端服务
+        proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -1427,44 +1454,21 @@ server {
 }
 EOF
 
-# --------- 检查并重启 Nginx ----------
-nginx -t && systemctl restart nginx
+# --------- 安装/部署sublink服务 ----------
 
-# ================================
-# 【新增】为后端创建独立的配置文件
-# ================================
-mkdir -p /opt/sub/conf
-cat > /opt/sub/conf/config.yml <<EOF
-listen: 0.0.0.0:25500
-api_access: true
-EOF
+bash <(curl -Ls https://raw.githubusercontent.com/xeefei/sublink/main/install.sh)
 
-# --------- 启动 Docker 容器 ----------
-docker rm -f sub >/dev/null 2>&1
-
-docker run -d --name sub --restart always \
-  -p 18080:80 \
-  -p 25500:25500 \
-  -e SITE_NAME="sub" \
-  -e API_URL="https://${API_DOMAIN}:8443" \
-  -v /opt/sub/conf/config.yml:/base/config.yml \
-  stilleshan/sub:latest
-
-# 【重要】开放防火墙端口
+# --------- 开放防火墙端口 ----------
 echo ""
-echo -e "${yellow}请务必手动放行 8080 和 8443 端口，以及 18080 和 25500 端口！！${plain}"
+echo -e "${yellow}请务必手动放行${plain} ${red} 8000 和 15268 ${yellow}端口！！${plain}"
 echo ""
 
 # --------- 完成提示 ----------
 echo ""
 echo -e "${green}【订阅转换模块】安装完成！！！${plain}"
 echo ""
-echo -e "${green}Web 界面访问地址：https://${SUB_DOMAIN}:8443${plain}"
+echo -e "${green}Web 界面访问地址：https://${domain}:15268${plain}"
 echo ""
-echo -e "${green}后端 API 拉取地址：https://${API_DOMAIN}:8443${plain}"
-echo ""
-echo -e "${green}PS：即使 VPS 重启，Docker 容器会自动启动，无需手动操作${plain}"
-
 # --------- 返回菜单 ----------
 show_menu
 }
