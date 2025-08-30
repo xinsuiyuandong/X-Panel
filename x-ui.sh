@@ -1319,8 +1319,6 @@ acme_path="/root/.acme.sh/${domain}_ecc"
 cp "${acme_path}/fullchain.cer" "/etc/nginx/ssl/${domain}.cer"
 cp "${acme_path}/${domain}.key" "/etc/nginx/ssl/${domain}.key"
 
-# 重载 nginx，让新证书生效
-systemctl reload nginx
 
 # --------- 配置 Nginx 反向代理 ----------
 NGINX_CONF="/etc/nginx/conf.d/sublink.conf"
@@ -1346,6 +1344,11 @@ server {
     }
 }
 EOF
+
+# 重载 nginx，让新证书生效
+sleep 1
+systemctl reload nginx
+sleep 2
 
 # --------- 使用 sed 替换 ExecStart 行，添加启动参数 ----------
 sudo sed -i "/^ExecStart=/ s|$| run --port 8000|" "/etc/systemd/system/sublink.service"
