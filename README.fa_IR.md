@@ -1,12 +1,12 @@
-<p align="center"><a href="#"><img src="./media/3X-UI.png" alt="Image"></a></p>
+<p align="center"><a href="#"><img src="./media/X-Panel.png" alt="Image"></a></p>
 
 **---------------------------------------一个更好的面板 • 基于Xray Core构建------------------------------**
 
 
-[![](https://img.shields.io/github/v/release/xeefei/3x-ui.svg?style=for-the-badge)](https://github.com/xeefei/3x-ui/releases)
-[![](https://img.shields.io/github/actions/workflow/status/xeefei/3x-ui/release.yml.svg?style=for-the-badge)](https://github.com/xeefei/3x-ui/actions)
-[![GO Version](https://img.shields.io/github/go-mod/go-version/xeefei/3x-ui.svg?style=for-the-badge)](#)
-[![Downloads](https://img.shields.io/github/downloads/xeefei/3x-ui/total.svg?style=for-the-badge)](https://github.com/xeefei/3x-ui/releases/latest)
+[![](https://img.shields.io/github/v/release/xeefei/x-panel.svg?style=for-the-badge)](https://github.com/xeefei/x-panel/releases)
+[![](https://img.shields.io/github/actions/workflow/status/xeefei/x-panel/release.yml.svg?style=for-the-badge)](https://github.com/xeefei/x-panel/actions)
+[![GO Version](https://img.shields.io/github/go-mod/go-version/xeefei/x-panel.svg?style=for-the-badge)](#)
+[![Downloads](https://img.shields.io/github/downloads/xeefei/x-panel/total.svg?style=for-the-badge)](https://github.com/xeefei/x-panel/releases/latest)
 [![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true&style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 **3X-UI** — یک پنل کنترل پیشرفته مبتنی بر وب با کد باز که برای مدیریت سرور Xray-core طراحی شده است. این پنل یک رابط کاربری آسان برای پیکربندی و نظارت بر پروتکل‌های مختلف VPN و پراکسی ارائه می‌دهد.
