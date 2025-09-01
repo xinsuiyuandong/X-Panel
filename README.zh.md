@@ -1,12 +1,12 @@
-<p align="center"><a href="#"><img src="./media/3X-UI.png" alt="Image"></a></p>
+<p align="center"><a href="#"><img src="./media/X-Panel.png" alt="Image"></a></p>
 
 **---------------------------------------一个更好的面板 • 基于Xray Core构建------------------------------**
 
 
-[![](https://img.shields.io/github/v/release/xeefei/3x-ui.svg?style=for-the-badge)](https://github.com/xeefei/3x-ui/releases)
-[![](https://img.shields.io/github/actions/workflow/status/xeefei/3x-ui/release.yml.svg?style=for-the-badge)](https://github.com/xeefei/3x-ui/actions)
-[![GO Version](https://img.shields.io/github/go-mod/go-version/xeefei/3x-ui.svg?style=for-the-badge)](#)
-[![Downloads](https://img.shields.io/github/downloads/xeefei/3x-ui/total.svg?style=for-the-badge)](https://github.com/xeefei/3x-ui/releases/latest)
+[![](https://img.shields.io/github/v/release/xeefei/x-panel.svg?style=for-the-badge)](https://github.com/xeefei/x-panel/releases)
+[![](https://img.shields.io/github/actions/workflow/status/xeefei/x-panel/release.yml.svg?style=for-the-badge)](https://github.com/xeefei/x-panel/actions)
+[![GO Version](https://img.shields.io/github/go-mod/go-version/xeefei/x-panel.svg?style=for-the-badge)](#)
+[![Downloads](https://img.shields.io/github/downloads/xeefei/x-panel/total.svg?style=for-the-badge)](https://github.com/xeefei/x-panel/releases/latest)
 [![License](https://img.shields.io/badge/license-GPL%20V3-blue.svg?longCache=true&style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 > **声明：** 此项目仅供个人学习、交流使用，请遵守当地法律法规，勿用于非法用途；请勿用于生产环境。
@@ -27,7 +27,7 @@
 ## [【3X-UI】详细安装流程步骤：https://xeefei.blogspot.com/2025/07/3x-ui.html](https://xeefei.blogspot.com/2025/07/3x-ui.html)
 
 ------------
-## ✰〔3X-UI优化版〕跟原版3X-UI的区别？✰
+## ✰〔X-Panel面板〕跟原版3X-UI的区别？✰
 ### 大部分功能基于原版3X-UI进行汉化优化，主要的优化内容如下：
 #### 1、最大限度地汉化了面板项目，更适合中文宝宝体质，包括：
 ##### ①优化在VPS中进行〔脚本安装过程〕的汉化提示，增加相应的安装中文提示，让中文用户能明白清楚自己安装到了哪个环节？在细节方面，增加了安装成功之后的〔用户设置信息〕提示，在脚本中加入〔面板登录地址〕显示，
@@ -63,13 +63,13 @@
 #### PS：上述两种方法：【ssh端口转发】或申请安装证书的目的都是为了更安全地登录面板，而至于搭建的其他流程和步骤，都是一样的；如果你已经【申请安装证书】了，并不会受到其他什么额外影响，就不用去折腾【ssh转发】了，直接用 【https://你的域名:端口/路径】 去登录你的面板管理后台就行了。
 
 ------------
-## ✰如何从其他x-ui版本迁移到〔3X-UI优化版〕？✰
-#### 1、若你用的是伊朗老哥的原版3X-UI，是可以直接〔覆盖安装〕的，因为〔3X-UI优化版〕是fork了原版3X-UI的项目，基于原有的功能进行优化的，大功能是没有变化的，主要是进行了脚本的〔汉化处理〕，其他诸如数据库文件等位置是没有改变的，所以直接覆盖安装，并不会影响你〔原有节点及配置〕等数据；安装命令如下：
+## ✰如何从其他x-ui版本迁移到〔X-Panel面板〕？✰
+#### 1、若你用的是伊朗老哥的原版3X-UI，是可以直接〔覆盖安装〕的，因为〔X-Panel面板〕是fork了原版3X-UI的项目，基于原有的功能进行优化的，大功能是没有变化的，主要是进行了脚本的〔汉化处理〕，其他诸如数据库文件等位置是没有改变的，所以直接覆盖安装，并不会影响你〔原有节点及配置〕等数据；安装命令如下：
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/xeefei/3x-ui/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/master/install.sh)
 ```
 #### 2、若你之前用的是Docker方式安装，那先进入容器里面/命令：docker exec -it 容器id /bin/sh，再执行以上脚本命令直接【覆盖安装】即可，
-#### 3、若你用的是之前F佬的x-ui或者其他分支版本，那直接覆盖安装的话，并不能确保一定就能够兼容？建议你先去备份〔数据库〕配置文件，再进行安装〔3X-UI优化版〕。
+#### 3、若你用的是之前F佬的x-ui或者其他分支版本，那直接覆盖安装的话，并不能确保一定就能够兼容？建议你先去备份〔数据库〕配置文件，再进行安装〔X-Panel面板〕。
 
 
 ------------
@@ -119,7 +119,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/xeefei/3x-ui/master/install.sh
 
 - 【全新安装】请执行以下脚本：
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/xeefei/3x-ui/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/master/install.sh)
 ```
 #### 如果执行了上面的代码但是报错，证明你的系统里面没有curl这个软件，请执行以下命令先安装curl软件，安装curl之后再去执行上面代码，
 ```
@@ -138,7 +138,7 @@ apt update -y&&apt install -y curl&&apt install -y socat
 若要安装指定的版本，请使用以下安装命令。 e.g., ver `v2.4.5`:
 
 ```
-VERSION=v2.4.5 && bash <(curl -Ls "https://raw.githubusercontent.com/xeefei/3x-ui/$VERSION/install.sh") $VERSION
+VERSION=v2.4.5 && bash <(curl -Ls "https://raw.githubusercontent.com/xeefei/x-panel/$VERSION/install.sh") $VERSION
 ```
 ------------
 ## 若你的VPS默认有防火墙，请在安装完成之后放行指定端口
@@ -242,12 +242,12 @@ VERSION=v2.4.5 && bash <(curl -Ls "https://raw.githubusercontent.com/xeefei/3x-u
 #### PS：若通过以上步骤还是不能正常上网，则重装VPS服务器OS系统，以及3X-UI面板全部重新安装，之后就正常了！
 
 ------------
-## 用3x-ui中文版如何开启【设备限制】功能？
+## 用〔X-Panel面板〕如何开启【设备限制】功能？
 ##### 1、进入后台在【添加入站】的时候，弹出来的页面就能有【设备数量】输入框，
 ![37](./media/37.png)
 ##### 2、通过步骤1设置完成后，在后台的【入站列表】页面也有对应的同步数据显示。
 ![38](./media/38.png)
-##### 3、具体要查看【设备限制】功能的封禁情况，就进入〔3X-UI中文版〕后台用日志查看。
+##### 3、具体要查看【设备限制】功能的封禁情况，就进入〔X-Panel面板〕后台用日志查看。
 ![39](./media/39.png)
 ##### 4、以下图片里面，详细阐述了我们的〔设备限制〕功能，跟3X-UI原本就有的〔IP Limit〕之间的区别对比。
 ![40](./media/40.png)
@@ -374,7 +374,7 @@ case "${ARCH}" in
 esac
 
 
-wget https://github.com/xeefei/3x-ui/releases/latest/download/x-ui-linux-${XUI_ARCH}.tar.gz
+wget https://github.com/xeefei/x-panel/releases/latest/download/x-ui-linux-${XUI_ARCH}.tar.gz
 ```
 
 2. 下载压缩包后，执行以下命令安装或升级 x-ui：
@@ -425,7 +425,7 @@ systemctl restart x-ui
 2. **克隆项目仓库**
 
    ```sh
-   git clone https://github.com/xeefei/3x-ui.git
+   git clone https://github.com/xeefei/x-panel.git
    cd 3x-ui
    ```
 
@@ -447,7 +447,7 @@ systemctl restart x-ui
       --network=host \
       --restart=unless-stopped \
       --name 3x-ui \
-      ghcr.io/xeefei/3x-ui:latest
+      ghcr.io/xeefei/x-panel:latest
    ```
 
 4. **更新至最新版本**
@@ -805,4 +805,4 @@ XUI_BIN_FOLDER="bin" XUI_DB_FOLDER="/etc/x-ui" go build main.go
 ------------
 ## Star 趋势
 
-[![Stargazers over time](https://starchart.cc/xeefei/3x-ui.svg)](https://starchart.cc/xeefei/3x-ui)
+[![Stargazers over time](https://starchart.cc/xeefei/x-panel.svg)](https://starchart.cc/xeefei/x-panel)
