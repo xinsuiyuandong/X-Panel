@@ -1,4 +1,4 @@
-name: Release 3X-UI for Docker
+name: Release X-Panel for Docker
 on:
   workflow_dispatch:
   push:
@@ -19,8 +19,8 @@ jobs:
       uses: docker/metadata-action@v5
       with:
         images: |
-          xeefei/3x-ui
-          ghcr.io/xeefei/3x-ui
+          xeefei/x-panel
+          ghcr.io/xeefei/x-panel
         tags: |
           type=ref,event=branch
           type=ref,event=tag
