@@ -38,10 +38,10 @@ echo -e "——————————————————————"
 echo -e "当前服务器的操作系统为:${red} $release${plain}"
 echo ""
 xui_version=$(/usr/local/x-ui/x-ui -v)
-last_version=$(curl -Ls "https://api.github.com/repos/xeefei/3x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-echo -e "${green}当前代理面板的版本为: ${red}〔3X-UI优化版〕v${xui_version}${plain}"
+last_version=$(curl -Ls "https://api.github.com/repos/xeefei/x-panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+echo -e "${green}当前代理面板的版本为: ${red}〔X-Panel面板〕v${xui_version}${plain}"
 echo ""
-echo -e "${yellow}〔3X-UI优化版〕最新版为---------->>> ${last_version}${plain}"
+echo -e "${yellow}〔X-Panel面板〕最新版为---------->>> ${last_version}${plain}"
 
 os_version=$(grep -i version_id /etc/os-release | cut -d \" -f2 | cut -d . -f1)
 
@@ -143,7 +143,7 @@ before_show_menu() {
 }
 
 install() {
-    bash <(curl -Ls https://raw.githubusercontent.com/xeefei/3x-ui/main/install.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/main/install.sh)
     if [[ $? == 0 ]]; then
         if [[ $# == 0 ]]; then
             start
@@ -162,7 +162,7 @@ update() {
         fi
         return 0
     fi
-    bash <(curl -Ls https://raw.githubusercontent.com/xeefei/3x-ui/main/install.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/main/install.sh)
     if [[ $? == 0 ]]; then
         LOGI "更新完成，面板已自动重启"
         exit 0
@@ -180,7 +180,7 @@ update_menu() {
         return 0
     fi
     
-    wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/xeefei/3x-ui/main/x-ui.sh
+    wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/xeefei/x-panel/main/x-ui.sh
     chmod +x /usr/local/x-ui/x-ui.sh
     chmod +x /usr/bin/x-ui
     
@@ -202,7 +202,7 @@ custom_version() {
         exit 1
     fi
 
-    download_link="https://raw.githubusercontent.com/xeefei/3x-ui/master/install.sh"
+    download_link="https://raw.githubusercontent.com/xeefei/x-panel/master/install.sh"
 
     # Use the entered panel version in the download link
     install_command="bash <(curl -Ls $download_link) v$panel_version"
@@ -236,7 +236,7 @@ uninstall() {
     echo ""
     echo -e "卸载成功\n"
     echo "如果您需要再次安装此面板，可以使用以下命令:"
-    echo -e "${green}bash <(curl -Ls https://raw.githubusercontent.com/xeefei/3x-ui/master/install.sh)${plain}"
+    echo -e "${green}bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/master/install.sh)${plain}"
     echo ""
     # Trap the SIGTERM signal
     trap delete_script SIGTERM
@@ -260,7 +260,7 @@ reset_user() {
     echo -e "面板登录用户名已重置为：${green} ${config_account} ${plain}"
     echo -e "面板登录密码已重置为：${green} ${config_password} ${plain}"
     echo -e "${yellow} 面板 Secret Token 已禁用 ${plain}"
-    echo -e "${green} 请使用新的登录用户名和密码访问 3X-UI 面板。也请记住它们！${plain}"
+    echo -e "${green} 请使用新的登录用户名和密码访问 X-Panel 面板。也请记住它们！${plain}"
     confirm_restart
 }
 
@@ -341,9 +341,9 @@ check_config() {
             echo ""
             echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
             echo ""
-            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔3X-UI〕登录界面"
+            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
             echo ""
-            echo -e "${red}注意：若不使用〔ssh转发〕请为3X-UI面板配置安装证书再行登录管理后台${plain}"
+            echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
         elif [[ -n $v4 && -n $v6 ]]; then
             echo -e "${green}1、本地电脑客户端转发命令：${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port}${blue} root@$v4${plain} ${yellow}或者 ${blue}ssh  -L [::]:15208:127.0.0.1:${existing_port}${blue} root@[$v6]${plain}"
             echo ""
@@ -351,9 +351,9 @@ check_config() {
             echo ""
             echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
             echo ""
-            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${yellow}或者${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔3X-UI〕登录界面"
+            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${yellow}或者${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
             echo ""
-            echo -e "${red}注意：若不使用〔ssh转发〕请为3X-UI面板配置安装证书再行登录管理后台${plain}"
+            echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
         else
             echo -e "${green}1、本地电脑客户端转发命令：${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port}${blue} root@$v4${plain}"
             echo ""
@@ -361,9 +361,9 @@ check_config() {
             echo ""
             echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
             echo ""
-            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${green}进入〔3X-UI〕登录界面"
+            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
             echo ""
-            echo -e "${red}注意：若不使用〔ssh转发〕请为3X-UI面板配置安装证书再行登录管理后台${plain}"
+            echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
             echo ""
         fi
     fi
@@ -391,7 +391,7 @@ start() {
         sleep 2
         check_status
         if [[ $? == 0 ]]; then
-            LOGI "3X-UI 已成功启动"
+            LOGI "X-Panel 已成功启动"
         else
             LOGE "面板启动失败，可能是启动时间超过两秒，请稍后查看日志信息"
         fi
@@ -412,7 +412,7 @@ stop() {
         sleep 2
         check_status
         if [[ $? == 1 ]]; then
-            LOGI "3X-UI 和 Xray 已成功关闭"
+            LOGI "X-Panel 和 Xray 已成功关闭"
         else
             LOGE "面板关闭失败，可能是停止时间超过两秒，请稍后查看日志信息"
         fi
@@ -428,7 +428,7 @@ restart() {
     sleep 2
     check_status
     if [[ $? == 0 ]]; then
-        LOGI "3X-UI 和 Xray 已成功重启"
+        LOGI "X-Panel 和 Xray 已成功重启"
     else
         LOGE "面板重启失败，可能是启动时间超过两秒，请稍后查看日志信息"
     fi
@@ -559,7 +559,7 @@ enable_bbr() {
 }
 
 update_shell() {
-    wget -O /usr/bin/x-ui -N --no-check-certificate https://github.com/xeefei/3x-ui/raw/main/x-ui.sh
+    wget -O /usr/bin/x-ui -N --no-check-certificate https://github.com/xeefei/x-panel/raw/main/x-ui.sh
     if [[ $? != 0 ]]; then
         echo ""
         LOGE "下载脚本失败，请检查机器是否可以连接至 GitHub"
@@ -1275,7 +1275,7 @@ echo -e "2. 自动调用面板的证书"
 echo -e "3. 自动部署sublink服务"
 echo -e "4. 自动配置Nginx反向代理"
 echo -e "5. 可直观在前端页面配置订阅"
-echo -e "作者：〔3X-UI中文优化版〕专属定制"
+echo -e "作者：〔X-Panel面板〕专属定制"
 echo -e "===============================================${plain}"
 echo ""
     local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
@@ -1312,7 +1312,7 @@ else
     echo -e "${green}检测到 Nginx 已安装，跳过安装步骤${plain}"
 fi
 
-# --------- 拷贝3X-UI已有证书到 Nginx ----------
+# --------- 拷贝X-Panel已有证书到 Nginx ----------
 mkdir -p /etc/nginx/ssl
 acme_path="/root/.acme.sh/${domain}_ecc"
 
@@ -1373,7 +1373,7 @@ echo -e "${green}Web 界面访问地址：https://${domain}:15268${plain}"
 echo ""
 echo -e "${green}若要登录前端网页使用【订阅转换】，请直接复制以上地址${plain}"
 echo ""
-echo -e "${green}接下来流程会进入〔3X-UI中文优化版〕x-ui 菜单项${plain}"
+echo -e "${green}接下来流程会进入〔X-Panel面板〕x-ui 菜单项${plain}"
 sleep 8
 echo ""
 # --------- 返回菜单 ----------
@@ -1719,31 +1719,31 @@ iplimit_remove_conflicts() {
 
 show_usage() {
     echo -e "         ---------------------"
-    echo -e "         |${green}3X-UI 控制菜单用法 ${plain}|${plain}"
+    echo -e "         |${green}X-Panel 控制菜单用法 ${plain}|${plain}"
     echo -e "         |  ${yellow}一个更好的面板   ${plain}|${plain}"   
     echo -e "         | ${yellow}基于Xray Core构建 ${plain}|${plain}"  
     echo -e "--------------------------------------------"
     echo -e "x-ui              - 进入管理脚本"
-    echo -e "x-ui start        - 启动 3x-ui 面板"
-    echo -e "x-ui stop         - 关闭 3x-ui 面板"
-    echo -e "x-ui restart      - 重启 3x-ui 面板"
-    echo -e "x-ui status       - 查看 3x-ui 状态"
+    echo -e "x-ui start        - 启动 X-Panel 面板"
+    echo -e "x-ui stop         - 关闭 X-Panel 面板"
+    echo -e "x-ui restart      - 重启 X-Panel 面板"
+    echo -e "x-ui status       - 查看 X-Panel 状态"
     echo -e "x-ui settings     - 查看当前设置信息"
-    echo -e "x-ui enable       - 启用 3x-ui 开机启动"
-    echo -e "x-ui disable      - 禁用 3x-ui 开机启动"
-    echo -e "x-ui log          - 查看 3x-ui 运行日志"
+    echo -e "x-ui enable       - 启用 X-Panel 开机启动"
+    echo -e "x-ui disable      - 禁用 X-Panel 开机启动"
+    echo -e "x-ui log          - 查看 X-Panel 运行日志"
     echo -e "x-ui banlog       - 检查 Fail2ban 禁止日志"
-    echo -e "x-ui update       - 更新 3x-ui 面板"
-    echo -e "x-ui custom       - 自定义 3x-ui 版本"
-    echo -e "x-ui install      - 安装 3x-ui 面板"
-    echo -e "x-ui uninstall    - 卸载 3x-ui 面板"
+    echo -e "x-ui update       - 更新 X-Panel 面板"
+    echo -e "x-ui custom       - 自定义 X-Panel 版本"
+    echo -e "x-ui install      - 安装 X-Panel 面板"
+    echo -e "x-ui uninstall    - 卸载 X-Panel 面板"
     echo -e "--------------------------------------------"
 }
 
 show_menu() {
     echo -e "
 ——————————————————————
-  ${green}3X-UI 面板管理脚本${plain}
+  ${green}X-Panel 面板管理脚本${plain}
   ${yellow}  一个更好的面板${plain}
   ${yellow} 基于Xray Core构建${plain}
 ——————————————————————
@@ -1780,12 +1780,12 @@ show_menu() {
   ${green}25.${plain} 安装订阅转换 
 ——————————————————————
   ${green}若在使用过程中有任何问题${plain}
-  ${yellow}请加入〔3X-UI〕中文交流群${plain}
+  ${yellow}请加入〔X-Panel面板〕交流群${plain}
   ${red}https://t.me/XUI_CN ${yellow}截图进行反馈${plain}
-  ${green}〔3X-UI〕优化版项目地址${plain}
-  ${yellow}https://github.com/xeefei/3x-ui${plain}
+  ${green}〔X-Panel面板〕项目地址${plain}
+  ${yellow}https://github.com/xeefei/x-panel${plain}
   ${green}详细〔安装配置〕教程${plain}
-  ${yellow}https://xeefei.blogspot.com/2025/07/3x-ui.html${plain}
+  ${yellow}https://xeefei.blogspot.com/2025/07/x-panel.html${plain}
 ——————————————————————
 
 -------------->>>>>>>赞 助 推 广 区<<<<<<<<-------------------
