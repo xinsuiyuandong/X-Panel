@@ -23,8 +23,8 @@
 
 - 赞助地址（USDT/TRC20）：`TYQEmQp1P65u9bG7KPehgJdvuokfb72YkZ`
 
-## [【3X-UI】中文交流群：https://t.me/XUI_CN](https://t.me/XUI_CN)
-## [【3X-UI】详细安装流程步骤：https://xeefei.blogspot.com/2025/07/3x-ui.html](https://xeefei.blogspot.com/2025/07/3x-ui.html)
+## [【X-Panel面板】交流群：https://t.me/XUI_CN](https://t.me/XUI_CN)
+## [【X-Panel面板】详细安装流程步骤：https://xeefei.blogspot.com/2025/07/3x-ui.html](https://xeefei.blogspot.com/2025/07/3x-ui.html)
 
 ------------
 ## ✰〔X-Panel面板〕跟原版3X-UI的区别？✰
@@ -58,7 +58,7 @@
 ![33](./media/33.png)
 #### 5、若在搭建之前没有翻墙加密，则【http明文模式】登录面板有很大的信息泄露安全风险，那建议你第一次搭建成功之后，去修改用户/密码，和访问路径，后期则通过搭建好的代理加密访问，
 ![34](./media/34.png)
-#### 6、在做【ssh转发】过程中，本地电脑的终端不能关闭，保持打开不能断开；且每一次要登录3X-UI管理后台都要做【ssh转发】，因为关闭之后就失效了。
+#### 6、在做【ssh转发】过程中，本地电脑的终端不能关闭，保持打开不能断开；且每一次要登录〔X-Panel面板〕管理后台都要做【ssh转发】，因为关闭之后就失效了。
 ![35](./media/35.png)
 #### PS：上述两种方法：【ssh端口转发】或申请安装证书的目的都是为了更安全地登录面板，而至于搭建的其他流程和步骤，都是一样的；如果你已经【申请安装证书】了，并不会受到其他什么额外影响，就不用去折腾【ssh转发】了，直接用 【https://你的域名:端口/路径】 去登录你的面板管理后台就行了。
 
@@ -114,7 +114,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/master/install.
 
 ------------
 ## 安装 & 升级
-- 使用3x-ui脚本一般情况下，安装完成创建入站之后，端口是默认关闭的，所以必须进入脚本选择【22】去放行端口
+- 使用〔X-Panel面板〕脚本一般情况下，安装完成创建入站之后，端口是默认关闭的，所以必须进入脚本选择【22】去放行端口
 - 要使用【自动续签】证书功能，也必须放行【80】端口，保持80端口是打开的，才会每3个月自动续签一次
 
 - 【全新安装】请执行以下脚本：
@@ -191,11 +191,11 @@ VERSION=v2.4.5 && bash <(curl -Ls "https://raw.githubusercontent.com/xeefei/x-pa
 ## 备份与恢复/迁移数据库（以Debian系统为例）
 #### 一、备份：通过配置好电报管理机器人，并去设置开启【自动备份】，每天凌晨12点会通过VPS管理机器人获取【备份配置】文件，有x-ui.db和config.json两个文件，可自行下载保存到自己电脑里面，
 ![14](./media/14.png)
-#### 二、搭建：在新的VPS中全新安装好3x-ui面板，通过脚本放行之前配置的所有端口，一次性放行多个端口请用【英文逗号】分隔，
+#### 二、搭建：在新的VPS中全新安装好〔X-Panel面板〕，通过脚本放行之前配置的所有端口，一次性放行多个端口请用【英文逗号】分隔，
 #### 三、若需要安装证书，则提前把域名解析到新的VPS对应的IP，并且去输入x-ui选择第【18】选项去安装，并记录公钥/私钥的路径，无域名则跳过这一步，
 #### 四、恢复：SSH登录服务器找到/etc/x-ui/x-ui.db和/usr/local/x-ui/bin/config.json文件位置，上传之前的两个备份文件，进行覆盖，
 ![12](./media/12.png)
-##### PS：把之前通过自动备份下载得到的两个文件上传覆盖掉旧文件，重启3x-ui面板即可【迁移成功】；即使迁移过程中出现问题，你是有备份文件的，不用担心，多试几次。
+##### PS：把之前通过自动备份下载得到的两个文件上传覆盖掉旧文件，重启〔X-Panel面板〕即可【迁移成功】；即使迁移过程中出现问题，你是有备份文件的，不用担心，多试几次。
 ![13](./media/13.png)
 #### 五、若安装了证书，去核对/更改一下证书的路径，一般是同一个域名的话，位置在：/root/cert/域名/fullchain.pem，路径是相同的就不用更改，
 #### 六、重启面板/重启服务器，让上述步骤生效即可，这时可以看到所有配置都是之前自己常用的，包括面板用户名、密码，入站、客户端，电报机器人配置等。
@@ -210,9 +210,9 @@ VERSION=v2.4.5 && bash <(curl -Ls "https://raw.githubusercontent.com/xeefei/x-pa
 ![17](./media/17.png)
 
 ------------
-## 用3x-ui如何实现【自己偷自己】？
+## 用〔X-Panel面板〕如何实现【自己偷自己】？
 - 其实很简单，只要你为面板设置了证书，
-- 开启了HTTPS登录，就可以将3x-ui自身作为Web Server，
+- 开启了HTTPS登录，就可以将〔X-Panel面板〕自身作为Web Server，
 - 无需Nginx等，这里给一个示例：
 - 其中目标网站（Dest）请填写面板监听端口，
 - 可选域名（SNI）填写面板登录域名，
@@ -227,7 +227,7 @@ VERSION=v2.4.5 && bash <(curl -Ls "https://raw.githubusercontent.com/xeefei/x-pa
 ## 〔子域名〕被墙针对特征
 #### 网络表现：
 ##### 1、可以Ping通域名和IP地址，
-##### 2、子域名无法打开3X-UI管理界面，
+##### 2、子域名无法打开〔X-Panel面板〕管理界面，
 ##### 3、什么都正常就是不能上网；
 
 #### 问题：
@@ -237,9 +237,9 @@ VERSION=v2.4.5 && bash <(curl -Ls "https://raw.githubusercontent.com/xeefei/x-pa
 ##### 1、更换为新的子域名，
 ##### 2、解析新的子域名到VPS的IP，
 ##### 3、重新去安装新证书，
-##### 4、重启3X-UI和服务器，
+##### 4、重启〔X-Panel面板〕和服务器，
 ##### 5、重新去获取链接并测试上网。
-#### PS：若通过以上步骤还是不能正常上网，则重装VPS服务器OS系统，以及3X-UI面板全部重新安装，之后就正常了！
+#### PS：若通过以上步骤还是不能正常上网，则重装VPS服务器OS系统，以及〔X-Panel面板〕全部重新安装，之后就正常了！
 
 ------------
 ## 用〔X-Panel面板〕如何开启【设备限制】功能？
@@ -253,7 +253,7 @@ VERSION=v2.4.5 && bash <(curl -Ls "https://raw.githubusercontent.com/xeefei/x-pa
 ![40](./media/40.png)
 
 ------------
-## 用3x-ui如何开启【每月流量自动重置】？
+## 用〔X-Panel面板〕如何开启【每月流量自动重置】？
 ##### 1、进入后台的【入站列表】，选择需要设置的【客户端】，
 ![29](./media/29.png)
 ##### 2、要注意是编辑【入站】下面的【客户端】，才会有效果，
@@ -293,7 +293,7 @@ VERSION=v2.4.5 && bash <(curl -Ls "https://raw.githubusercontent.com/xeefei/x-pa
 ##### 5、创建【入站协议】的时候，尽量用【高位端口】，比如40000--65000之间的端口号。
 #### 提醒：为什么在特殊时期，比如：两会，春节等被封得最严重最惨？
 ##### 尼玛同一个IP+同一个端口号，多个省份去漫游，跟开飞机场一样！不封你，封谁的IP和端口？
-#### 总结：不要多终端/多省份/多个朋友/共同使用同一个IP和端口号！使用3x-ui多创建几个【入站】，
+#### 总结：不要多终端/多省份/多个朋友/共同使用同一个IP和端口号！使用〔X-Panel面板〕多创建几个【入站】，
 ####      多做几条备用，各用各的！各行其道才比较安全！GFW的思维模式是干掉机场，机场的特征个人用户不要去沾染，自然IP就保护好了。
 
 ------------
@@ -426,7 +426,7 @@ systemctl restart x-ui
 
    ```sh
    git clone https://github.com/xeefei/x-panel.git
-   cd 3x-ui
+   cd x-panel
    ```
 
 3. **启动服务**：
@@ -446,26 +446,26 @@ systemctl restart x-ui
       -v $PWD/cert/:/root/cert/ \
       --network=host \
       --restart=unless-stopped \
-      --name 3x-ui \
+      --name x-panel \
       ghcr.io/xeefei/x-panel:latest
    ```
 
 4. **更新至最新版本**
 
    ```sh
-   cd 3x-ui
+   cd x-panel
    docker compose down
-   docker compose pull 3x-ui
+   docker compose pull x-panel
    docker compose up -d
    ```
 
-5. **从Docker中删除3x-ui **
+5. **从Docker中删除x-panel **
 
    ```sh
-   docker stop 3x-ui
-   docker rm 3x-ui
+   docker stop x-panel
+   docker rm x-panel
    cd --
-   rm -r 3x-ui
+   rm -r x-panel
    ```
 
 </details>
