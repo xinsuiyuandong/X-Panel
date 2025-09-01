@@ -56,7 +56,7 @@ echo ""
 # echo ""
 echo -e "${yellow}---------->>>>>当前系统的架构为: $(arch)${plain}"
 echo ""
-last_version=$(curl -Ls "https://api.github.com/repos/xeefei/3x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+last_version=$(curl -Ls "https://api.github.com/repos/xeefei/x-panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 # 获取 x-ui 版本
 xui_version=$(/usr/local/x-ui/x-ui -v)
 
@@ -65,19 +65,19 @@ if [[ -z "$xui_version" ]]; then
     echo ""
     echo -e "${red}------>>>当前服务器没有安装任何 x-ui 系列代理面板${plain}"
     echo ""
-    echo -e "${green}-------->>>>片刻之后脚本将会自动引导安装〔3X-UI优化版〕${plain}"
+    echo -e "${green}-------->>>>片刻之后脚本将会自动引导安装〔X-Panel面板〕${plain}"
 else
     # 检查版本号中是否包含冒号
     if [[ "$xui_version" == *:* ]]; then
         echo -e "${green}---------->>>>>当前代理面板的版本为: ${red}其他 x-ui 分支版本${plain}"
         echo ""
-        echo -e "${green}-------->>>>片刻之后脚本将会自动引导安装〔3X-UI优化版〕${plain}"
+        echo -e "${green}-------->>>>片刻之后脚本将会自动引导安装〔X-Panel面板〕${plain}"
     else
-        echo -e "${green}---------->>>>>当前代理面板的版本为: ${red}〔3X-UI优化版〕v${xui_version}${plain}"
+        echo -e "${green}---------->>>>>当前代理面板的版本为: ${red}〔X-Panel面板〕v${xui_version}${plain}"
     fi
 fi
 echo ""
-echo -e "${yellow}---------------------->>>>>〔3X-UI优化版〕最新版为：${last_version}${plain}"
+echo -e "${yellow}---------------------->>>>>〔X-Panel面板〕最新版为：${last_version}${plain}"
 sleep 4
 
 os_version=$(grep -i version_id /etc/os-release | cut -d \" -f2 | cut -d . -f1)
@@ -231,14 +231,14 @@ install_x-ui() {
 
     # Download resources
     if [ $# == 0 ]; then
-        last_version=$(curl -Ls "https://api.github.com/repos/xeefei/3x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        last_version=$(curl -Ls "https://api.github.com/repos/xeefei/x-panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
         if [[ ! -n "$last_version" ]]; then
-            echo -e "${red}获取 3x-ui 版本失败，可能是 Github API 限制，请稍后再试${plain}"
+            echo -e "${red}获取 X-Panel 版本失败，可能是 Github API 限制，请稍后再试${plain}"
             exit 1
         fi
         echo ""
         echo -e "-----------------------------------------------------"
-        echo -e "${green}--------->>获取 3x-ui 最新版本：${yellow}${last_version}${plain}${green}，开始安装...${plain}"
+        echo -e "${green}--------->>获取 X-Panel 最新版本：${yellow}${last_version}${plain}${green}，开始安装...${plain}"
         echo -e "-----------------------------------------------------"
         echo ""
         sleep 2
@@ -248,17 +248,17 @@ install_x-ui() {
         echo -e "${green}---------------->>>>>>>>>>>>>>>>>>>>>安装进度100%${plain}"
         echo ""
         sleep 2
-        wget -N --no-check-certificate -O /usr/local/x-ui-linux-$(arch).tar.gz https://github.com/xeefei/3x-ui/releases/download/${last_version}/x-ui-linux-$(arch).tar.gz
+        wget -N --no-check-certificate -O /usr/local/x-ui-linux-$(arch).tar.gz https://github.com/xeefei/x-panel/releases/download/${last_version}/x-ui-linux-$(arch).tar.gz
         if [[ $? -ne 0 ]]; then
-            echo -e "${red}下载 3x-ui 失败, 请检查服务器是否可以连接至 GitHub？ ${plain}"
+            echo -e "${red}下载 X-Panel 失败, 请检查服务器是否可以连接至 GitHub？ ${plain}"
             exit 1
         fi
     else
         last_version=$1
-        url="https://github.com/xeefei/3x-ui/releases/download/${last_version}/x-ui-linux-$(arch).tar.gz"
+        url="https://github.com/xeefei/x-panel/releases/download/${last_version}/x-ui-linux-$(arch).tar.gz"
         echo ""
         echo -e "--------------------------------------------"
-        echo -e "${green}---------------->>>>开始安装 3x-ui $1${plain}"
+        echo -e "${green}---------------->>>>开始安装 X-Panel $1${plain}"
         echo -e "--------------------------------------------"
         echo ""
         sleep 2
@@ -270,11 +270,11 @@ install_x-ui() {
         sleep 2
         wget -N --no-check-certificate -O /usr/local/x-ui-linux-$(arch).tar.gz ${url}
         if [[ $? -ne 0 ]]; then
-            echo -e "${red}下载 3x-ui $1 失败, 请检查此版本是否存在 ${plain}"
+            echo -e "${red}下载 X-Panel $1 失败, 请检查此版本是否存在 ${plain}"
             exit 1
         fi
     fi
-    wget -O /usr/bin/x-ui-temp https://raw.githubusercontent.com/xeefei/3x-ui/main/x-ui.sh
+    wget -O /usr/bin/x-ui-temp https://raw.githubusercontent.com/xeefei/x-panel/main/x-ui.sh
 
     # Stop x-ui service and remove old resources
     if [[ -e /usr/local/x-ui/ ]]; then
@@ -339,9 +339,9 @@ ssh_forwarding() {
             echo ""
             echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
             echo ""
-            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔3X-UI〕登录界面"
+            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
             echo ""
-            echo -e "${red}注意：若不使用〔ssh转发〕请为3X-UI面板配置安装证书再行登录管理后台${plain}"
+            echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
         elif [[ -n $v4 && -n $v6 ]]; then
             echo -e "${green}1、本地电脑客户端转发命令：${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port}${blue} root@$v4${plain} ${yellow}或者 ${blue}ssh  -L [::]:15208:127.0.0.1:${existing_port}${blue} root@[$v6]${plain}"
             echo ""
@@ -349,9 +349,9 @@ ssh_forwarding() {
             echo ""
             echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
             echo ""
-            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${yellow}或者${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔3X-UI〕登录界面"
+            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${yellow}或者${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
             echo ""
-            echo -e "${red}注意：若不使用〔ssh转发〕请为3X-UI面板配置安装证书再行登录管理后台${plain}"
+            echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
         else
             echo -e "${green}1、本地电脑客户端转发命令：${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port}${blue} root@$v4${plain}"
             echo ""
@@ -359,9 +359,9 @@ ssh_forwarding() {
             echo ""
             echo -e "${green}3、请在终端中成功输入服务器的〔root密码〕，注意区分大小写，用以上命令进行转发${plain}"
             echo ""
-            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${green}进入〔3X-UI〕登录界面"
+            echo -e "${green}4、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${green}进入〔X-Panel面板〕登录界面"
             echo ""
-            echo -e "${red}注意：若不使用〔ssh转发〕请为3X-UI面板配置安装证书再行登录管理后台${plain}"
+            echo -e "${red}注意：若不使用〔ssh转发〕请为X-Panel面板配置安装证书再行登录管理后台${plain}"
             echo ""
         fi
     fi
@@ -381,28 +381,28 @@ ssh_forwarding
     wg-quick up wgcf >/dev/null 2>&1
 
     echo ""
-    echo -e "------->>>>${green}3x-ui ${last_version}${plain}<<<<安装成功，正在启动..."
+    echo -e "------->>>>${green}X-Panel ${last_version}${plain}<<<<安装成功，正在启动..."
     sleep 1
     echo ""
     echo -e "         ---------------------"
-    echo -e "         |${green}3X-UI 控制菜单用法 ${plain}|${plain}"
+    echo -e "         |${green}X-Panel 控制菜单用法 ${plain}|${plain}"
     echo -e "         |  ${yellow}一个更好的面板   ${plain}|${plain}"   
     echo -e "         | ${yellow}基于Xray Core构建 ${plain}|${plain}"  
     echo -e "--------------------------------------------"
     echo -e "x-ui              - 进入管理脚本"
-    echo -e "x-ui start        - 启动 3x-ui 面板"
-    echo -e "x-ui stop         - 关闭 3x-ui 面板"
-    echo -e "x-ui restart      - 重启 3x-ui 面板"
-    echo -e "x-ui status       - 查看 3x-ui 状态"
+    echo -e "x-ui start        - 启动 X-Panel 面板"
+    echo -e "x-ui stop         - 关闭 X-Panel 面板"
+    echo -e "x-ui restart      - 重启 X-Panel 面板"
+    echo -e "x-ui status       - 查看 X-Panel 状态"
     echo -e "x-ui settings     - 查看当前设置信息"
-    echo -e "x-ui enable       - 启用 3x-ui 开机启动"
-    echo -e "x-ui disable      - 禁用 3x-ui 开机启动"
-    echo -e "x-ui log          - 查看 3x-ui 运行日志"
+    echo -e "x-ui enable       - 启用 X-Panel 开机启动"
+    echo -e "x-ui disable      - 禁用 X-Panel 开机启动"
+    echo -e "x-ui log          - 查看 X-Panel 运行日志"
     echo -e "x-ui banlog       - 检查 Fail2ban 禁止日志"
-    echo -e "x-ui update       - 更新 3x-ui 面板"
-    echo -e "x-ui custom       - 自定义 3x-ui 版本"
-    echo -e "x-ui install      - 安装 3x-ui 面板"
-    echo -e "x-ui uninstall    - 卸载 3x-ui 面板"
+    echo -e "x-ui update       - 更新 X-Panel 面板"
+    echo -e "x-ui custom       - 自定义 X-Panel 版本"
+    echo -e "x-ui install      - 安装 X-Panel 面板"
+    echo -e "x-ui uninstall    - 卸载 X-Panel 面板"
     echo -e "--------------------------------------------"
     echo ""
     # if [[ -n $ipv4 ]]; then
@@ -415,7 +415,7 @@ ssh_forwarding
     sleep 3
     echo -e ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
     echo ""
-    echo -e "${yellow}----->>>3X-UI面板和Xray启动成功<<<-----${plain}"
+    echo -e "${yellow}----->>>X-Panel面板和Xray启动成功<<<-----${plain}"
 }
 install_base
 install_x-ui $1
@@ -431,14 +431,14 @@ echo -e "----------------------------------------------"
 echo ""
 sleep 2
 echo -e "${green}安装/更新完成，若在使用过程中有任何问题${plain}"
-echo -e "${yellow}请先描述清楚所遇问题加〔3X-UI〕中文交流群${plain}"
+echo -e "${yellow}请先描述清楚所遇问题加〔X-Panel面板〕中文交流群${plain}"
 echo -e "${yellow}在TG群中${red} https://t.me/XUI_CN ${yellow}截图进行反馈${plain}"
 echo ""
 echo -e "----------------------------------------------"
 echo ""
-echo -e "${green}〔3X-UI〕优化版项目地址：${yellow}https://github.com/xeefei/3x-ui${plain}" 
+echo -e "${green}〔X-Panel面板〕项目地址：${yellow}https://github.com/xeefei/x-panel${plain}" 
 echo ""
-echo -e "${green} 详细安装教程：${yellow}https://xeefei.blogspot.com/2025/07/3x-ui.html${plain}"
+echo -e "${green} 详细安装教程：${yellow}https://xeefei.blogspot.com/2025/07/X-Panel.html${plain}"
 echo ""
 echo -e "----------------------------------------------"
 echo ""
