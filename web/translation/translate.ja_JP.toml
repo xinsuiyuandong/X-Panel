@@ -615,7 +615,7 @@
 "report" = "🕰 定期報告：{{ .RunTime }}\r\n"
 "datetime" = "⏰ 日時：{{ .DateTime }}\r\n"
 "hostname" = "💻 ホスト名：{{ .Hostname }}\r\n"
-"version" = "🚀 X-UI バージョン：{{ .Version }}\r\n"
+"version" = "🚀 X-Panel バージョン：{{ .Version }}\r\n"
 "xrayVersion" = "📡 Xray バージョン: {{ .XrayVersion }}\r\n"
 "ipv6" = "🌐 IPv6：{{ .IPv6 }}\r\n"
 "ipv4" = "🌐 IPv4：{{ .IPv4 }}\r\n"
