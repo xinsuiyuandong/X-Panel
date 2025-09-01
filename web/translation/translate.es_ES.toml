@@ -615,7 +615,7 @@
 "report" = "🕰 Informes programados: {{ .RunTime }}\r\n"
 "datetime" = "⏰ Fecha y Hora: {{ .DateTime }}\r\n"
 "hostname" = "💻 Nombre del Host: {{ .Hostname }}\r\n"
-"version" = "🚀 Versión de X-UI: {{ .Version }}\r\n"
+"version" = "🚀 Versión de X-Panel: {{ .Version }}\r\n"
 "xrayVersion" = "📡 Versión de Xray: {{ .XrayVersion }}\r\n"
 "ipv6" = "🌐 IPv6: {{ .IPv6 }}\r\n"
 "ipv4" = "🌐 IPv4: {{ .IPv4 }}\r\n"
@@ -737,3 +737,4 @@
 "askToAddUserId" = "¡No se encuentra su configuración!\r\nPor favor, pídale a su administrador que use su ChatID de usuario de Telegram en su(s) configuración(es).\r\n\r\nSu ChatID de usuario: <code>{{ .TgUserID }}</code>"
 "chooseClient" = "Elige un Cliente para Inbound {{ .Inbound }}"
 "chooseInbound" = "Elige un Inbound"
+
