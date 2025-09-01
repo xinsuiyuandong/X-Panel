@@ -1785,7 +1785,7 @@ show_menu() {
   ${green}〔X-Panel面板〕项目地址${plain}
   ${yellow}https://github.com/xeefei/x-panel${plain}
   ${green}详细〔安装配置〕教程${plain}
-  ${yellow}https://xeefei.blogspot.com/2025/07/x-panel.html${plain}
+  ${yellow}https://xeefei.blogspot.com/2025/09/x-panel.html${plain}
 ——————————————————————
 
 -------------->>>>>>>赞 助 推 广 区<<<<<<<<-------------------
