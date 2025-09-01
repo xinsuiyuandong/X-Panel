@@ -24,7 +24,7 @@
 - 赞助地址（USDT/TRC20）：`TYQEmQp1P65u9bG7KPehgJdvuokfb72YkZ`
 
 ## [【X-Panel面板】交流群：https://t.me/XUI_CN](https://t.me/XUI_CN)
-## [【X-Panel面板】详细安装流程步骤：https://xeefei.blogspot.com/2025/07/3x-ui.html](https://xeefei.blogspot.com/2025/07/3x-ui.html)
+## [【X-Panel面板】详细安装流程步骤：https://xeefei.blogspot.com/2025/09/x-panel.html](https://xeefei.blogspot.com/2025/09/x-panel.html)
 
 ------------
 ## ✰〔X-Panel面板〕跟原版3X-UI的区别？✰
