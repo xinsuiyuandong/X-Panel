@@ -1,4 +1,4 @@
-name: Release 3X-UI
+name: Release X-Panel
 
 on:
   workflow_dispatch:
@@ -47,7 +47,7 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
-      - name: Build 3X-UI for Linux
+      - name: Build X-Panel for Linux
         run: |
           export CGO_ENABLED=1
           export GOOS=linux
@@ -173,7 +173,7 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
-      - name: Build 3X-UI for Windows
+      - name: Build X-Panel for Windows
         # 〔中文注释〕: 使用 PowerShell 执行脚本，更符合 Windows 环境
         shell: pwsh
         run: |
