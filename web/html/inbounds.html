@@ -694,14 +694,14 @@
 <script>
     const columns = [{
         title: "ID",
-        align: 'right',
+        align: 'center',
         dataIndex: "id",
-        width: 30,
+        width: 40,
         responsive: ["xs"],
     }, {
         title: '{{ i18n "pages.inbounds.operate" }}',
         align: 'center',
-        width: 20,
+        width: 30,
         scopedSlots: { customRender: 'action' },
     }, {
         title: '{{ i18n "pages.inbounds.enable" }}',
@@ -711,13 +711,13 @@
     }, {
         title: '{{ i18n "pages.inbounds.remark" }}',
         align: 'center',
-        width: 40,
+        width: 50,
         dataIndex: "remark",
     }, {
         title: '{{ i18n "pages.inbounds.port" }}',
         align: 'center',
         dataIndex: "port",
-        width: 30,
+        width: 40,
     }, {
         title: '{{ i18n "pages.inbounds.protocol" }}',
         align: 'center',
@@ -726,7 +726,7 @@
     }, {
         title: '{{ i18n "clients" }}',
         align: 'left',
-        width: 30,
+        width: 40,
         scopedSlots: { customRender: 'clients' },
     }, {
         title: '{{ i18n "pages.inbounds.deviceLimit" }}',
@@ -739,11 +739,6 @@
         align: 'center',
         width: 50,
         scopedSlots: { customRender: 'traffic' },
-    }, {
-        title: '{{ i18n "pages.inbounds.allTimeTraffic" }}',
-        align: 'center',
-        width: 50,
-        scopedSlots: { customRender: 'allTimeInbound' },
     }, {
         title: '{{ i18n "pages.inbounds.expireDate" }}',
         align: 'center',
