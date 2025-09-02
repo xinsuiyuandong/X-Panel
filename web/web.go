@@ -345,30 +345,42 @@ func (s *Server) Start() (err error) {
 	if err != nil {
 		return err
 	}
-	if certFile == "" || keyFile == "" {
-		// 如果没有证书，强制检查 listen 是否内部 IP，否则回退到本地
-		if !isInternalIP(listen) {
-			listen = fallbackToLocalhost(listen)
+	var listenAddr string
+
+	if certFile != "" && keyFile != "" {
+		// 方式一：配置了证书，启用 HTTPS
+		// 检查证书是否有效，如果无效则直接报错退出，不允许回退到 HTTP
+		_, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			logger.Errorf("Error loading certificates, please check the file path and content: %v", err)
+			return err
 		}
+		// 监听用户配置的地址
+		listenAddr = net.JoinHostPort(listen, strconv.Itoa(port))
+	} else {
+		// 方式二：未配置证书，强制监听在本地回环地址，仅供 SSH 转发使用
+		logger.Info("No certificate configured. Forcing listen address to localhost for security.")
+		logger.Info("Access is only possible via SSH tunnel (e.g., http://127.0.0.1).")
+		
+		// 无论用户在 listen 中填写什么，都强制使用回环地址
+		listen = fallbackToLocalhost(listen)
+		listenAddr = net.JoinHostPort(listen, strconv.Itoa(port))
 	}
-	listenAddr := net.JoinHostPort(listen, strconv.Itoa(port))
+
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return err
 	}
-	if certFile != "" || keyFile != "" {
-		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-		if err == nil {
-			c := &tls.Config{
-				Certificates: []tls.Certificate{cert},
-			}
-			listener = network.NewAutoHttpsListener(listener)
-			listener = tls.NewListener(listener, c)
-			logger.Info("Web server running HTTPS on", listener.Addr())
-		} else {
-			logger.Error("Error loading certificates:", err)
-			logger.Info("Web server running HTTP on", listener.Addr())
+
+	// 再次检查证书，配置 TLS Listener
+	if certFile != "" && keyFile != "" {
+		cert, _ := tls.LoadX509KeyPair(certFile, keyFile) // 这里我们忽略错误，因为上面已经检查过了
+		c := &tls.Config{
+			Certificates: []tls.Certificate{cert},
 		}
+		listener = network.NewAutoHttpsListener(listener)
+		listener = tls.NewListener(listener, c)
+		logger.Info("Web server running HTTPS on", listener.Addr())
 	} else {
 		logger.Info("Web server running HTTP on", listener.Addr())
 	}
