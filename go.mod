@@ -16,10 +16,10 @@ require (
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/shirou/gopsutil/v4 v4.25.7
+	github.com/shirou/gopsutil/v4 v4.25.8
 	github.com/valyala/fasthttp v1.65.0
 	github.com/xlzd/gotp v0.1.0
-	github.com/xtls/xray-core v1.250803.1-0.20250829143322-81b7cd718ad5
+	github.com/xtls/xray-core v1.250831.0
 	go.uber.org/atomic v1.11.0
 	golang.org/x/crypto v0.41.0
 	golang.org/x/text v0.28.0
@@ -30,7 +30,8 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
-	github.com/bytedance/sonic v1.14.0 // indirect
+	github.com/bytedance/gopkg v0.1.3 // indirect
+	github.com/bytedance/sonic v1.14.1 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
@@ -69,7 +70,7 @@ require (
 	github.com/refraction-networking/utls v1.8.0 // indirect
 	github.com/riobard/go-bloom v0.0.0-20200614022211-cdc8013cb5b3 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
-	github.com/sagernet/sing v0.7.5 // indirect
+	github.com/sagernet/sing v0.7.6 // indirect
 	github.com/sagernet/sing-shadowsocks v0.2.8 // indirect
 	github.com/seiflotfy/cuckoofilter v0.0.0-20240715131351-a2f2c23f1771 // indirect
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
@@ -97,6 +98,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250826171959-ef028d996bc1 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	gvisor.dev/gvisor v0.0.0-20250503011706-39ed1f5ac29c // indirect
+	gvisor.dev/gvisor v0.0.0-20250829210611-376319f48048 // indirect
 	lukechampine.com/blake3 v1.4.1 // indirect
 )
