@@ -417,6 +417,10 @@ ssh_forwarding
     echo ""
     echo -e "${yellow}----->>>X-Panel面板和Xray启动成功<<<-----${plain}"
 }
+
+# 设置VPS中的时区/时间为【上海时间】
+sudo timedatectl set-timezone Asia/Shanghai
+
 install_base
 install_x-ui $1
 echo ""
