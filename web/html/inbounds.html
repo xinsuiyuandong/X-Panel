@@ -694,9 +694,9 @@
 <script>
     const columns = [{
         title: "ID",
-        align: 'right',
+        align: 'center',
         dataIndex: "id",
-        width: 30,
+        width: 40,
         responsive: ["xs"],
     }, {
         title: '{{ i18n "pages.inbounds.operate" }}',
@@ -711,7 +711,7 @@
     }, {
         title: '{{ i18n "pages.inbounds.remark" }}',
         align: 'center',
-        width: 60,
+        width: 50,
         dataIndex: "remark",
     }, {
         title: '{{ i18n "pages.inbounds.port" }}',
@@ -720,24 +720,25 @@
         width: 40,
     }, {
         title: '{{ i18n "pages.inbounds.protocol" }}',
-        align: 'left',
+        align: 'center',
         width: 70,
         scopedSlots: { customRender: 'protocol' },
     }, {
         title: '{{ i18n "clients" }}',
         align: 'left',
-        width: 50,
+        width: 40,
         scopedSlots: { customRender: 'clients' },
+    }, {
+        title: '{{ i18n "pages.inbounds.deviceLimit" }}',
+        dataIndex: "deviceLimit",
+        align: "center",
+        width: 40,
+        customRender: (text) => (text > 0 ? text : i18n("pages.inbounds.unlimited")),
     }, {
         title: '{{ i18n "pages.inbounds.traffic" }}',
         align: 'center',
-        width: 90,
+        width: 50,
         scopedSlots: { customRender: 'traffic' },
-    }, {
-        title: '{{ i18n "pages.inbounds.allTimeTraffic" }}',
-        align: 'center',
-        width: 70,
-        scopedSlots: { customRender: 'allTimeInbound' },
     }, {
         title: '{{ i18n "pages.inbounds.expireDate" }}',
         align: 'center',
@@ -1135,6 +1136,8 @@
                     remark: dbInbound.remark,
                     enable: dbInbound.enable,
                     expiryTime: dbInbound.expiryTime,
+	   // 新增这一行
+                    deviceLimit: dbInbound.deviceLimit,
 
                     listen: inbound.listen,
                     port: inbound.port,
@@ -1158,6 +1161,8 @@
                     remark: dbInbound.remark,
                     enable: dbInbound.enable,
                     expiryTime: dbInbound.expiryTime,
+	   // 新增这一行
+	   deviceLimit: dbInbound.deviceLimit,
 
                     listen: inbound.listen,
                     port: inbound.port,

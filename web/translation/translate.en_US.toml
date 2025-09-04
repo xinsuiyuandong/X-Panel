@@ -82,6 +82,7 @@
 "xray" = "Xray Configs"
 "logout" = "Log Out"
 "link" = "Manage"
+"navigation" = "navigation"
 
 [pages.login]
 "hello" = "Hello"
@@ -454,6 +455,9 @@
 "statsOutboundDownlink" = "Outbound Download Statistics"
 "statsOutboundDownlinkDesc" = "Enables the statistics collection for downstream traffic of all outbound proxies."
 
+[pages.navigation]
+"title" = "navigation"
+
 [pages.xray.rules]
 "first" = "First"
 "last" = "Last"
@@ -615,7 +619,7 @@
 "report" = "🕰 Scheduled Reports: {{ .RunTime }}\r\n"
 "datetime" = "⏰ Date&Time: {{ .DateTime }}\r\n"
 "hostname" = "💻 Host: {{ .Hostname }}\r\n"
-"version" = "🚀 3X-UI Version: {{ .Version }}\r\n"
+"version" = "🚀 X-Panel Version: {{ .Version }}\r\n"
 "xrayVersion" = "📡 Xray Version: {{ .XrayVersion }}\r\n"
 "ipv6" = "🌐 IPv6: {{ .IPv6 }}\r\n"
 "ipv4" = "🌐 IPv4: {{ .IPv4 }}\r\n"

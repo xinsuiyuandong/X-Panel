@@ -615,7 +615,7 @@
 "report" = "🕰 Báo cáo định kỳ: {{ .RunTime }}\r\n"
 "datetime" = "⏰ Ngày-Giờ: {{ .DateTime }}\r\n"
 "hostname" = "💻 Tên máy chủ: {{ .Hostname }}\r\n"
-"version" = "🚀 Phiên bản X-UI: {{ .Version }}\r\n"
+"version" = "🚀 Phiên bản X-Panel: {{ .Version }}\r\n"
 "xrayVersion" = "📡 Phiên bản Xray: {{ .XrayVersion }}\r\n"
 "ipv6" = "🌐 IPv6: {{ .IPv6 }}\r\n"
 "ipv4" = "🌐 IPv4: {{ .IPv4 }}\r\n"
@@ -737,3 +737,4 @@
 "askToAddUserId" = "Cấu hình của bạn không được tìm thấy!\r\nVui lòng yêu cầu Quản trị viên sử dụng ID người dùng telegram của bạn trong cấu hình của bạn.\r\n\r\nID người dùng của bạn: <code>{{ .TgUserID }}</code>"
 "chooseClient" = "Chọn một Khách hàng cho Inbound {{ .Inbound }}"
 "chooseInbound" = "Chọn một Inbound"
+
