@@ -5,9 +5,11 @@ import (
 	"errors"
 	"runtime"
 	"sync"
+    "strconv"
 
 	"x-ui/logger"
 	"x-ui/xray"
+	json_util "x-ui/util/json_util"
 
 	"go.uber.org/atomic"
 )
@@ -111,6 +113,54 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// =================================================================
+	// 中文注释: 动态限速核心逻辑 - 第一步: 收集所有限速值
+	// =================================================================
+	// 创建一个 map 用于存储所有出现过的、不为0的限速值
+	uniqueSpeeds := make(map[int]bool)
+	for _, inbound := range inbounds {
+		if !inbound.Enable {
+			continue
+		}
+		// 获取该入站下的所有客户端设置
+		clients, _ := s.inboundService.GetClients(inbound)
+		for _, client := range clients {
+			if client.SpeedLimit > 0 {
+				uniqueSpeeds[client.SpeedLimit] = true
+			}
+		}
+	}
+
+	// =================================================================
+	// 中文注释: 动态限速核心逻辑 - 第二步: 根据收集到的限速值，动态生成 Policy Levels
+	// =================================================================
+	// 初始化 policy levels，并加入默认的 level 0 (不限速)
+	policyLevels := make(map[string]interface{})
+	policyLevels["0"] = map[string]interface{}{"handshake": 8, "connIdle": 500}
+
+	// 遍历所有收集到的限速值
+	for speed := range uniqueSpeeds {
+		// 为每个速率创建一个 level，level 的名字就是速率的字符串形式
+		// 例如，速率 1024 KB/s 对应 level "1024"
+		policyLevels[strconv.Itoa(speed)] = map[string]interface{}{
+			"downlinkOnly": speed, // 限制下载速度
+			"uplinkOnly":   speed, // 同时限制上传速度 (您可以根据需要调整)
+		}
+	}
+
+                // 将生成的 policy 应用到 Xray 配置中
+                policyJSON, err := json.Marshal(map[string]interface{}{
+                            "levels": policyLevels,
+                         })
+                   if err != nil {
+                        return nil, err
+                }
+                xrayConfig.Policy = json_util.RawMessage(policyJSON)
+
+	// =================================================================
+	// 中文注释: 动态限速核心逻辑 - 第三步: 为设置了限速的用户分配对应的 Level
+	// =================================================================
 	for _, inbound := range inbounds {
 		if !inbound.Enable {
 			continue
@@ -140,20 +190,29 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 			var final_clients []any
 			for _, client := range clients {
 				c := client.(map[string]any)
-				if c["enable"] != nil {
-					if enable, ok := c["enable"].(bool); ok && !enable {
-						continue
-					}
+				if enable, ok := c["enable"].(bool); ok && !enable { continue }
+
+				// =================================================================
+				// 这里的逻辑是准备将 client 对象提交给 Xray-core。
+				// 我们需要将 speedLimit 转换为 Xray 认识的 level 字段。
+				// 并且，我们不再删除任何字段，因为 Xray-core 会自动忽略它不认识的字段。
+				// 这样可以确保包含 speedLimit 的完整用户信息被用于生成配置。
+				// =================================================================
+                if speedLimit, ok := c["speedLimit"].(float64); ok && speedLimit > 0 {
+					c["level"] = int(speedLimit)
+                    // 【新增功能】在这里添加日志记录
+                    if email, emailOk := c["email"].(string); emailOk {
+                        logger.Infof("为用户 %s 应用〔独立限速〕: %d KB/s", email, int(speedLimit))
+                    }
+				} else {
+					c["level"] = 0
 				}
-				for key := range c {
-					if key != "email" && key != "id" && key != "password" && key != "flow" && key != "method" {
-						delete(c, key)
-					}
-					if c["flow"] == "xtls-rprx-vision-udp443" {
-						c["flow"] = "xtls-rprx-vision"
-					}
+
+				if c["flow"] == "xtls-rprx-vision-udp443" {
+					c["flow"] = "xtls-rprx-vision"
 				}
-				final_clients = append(final_clients, any(c))
+
+				final_clients = append(final_clients, c)
 			}
 
 			settings["clients"] = final_clients
