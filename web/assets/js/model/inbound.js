@@ -1785,6 +1785,7 @@ Inbound.VmessSettings.VMESS = class extends XrayCommonClass {
         security = USERS_SECURITY.AUTO,
         email = RandomUtil.randomLowerAndNum(8),
         limitIp = 0,
+        speedLimit = 0, // <--- 中文注释: 新增 speedLimit 属性
         totalGB = 0,
         expiryTime = 0,
         enable = true,
@@ -1800,6 +1801,7 @@ Inbound.VmessSettings.VMESS = class extends XrayCommonClass {
         this.security = security;
         this.email = email;
         this.limitIp = limitIp;
+        this.speedLimit = speedLimit; // <--- 中文注释: 赋值
         this.totalGB = totalGB;
         this.expiryTime = expiryTime;
         this.enable = enable;
@@ -1810,6 +1812,26 @@ Inbound.VmessSettings.VMESS = class extends XrayCommonClass {
         this.created_at = created_at;
         this.updated_at = updated_at;
     }
+    
+    // 【建议增加】为 VMESS 添加完整的 toJson 方法
+     toJson() {
+        return {
+            id: this.id,
+            security: this.security,
+            email: this.email,
+            limitIp: this.limitIp,
+            speedLimit: this.speedLimit, // 中文注释: 序列化 speedLimit 字段
+            totalGB: this.totalGB,
+            expiryTime: this.expiryTime,
+            enable: this.enable,
+            tgId: this.tgId,
+            subId: this.subId,
+            comment: this.comment,
+            reset: this.reset,
+            created_at: this.created_at,
+            updated_at: this.updated_at,
+        };
+    }
 
     static fromJson(json = {}) {
         return new Inbound.VmessSettings.VMESS(
@@ -1817,6 +1839,7 @@ Inbound.VmessSettings.VMESS = class extends XrayCommonClass {
             json.security,
             json.email,
             json.limitIp,
+            json.speedLimit || 0, // <--- 中文注释: 从 JSON 解析
             json.totalGB,
             json.expiryTime,
             json.enable,
@@ -1900,6 +1923,7 @@ Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
         flow = '',
         email = RandomUtil.randomLowerAndNum(8),
         limitIp = 0,
+        speedLimit = 0, // <--- 中文注释: 新增 speedLimit 属性
         totalGB = 0,
         expiryTime = 0,
         enable = true,
@@ -1915,6 +1939,7 @@ Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
         this.flow = flow;
         this.email = email;
         this.limitIp = limitIp;
+        this.speedLimit = speedLimit; // <--- 中文注释: 赋值
         this.totalGB = totalGB;
         this.expiryTime = expiryTime;
         this.enable = enable;
@@ -1926,12 +1951,33 @@ Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
         this.updated_at = updated_at;
     }
 
+    // 【建议增加】为 VLESS 添加完整的 toJson 方法
+    toJson() {
+        return {
+            id: this.id,
+            flow: this.flow,
+            email: this.email,
+            limitIp: this.limitIp,
+            speedLimit: this.speedLimit, // 中文注释: 序列化 speedLimit 字段
+            totalGB: this.totalGB,
+            expiryTime: this.expiryTime,
+            enable: this.enable,
+            tgId: this.tgId,
+            subId: this.subId,
+            comment: this.comment,
+            reset: this.reset,
+            created_at: this.created_at,
+            updated_at: this.updated_at,
+        };
+    }
+
     static fromJson(json = {}) {
         return new Inbound.VLESSSettings.VLESS(
             json.id,
             json.flow,
             json.email,
             json.limitIp,
+            json.speedLimit || 0, // <--- 中文注释: 从 JSON 解析
             json.totalGB,
             json.expiryTime,
             json.enable,
@@ -2045,6 +2091,7 @@ Inbound.TrojanSettings.Trojan = class extends XrayCommonClass {
         password = RandomUtil.randomSeq(10),
         email = RandomUtil.randomLowerAndNum(8),
         limitIp = 0,
+        speedLimit = 0, // <--- 中文注释: 新增 speedLimit 属性
         totalGB = 0,
         expiryTime = 0,
         enable = true,
@@ -2059,6 +2106,7 @@ Inbound.TrojanSettings.Trojan = class extends XrayCommonClass {
         this.password = password;
         this.email = email;
         this.limitIp = limitIp;
+        this.speedLimit = speedLimit; // <--- 中文注释: 赋值
         this.totalGB = totalGB;
         this.expiryTime = expiryTime;
         this.enable = enable;
@@ -2075,6 +2123,7 @@ Inbound.TrojanSettings.Trojan = class extends XrayCommonClass {
             password: this.password,
             email: this.email,
             limitIp: this.limitIp,
+            speedLimit: this.speedLimit, // <--- 中文注释: 序列化到 JSON
             totalGB: this.totalGB,
             expiryTime: this.expiryTime,
             enable: this.enable,
@@ -2092,6 +2141,7 @@ Inbound.TrojanSettings.Trojan = class extends XrayCommonClass {
             json.password,
             json.email,
             json.limitIp,
+            json.speedLimit || 0, // <--- 中文注释: 从 JSON 解析
             json.totalGB,
             json.expiryTime,
             json.enable,
@@ -2214,6 +2264,7 @@ Inbound.ShadowsocksSettings.Shadowsocks = class extends XrayCommonClass {
         password = RandomUtil.randomShadowsocksPassword(),
         email = RandomUtil.randomLowerAndNum(8),
         limitIp = 0,
+        speedLimit = 0, // <--- 中文注释: 新增 speedLimit 属性
         totalGB = 0,
         expiryTime = 0,
         enable = true,
@@ -2229,6 +2280,7 @@ Inbound.ShadowsocksSettings.Shadowsocks = class extends XrayCommonClass {
         this.password = password;
         this.email = email;
         this.limitIp = limitIp;
+        this.speedLimit = speedLimit; // <--- 中文注释: 赋值
         this.totalGB = totalGB;
         this.expiryTime = expiryTime;
         this.enable = enable;
@@ -2246,6 +2298,7 @@ Inbound.ShadowsocksSettings.Shadowsocks = class extends XrayCommonClass {
             password: this.password,
             email: this.email,
             limitIp: this.limitIp,
+            speedLimit: this.speedLimit, // <--- 中文注释: 序列化到 JSON
             totalGB: this.totalGB,
             expiryTime: this.expiryTime,
             enable: this.enable,
@@ -2264,6 +2317,7 @@ Inbound.ShadowsocksSettings.Shadowsocks = class extends XrayCommonClass {
             json.password,
             json.email,
             json.limitIp,
+            json.speedLimit || 0, // <--- 中文注释: 从 JSON 解析
             json.totalGB,
             json.expiryTime,
             json.enable,
