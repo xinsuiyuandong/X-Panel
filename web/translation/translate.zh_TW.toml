@@ -240,6 +240,8 @@
 "reviewHint" = "如需修改請返回上一步"
 "unlimited" = "無限制"
 "deviceLimit" = "裝置限制"
+"speedLimit"="獨立限速"
+"speedLimitDesc"="設定該使用者的最大下載速度，單位 KB/s，0 表示不限速"
 
 [pages.client]
 "add" = "新增客戶端"
