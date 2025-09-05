@@ -51,6 +51,22 @@
             </template>
             <a-input v-model.trim="clientsBulkModal.subId"></a-input>
         </a-form-item>
+
+<!-- 中文注释: 增加【独立限速】 speedLimit 输入框 -->
+        <a-form-item>
+            <template slot="label">
+                {{ i18n "pages.inbounds.speedLimit" }}
+            </template>
+            <a-input-number
+                v-model.number="clientsBulkModal.speedLimit"
+                :min="0"
+                style="width: 100%">
+                <template slot="addonAfter">
+                    KB/s
+                </template>
+            </a-input-number>
+        </a-form-item>
+
         <a-form-item v-if="app.tgBotEnable">
             <template slot="label">
                 <a-tooltip>
@@ -137,6 +153,10 @@
         quantity: 1,
         totalGB: 0,
         limitIp: 0,
+
+        <!-- 中文注释: 在这里为批量添加对象增加 speedLimit 属性 -->
+        speedLimit: 0,
+
         expiryTime: '',
         emailMethod: 0,
         firstNum: 1,
@@ -168,6 +188,10 @@
                 newClient.email += useNum ? prefix + i.toString() + postfix : prefix + postfix;
                 if (clientsBulkModal.subId.length > 0) newClient.subId = clientsBulkModal.subId;
                 newClient.tgId = clientsBulkModal.tgId;
+
+                <!-- 中文注释: 在这里为每个新生成的 client 对象赋值 speedLimit -->
+                newClient.speedLimit = clientsBulkModal.speedLimit;
+
                 newClient.security = clientsBulkModal.security;
                 newClient.limitIp = clientsBulkModal.limitIp;
                 newClient._totalGB = clientsBulkModal.totalGB;
@@ -191,6 +215,10 @@
             this.okText = okText;
             this.confirm = confirm;
             this.quantity = 1;
+
+            <!-- 中文注释: 在这里重置 speedLimit 的值 -->
+            this.speedLimit = 0;
+
             this.totalGB = 0;
             this.expiryTime = 0;
             this.emailMethod = 0;
