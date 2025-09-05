@@ -464,6 +464,9 @@
                         </a-popover>
                       </template>
                     </template>
+					<template slot="deviceLimit" slot-scope="text, dbInbound">
+                      <a-tag>[[ SizeFormatter.sizeFormat(dbInbound.deviceLimit) ]]</a-tag>
+                    </template>
                     <template slot="traffic" slot-scope="text, dbInbound">
                       <a-popover :overlay-class-name="themeSwitcher.currentTheme">
                         <template slot="content">
@@ -776,6 +779,16 @@
         { title: '{{ i18n "pages.inbounds.client" }}', width: 80, scopedSlots: { customRender: 'client' } },
         { title: '{{ i18n "pages.inbounds.traffic" }}', width: 80, align: 'center', scopedSlots: { customRender: 'traffic' } },
         { title: '{{ i18n "pages.inbounds.allTimeTraffic" }}', width: 80, align: 'center', scopedSlots: { customRender: 'allTime' } },
+        
+		<!-- 中文注释: 在子表格中新增“限速”列 -->
+        { 
+            title: '{{ i18n "pages.inbounds.speedLimit" }}',
+            width: 80,
+            align: 'center',
+            dataIndex: 'speedLimit',
+            customRender: (text) => (text > 0 ? `${text} KB/s` : i18n("pages.inbounds.unlimited")),
+        },
+
         { title: '{{ i18n "pages.inbounds.expireDate" }}', width: 80, align: 'center', scopedSlots: { customRender: 'expiryTime' } },
     ];
 
@@ -1136,7 +1149,8 @@
                     remark: dbInbound.remark,
                     enable: dbInbound.enable,
                     expiryTime: dbInbound.expiryTime,
-	   // 新增这一行
+					
+                   <!-- 新增这一行 -->
                     deviceLimit: dbInbound.deviceLimit,
 
                     listen: inbound.listen,
@@ -1161,8 +1175,8 @@
                     remark: dbInbound.remark,
                     enable: dbInbound.enable,
                     expiryTime: dbInbound.expiryTime,
-	   // 新增这一行
-	   deviceLimit: dbInbound.deviceLimit,
+                   <!-- 新增这一行 -->
+	                deviceLimit: dbInbound.deviceLimit,
 
                     listen: inbound.listen,
                     port: inbound.port,
@@ -1377,8 +1391,17 @@
                     await this.getDBInbounds();
                 }
             },
+			
             getInboundClients(dbInbound) {
-                return dbInbound.toInbound().clients;
+			  <!-- 先把 dbInbound 转成 inbound 对象 -->
+              const inbound = dbInbound.toInbound();
+              const clients = inbound.clients || [];
+
+		  <!-- 遍历 clients，保证 speedLimit 字段存在且是数字 -->
+              return clients.map(c => ({
+                  ...c,                                      <!-- 保留原有字段 -->
+                speedLimit: Number(c.speedLimit || 0),     <!-- 如果没设置就默认为 0 -->
+                  }));
             },
             resetClientTraffic(client, dbInboundId, confirmation = true) {
                 if (confirmation){
