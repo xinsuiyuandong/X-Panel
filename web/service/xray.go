@@ -159,6 +159,16 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
                 xrayConfig.Policy = json_util.RawMessage(policyJSON)
 
 	// =================================================================
+    // 中文注释: 在这里增加日志，打印最终生成的限速策略
+    // =================================================================
+    if len(uniqueSpeeds) > 0 {
+        finalPolicyLog, _ := json.Marshal(policyLevels)
+        logger.Infof("已为Xray动态生成〔限速策略〕: %s", string(finalPolicyLog))
+    }
+    // =================================================================
+	
+
+	// =================================================================
 	// 中文注释: 动态限速核心逻辑 - 第三步: 为设置了限速的用户分配对应的 Level
 	// =================================================================
 	for _, inbound := range inbounds {
