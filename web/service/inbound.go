@@ -514,6 +514,12 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 				cm["created_at"] = nowTs
 			}
 			cm["updated_at"] = nowTs
+
+			// ↓↓↓↓↓↓  【重要补充】在这里手动确保 SpeedLimit 被写入数据库 ↓↓↓↓↓↓
+            // clients[i] 和 interfaceClients[i] 是一一对应的
+            // 我们从强类型的 clients[i] 对象中取出 SpeedLimit，赋值给弱类型的 map
+			cm["speedLimit"] = clients[i].SpeedLimit // 中文注释: 确保批量添加时，speedLimit 的值也被写入数据库。
+			
 			interfaceClients[i] = cm
 		}
 	}
@@ -587,14 +593,21 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 				if oldInbound.Protocol == "shadowsocks" {
 					cipher = oldSettings["method"].(string)
 				}
-				err1 := s.xrayApi.AddUser(string(oldInbound.Protocol), oldInbound.Tag, map[string]any{
+
+				// 中文注释: 在这里为 API 调用添加 speedLimit 参数。
+					clientMap := map[string]any{
 					"email":    client.Email,
 					"id":       client.ID,
 					"security": client.Security,
 					"flow":     client.Flow,
 					"password": client.Password,
 					"cipher":   cipher,
-				})
+					
+					// Xray-core 会将这个值作为 level，然后去 policy 中寻找对应的限速策略。
+					"level":    client.SpeedLimit,
+				}
+				err1 := s.xrayApi.AddUser(string(oldInbound.Protocol), oldInbound.Tag, clientMap)
+				
 				if err1 == nil {
 					logger.Debug("Client added by api:", client.Email)
 				} else {
@@ -783,6 +796,12 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 			}
 			newMap["created_at"] = preservedCreated
 			newMap["updated_at"] = time.Now().Unix() * 1000
+
+			// ↓↓↓↓↓↓  【重要补充】在这里手动确保 SpeedLimit 被写入数据库 ↓↓↓↓↓↓
+            // clients[0] 是从请求中解码出来的强类型对象，它的 SpeedLimit 字段是有值的。
+            // 我们把它手动赋值给即将用于保存的 newMap。
+			newMap["speedLimit"] = clients[0].SpeedLimit // 中文注释：确保将 speedLimit 的值写入将要保存到数据库的 map 中。
+			
 			interfaceClients[0] = newMap
 		}
 	}
@@ -850,14 +869,20 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 			if oldInbound.Protocol == "shadowsocks" {
 				cipher = oldSettings["method"].(string)
 			}
-			err1 := s.xrayApi.AddUser(string(oldInbound.Protocol), oldInbound.Tag, map[string]any{
+
+			// 中文注释: 同样，在更新用户时，也必须把新的 speedLimit 值通过 API 传给 Xray-core。
+			clientMap := map[string]any{
 				"email":    clients[0].Email,
 				"id":       clients[0].ID,
 				"security": clients[0].Security,
 				"flow":     clients[0].Flow,
 				"password": clients[0].Password,
 				"cipher":   cipher,
-			})
+				
+				"level":    clients[0].SpeedLimit,
+			}
+			err1 := s.xrayApi.AddUser(string(oldInbound.Protocol), oldInbound.Tag, clientMap)
+			
 			if err1 == nil {
 				logger.Debug("Client edited by api:", clients[0].Email)
 			} else {
@@ -2114,6 +2139,12 @@ func (s *InboundService) MigrationRequirements() {
 					c["created_at"] = time.Now().Unix() * 1000
 				}
 				c["updated_at"] = time.Now().Unix() * 1000
+
+		 // 中文注释: 回填 speedLimit，如果不存在设为 0，确保旧数据有字段，避免显示和配置问题
+                if _, ok := c["speedLimit"]; !ok {
+                     c["speedLimit"] = 0
+                }
+				
 				newClients = append(newClients, any(c))
 			}
 			settings["clients"] = newClients
