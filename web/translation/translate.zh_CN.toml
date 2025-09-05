@@ -240,6 +240,8 @@
 "reviewHint"="如需修改请返回上一步"
 "unlimited"="无限制"
 "deviceLimit"="设备限制"
+"speedLimit"="独立限速"
+"speedLimitDesc"="设置该用户的最大下载速度，单位 KB/s，0 表示不限速"
 
 
 [pages.client]
