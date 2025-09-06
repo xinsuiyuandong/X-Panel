@@ -498,8 +498,15 @@
               <a-col :style="{ width: '100%' }">
                 <h2 class="title headline zoom">
                   <span class="words-wrapper">
-                    <b class="is-visible">{{ i18n "pages.login.hello" }}</b>
-                    <b>{{ i18n "pages.login.title" }}</b>
+                    <!-- 第一帧：上下两行组成整体 -->
+                    <b class="is-visible">
+                    <div>〔X-Panel〕</div>
+                    <div>{{ i18n "pages.login.XPanelSystem" }}</div>
+                    </b>
+                    <!-- 第二帧：单独一行 -->
+                    <b>
+                    <div>{{ i18n "pages.login.title" }}</div>
+                    </b>
                   </span>
                 </h2>
               </a-col>
