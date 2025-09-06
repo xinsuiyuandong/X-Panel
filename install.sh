@@ -145,13 +145,13 @@ install_base() {
         apt-get update && apt-get install -y -q wget curl sudo tar tzdata
         ;;
     centos | rhel | almalinux | rocky | ol)
-        yum -y update && yum install -y -q wget curl sudo tar tzdata
+        yum -y --exclude=kernel* update && yum install -y -q wget curl sudo tar tzdata
         ;;
     fedora | amzn | virtuozzo)
-        dnf -y update && dnf install -y -q wget curl sudo tar tzdata
+        dnf -y --exclude=kernel* update && dnf install -y -q wget curl sudo tar tzdata
         ;;
     arch | manjaro | parch)
-        pacman -Syu && pacman -Syu --noconfirm wget curl sudo tar tzdata
+        pacman -Sy && pacman -S --noconfirm wget curl sudo tar tzdata
         ;;
     alpine)
         apk update && apk add --no-cache wget curl sudo tar tzdata
