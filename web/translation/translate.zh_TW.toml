@@ -280,6 +280,7 @@
 "trafficGetError" = "獲取流量資料時發生錯誤"
 "getNewX25519CertError" = "獲取 X25519 憑證時發生錯誤。"
 "getNewmldsa65Error" = "獲取 mldsa65 憑證時發生錯誤。"
+"getNewVlessEncError" = "取得VlessEnc憑證時發生錯誤。"
 
 [pages.inbounds.stream.general]
 "request" = "請求"
