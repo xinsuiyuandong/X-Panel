@@ -19,10 +19,10 @@
 ## شروع سریع
 
 ```
-bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/master/install.sh)
 ```
 
-برای مستندات کامل، لطفاً به [ویکی پروژه](https://github.com/MHSanaei/3x-ui/wiki) مراجعه کنید.
+برای مستندات کامل، لطفاً به [ویکی پروژه](https://github.com/xeefei/x-panel/wiki) مراجعه کنید.
 
 ## تشکر ویژه از
 
