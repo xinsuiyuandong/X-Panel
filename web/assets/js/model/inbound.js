@@ -140,22 +140,8 @@ class XrayCommonClass {
         return new XrayCommonClass();
     }
 
-    /**
-     * 【最佳实践】中文注释：这是一个智能的、通用的序列化方法。
-     * 1. 使用 ...this 创建一个当前对象所有属性的浅拷贝。
-     * 2. 遍历拷贝后的对象，删除所有以下划线 "_" 开头的属性。
-     * 这些带下划线的属性被约定为仅供前端 UI 逻辑使用（如 _expiryTime），不应提交给后端。
-     * 3. 返回一个干净的、只包含持久化数据的对象。
-     * 这个方法将被所有子类继承，无需在每个子类中重复实现，保证了代码的健壮性和可维护性。
-     */
     toJson() {
-        const obj = { ...this };
-        for (const key in obj) {
-            if (key.startsWith('_')) {
-                delete obj[key];
-            }
-        }
-        return obj;
+        return this;     
     }
 
     toString(format = true) {
@@ -1826,14 +1812,33 @@ Inbound.VmessSettings.VMESS = class extends XrayCommonClass {
         this.updated_at = updated_at;
     }
     
-
+    // 【建议增加】为 VMESS 添加完整的 toJson 方法
+     toJson() {
+        return {
+            id: this.id,
+            security: this.security,
+            email: this.email,
+            limitIp: this.limitIp,
+            speedLimit: this.speedLimit, // 中文注释: 序列化 speedLimit 字段
+            totalGB: this.totalGB,
+            expiryTime: this.expiryTime,
+            enable: this.enable,
+            tgId: this.tgId,
+            subId: this.subId,
+            comment: this.comment,
+            reset: this.reset,
+            created_at: this.created_at,
+            updated_at: this.updated_at,
+        };
+    }
+    
     static fromJson(json = {}) {
         return new Inbound.VmessSettings.VMESS(
             json.id,
             json.security,
             json.email,
             json.limitIp,
-            json.speedLimit || 0, // <--- 中文注释: 从 JSON 解析
+            json.speedLimit ?? 0, // <--- 中文注释: 从 JSON 解析
             json.totalGB,
             json.expiryTime,
             json.enable,
@@ -1877,15 +1882,16 @@ Inbound.VLESSSettings = class extends Inbound.Settings {
         protocol,
         vlesses = [new Inbound.VLESSSettings.VLESS()],
         decryption = "none",
-        encryption = "",
+        encryption = "none",
         fallbacks = [],
+        selectedAuth = undefined,
     ) {
         super(protocol);
         this.vlesses = vlesses;
         this.decryption = decryption;
         this.encryption = encryption;
         this.fallbacks = fallbacks;
-        this.selectedAuth = "X25519, not Post-Quantum";
+        this.selectedAuth = selectedAuth;
     }
 
     addFallback() {
@@ -1903,9 +1909,9 @@ Inbound.VLESSSettings = class extends Inbound.Settings {
             (json.clients || []).map(client => Inbound.VLESSSettings.VLESS.fromJson(client)),
             json.decryption,
             json.encryption,
-            Inbound.VLESSSettings.Fallback.fromJson(json.fallbacks || [])
+            Inbound.VLESSSettings.Fallback.fromJson(json.fallbacks || []),
+            json.selectedAuth
         );
-        obj.selectedAuth = json.selectedAuth || "X25519, not Post-Quantum";
         return obj;
     }
 
@@ -1969,7 +1975,25 @@ Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
         this.updated_at = updated_at;
     }
 
-
+    // 【建议增加】为 VLESS 添加完整的 toJson 方法
+    toJson() {
+        return {
+            id: this.id,
+            flow: this.flow,
+            email: this.email,
+            limitIp: this.limitIp,
+            speedLimit: this.speedLimit, // 中文注释: 序列化 speedLimit 字段
+            totalGB: this.totalGB,
+            expiryTime: this.expiryTime,
+            enable: this.enable,
+            tgId: this.tgId,
+            subId: this.subId,
+            comment: this.comment,
+            reset: this.reset,
+            created_at: this.created_at,
+            updated_at: this.updated_at,
+        };
+    }
 
     static fromJson(json = {}) {
         return new Inbound.VLESSSettings.VLESS(
@@ -1977,7 +2001,7 @@ Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
             json.flow,
             json.email,
             json.limitIp,
-            json.speedLimit || 0, // <--- 中文注释: 从 JSON 解析
+            json.speedLimit ?? 0, // <--- 中文注释: 从 JSON 解析
             json.totalGB,
             json.expiryTime,
             json.enable,
@@ -2118,14 +2142,30 @@ Inbound.TrojanSettings.Trojan = class extends XrayCommonClass {
         this.updated_at = updated_at;
     }
 
-
+    toJson() {
+        return {
+            password: this.password,
+            email: this.email,
+            limitIp: this.limitIp,
+            speedLimit: this.speedLimit, // <--- 中文注释: 序列化到 JSON
+            totalGB: this.totalGB,
+            expiryTime: this.expiryTime,
+            enable: this.enable,
+            tgId: this.tgId,
+            subId: this.subId,
+            comment: this.comment,
+            reset: this.reset,
+            created_at: this.created_at,
+            updated_at: this.updated_at,
+        };
+    }
 
     static fromJson(json = {}) {
         return new Inbound.TrojanSettings.Trojan(
             json.password,
             json.email,
             json.limitIp,
-            json.speedLimit || 0, // <--- 中文注释: 从 JSON 解析
+            json.speedLimit ?? 0, // <--- 中文注释: 从 JSON 解析
             json.totalGB,
             json.expiryTime,
             json.enable,
@@ -2275,7 +2315,25 @@ Inbound.ShadowsocksSettings.Shadowsocks = class extends XrayCommonClass {
         this.created_at = created_at;
         this.updated_at = updated_at;
     }
-
+    
+    toJson() {
+        return {
+            method: this.method,
+            password: this.password,
+            email: this.email,
+            limitIp: this.limitIp,
+            speedLimit: this.speedLimit, // <--- 中文注释: 序列化到 JSON
+            totalGB: this.totalGB,
+            expiryTime: this.expiryTime,
+            enable: this.enable,
+            tgId: this.tgId,
+            subId: this.subId,
+            comment: this.comment,
+            reset: this.reset,
+            created_at: this.created_at,
+            updated_at: this.updated_at,
+        };
+    }
 
     static fromJson(json = {}) {
         return new Inbound.ShadowsocksSettings.Shadowsocks(
@@ -2283,7 +2341,7 @@ Inbound.ShadowsocksSettings.Shadowsocks = class extends XrayCommonClass {
             json.password,
             json.email,
             json.limitIp,
-            json.speedLimit || 0, // <--- 中文注释: 从 JSON 解析
+            json.speedLimit ?? 0, // <--- 中文注释: 从 JSON 解析
             json.totalGB,
             json.expiryTime,
             json.enable,
