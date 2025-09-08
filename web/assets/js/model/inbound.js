@@ -140,8 +140,22 @@ class XrayCommonClass {
         return new XrayCommonClass();
     }
 
+    /**
+     * 【最佳实践】中文注释：这是一个智能的、通用的序列化方法。
+     * 1. 使用 ...this 创建一个当前对象所有属性的浅拷贝。
+     * 2. 遍历拷贝后的对象，删除所有以下划线 "_" 开头的属性。
+     * 这些带下划线的属性被约定为仅供前端 UI 逻辑使用（如 _expiryTime），不应提交给后端。
+     * 3. 返回一个干净的、只包含持久化数据的对象。
+     * 这个方法将被所有子类继承，无需在每个子类中重复实现，保证了代码的健壮性和可维护性。
+     */
     toJson() {
-        return this;     
+        const obj = { ...this };
+        for (const key in obj) {
+            if (key.startsWith('_')) {
+                delete obj[key];
+            }
+        }
+        return obj;
     }
 
     toString(format = true) {
@@ -2104,23 +2118,6 @@ Inbound.TrojanSettings.Trojan = class extends XrayCommonClass {
         this.updated_at = updated_at;
     }
 
-    toJson() {
-        return {
-            password: this.password,
-            email: this.email,
-            limitIp: this.limitIp,
-            speedLimit: this.speedLimit, // <--- 中文注释: 序列化到 JSON
-            totalGB: this.totalGB,
-            expiryTime: this.expiryTime,
-            enable: this.enable,
-            tgId: this.tgId,
-            subId: this.subId,
-            comment: this.comment,
-            reset: this.reset,
-            created_at: this.created_at,
-            updated_at: this.updated_at,
-        };
-    }
 
     static fromJson(json = {}) {
         return new Inbound.TrojanSettings.Trojan(
@@ -2278,24 +2275,6 @@ Inbound.ShadowsocksSettings.Shadowsocks = class extends XrayCommonClass {
         this.updated_at = updated_at;
     }
     
-    toJson() {
-        return {
-            method: this.method,
-            password: this.password,
-            email: this.email,
-            limitIp: this.limitIp,
-            speedLimit: this.speedLimit, // <--- 中文注释: 序列化到 JSON
-            totalGB: this.totalGB,
-            expiryTime: this.expiryTime,
-            enable: this.enable,
-            tgId: this.tgId,
-            subId: this.subId,
-            comment: this.comment,
-            reset: this.reset,
-            created_at: this.created_at,
-            updated_at: this.updated_at,
-        };
-    }
 
     static fromJson(json = {}) {
         return new Inbound.ShadowsocksSettings.Shadowsocks(
