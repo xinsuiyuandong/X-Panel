@@ -11,10 +11,8 @@ const Protocols = {
 
 const SSMethods = {
     AES_256_GCM: 'aes-256-gcm',
-    AES_128_GCM: 'aes-128-gcm',
     CHACHA20_POLY1305: 'chacha20-poly1305',
     CHACHA20_IETF_POLY1305: 'chacha20-ietf-poly1305',
-    XCHACHA20_POLY1305: 'xchacha20-poly1305',
     XCHACHA20_IETF_POLY1305: 'xchacha20-ietf-poly1305',
     BLAKE3_AES_128_GCM: '2022-blake3-aes-128-gcm',
     BLAKE3_AES_256_GCM: '2022-blake3-aes-256-gcm',
@@ -142,8 +140,22 @@ class XrayCommonClass {
         return new XrayCommonClass();
     }
 
+    /**
+     * 【最佳实践】中文注释：这是一个智能的、通用的序列化方法。
+     * 1. 使用 ...this 创建一个当前对象所有属性的浅拷贝。
+     * 2. 遍历拷贝后的对象，删除所有以下划线 "_" 开头的属性。
+     * 这些带下划线的属性被约定为仅供前端 UI 逻辑使用（如 _expiryTime），不应提交给后端。
+     * 3. 返回一个干净的、只包含持久化数据的对象。
+     * 这个方法将被所有子类继承，无需在每个子类中重复实现，保证了代码的健壮性和可维护性。
+     */
     toJson() {
-        return this;
+        const obj = { ...this };
+        for (const key in obj) {
+            if (key.startsWith('_')) {
+                delete obj[key];
+            }
+        }
+        return obj;
     }
 
     toString(format = true) {
@@ -1301,6 +1313,7 @@ class Inbound extends XrayCommonClass {
         const security = forceTls == 'same' ? this.stream.security : forceTls;
         const params = new Map();
         params.set("type", this.stream.network);
+        params.set("encryption", this.settings.encryption);
         switch (type) {
             case "tcp":
                 const tcp = this.stream.tcp;
@@ -1813,25 +1826,6 @@ Inbound.VmessSettings.VMESS = class extends XrayCommonClass {
         this.updated_at = updated_at;
     }
     
-    // 【建议增加】为 VMESS 添加完整的 toJson 方法
-     toJson() {
-        return {
-            id: this.id,
-            security: this.security,
-            email: this.email,
-            limitIp: this.limitIp,
-            speedLimit: this.speedLimit, // 中文注释: 序列化 speedLimit 字段
-            totalGB: this.totalGB,
-            expiryTime: this.expiryTime,
-            enable: this.enable,
-            tgId: this.tgId,
-            subId: this.subId,
-            comment: this.comment,
-            reset: this.reset,
-            created_at: this.created_at,
-            updated_at: this.updated_at,
-        };
-    }
 
     static fromJson(json = {}) {
         return new Inbound.VmessSettings.VMESS(
@@ -1882,13 +1876,16 @@ Inbound.VLESSSettings = class extends Inbound.Settings {
     constructor(
         protocol,
         vlesses = [new Inbound.VLESSSettings.VLESS()],
-        decryption = 'none',
-        fallbacks = []
+        decryption = "none",
+        encryption = "",
+        fallbacks = [],
     ) {
         super(protocol);
         this.vlesses = vlesses;
         this.decryption = decryption;
+        this.encryption = encryption;
         this.fallbacks = fallbacks;
+        this.selectedAuth = "X25519, not Post-Quantum";
     }
 
     addFallback() {
@@ -1901,20 +1898,41 @@ Inbound.VLESSSettings = class extends Inbound.Settings {
 
     // decryption should be set to static value
     static fromJson(json = {}) {
-        return new Inbound.VLESSSettings(
+        const obj = new Inbound.VLESSSettings(
             Protocols.VLESS,
-            json.clients.map(client => Inbound.VLESSSettings.VLESS.fromJson(client)),
-            json.decryption || 'none',
-            Inbound.VLESSSettings.Fallback.fromJson(json.fallbacks),);
+            (json.clients || []).map(client => Inbound.VLESSSettings.VLESS.fromJson(client)),
+            json.decryption,
+            json.encryption,
+            Inbound.VLESSSettings.Fallback.fromJson(json.fallbacks || [])
+        );
+        obj.selectedAuth = json.selectedAuth || "X25519, not Post-Quantum";
+        return obj;
     }
 
     toJson() {
-        return {
+        const json = {
             clients: Inbound.VLESSSettings.toJsonArray(this.vlesses),
-            decryption: this.decryption,
-            fallbacks: Inbound.VLESSSettings.toJsonArray(this.fallbacks),
         };
+        
+        if (this.decryption) {
+            json.decryption = this.decryption;
+        }
+
+        if (this.encryption) {
+            json.encryption = this.encryption;
+        }
+
+        if (this.fallbacks && this.fallbacks.length > 0) {
+            json.fallbacks = Inbound.VLESSSettings.toJsonArray(this.fallbacks);
+        }
+        if (this.selectedAuth) {
+            json.selectedAuth = this.selectedAuth;
+        }
+
+        return json;
     }
+    
+    
 };
 
 Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
@@ -1951,25 +1969,7 @@ Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
         this.updated_at = updated_at;
     }
 
-    // 【建议增加】为 VLESS 添加完整的 toJson 方法
-    toJson() {
-        return {
-            id: this.id,
-            flow: this.flow,
-            email: this.email,
-            limitIp: this.limitIp,
-            speedLimit: this.speedLimit, // 中文注释: 序列化 speedLimit 字段
-            totalGB: this.totalGB,
-            expiryTime: this.expiryTime,
-            enable: this.enable,
-            tgId: this.tgId,
-            subId: this.subId,
-            comment: this.comment,
-            reset: this.reset,
-            created_at: this.created_at,
-            updated_at: this.updated_at,
-        };
-    }
+
 
     static fromJson(json = {}) {
         return new Inbound.VLESSSettings.VLESS(
@@ -2118,23 +2118,7 @@ Inbound.TrojanSettings.Trojan = class extends XrayCommonClass {
         this.updated_at = updated_at;
     }
 
-    toJson() {
-        return {
-            password: this.password,
-            email: this.email,
-            limitIp: this.limitIp,
-            speedLimit: this.speedLimit, // <--- 中文注释: 序列化到 JSON
-            totalGB: this.totalGB,
-            expiryTime: this.expiryTime,
-            enable: this.enable,
-            tgId: this.tgId,
-            subId: this.subId,
-            comment: this.comment,
-            reset: this.reset,
-            created_at: this.created_at,
-            updated_at: this.updated_at,
-        };
-    }
+
 
     static fromJson(json = {}) {
         return new Inbound.TrojanSettings.Trojan(
@@ -2292,24 +2276,6 @@ Inbound.ShadowsocksSettings.Shadowsocks = class extends XrayCommonClass {
         this.updated_at = updated_at;
     }
 
-    toJson() {
-        return {
-            method: this.method,
-            password: this.password,
-            email: this.email,
-            limitIp: this.limitIp,
-            speedLimit: this.speedLimit, // <--- 中文注释: 序列化到 JSON
-            totalGB: this.totalGB,
-            expiryTime: this.expiryTime,
-            enable: this.enable,
-            tgId: this.tgId,
-            subId: this.subId,
-            comment: this.comment,
-            reset: this.reset,
-            created_at: this.created_at,
-            updated_at: this.updated_at,
-        };
-    }
 
     static fromJson(json = {}) {
         return new Inbound.ShadowsocksSettings.Shadowsocks(
