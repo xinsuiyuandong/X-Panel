@@ -1812,25 +1812,6 @@ Inbound.VmessSettings.VMESS = class extends XrayCommonClass {
         this.updated_at = updated_at;
     }
     
-    // 【建议增加】为 VMESS 添加完整的 toJson 方法
-     toJson() {
-        return {
-            id: this.id,
-            security: this.security,
-            email: this.email,
-            limitIp: this.limitIp,
-            speedLimit: this.speedLimit, // 中文注释: 序列化 speedLimit 字段
-            totalGB: this.totalGB,
-            expiryTime: this.expiryTime,
-            enable: this.enable,
-            tgId: this.tgId,
-            subId: this.subId,
-            comment: this.comment,
-            reset: this.reset,
-            created_at: this.created_at,
-            updated_at: this.updated_at,
-        };
-    }
     
     static fromJson(json = {}) {
         return new Inbound.VmessSettings.VMESS(
@@ -1974,25 +1955,7 @@ Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
         this.updated_at = updated_at;
     }
 
-    // 【建议增加】为 VLESS 添加完整的 toJson 方法
-    toJson() {
-        return {
-            id: this.id,
-            flow: this.flow,
-            email: this.email,
-            limitIp: this.limitIp,
-            speedLimit: this.speedLimit, // 中文注释: 序列化 speedLimit 字段
-            totalGB: this.totalGB,
-            expiryTime: this.expiryTime,
-            enable: this.enable,
-            tgId: this.tgId,
-            subId: this.subId,
-            comment: this.comment,
-            reset: this.reset,
-            created_at: this.created_at,
-            updated_at: this.updated_at,
-        };
-    }
+    
 
     static fromJson(json = {}) {
         return new Inbound.VLESSSettings.VLESS(
