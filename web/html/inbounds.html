@@ -464,9 +464,6 @@
                         </a-popover>
                       </template>
                     </template>
-					<template slot="deviceLimit" slot-scope="text, dbInbound">
-                      <a-tag>[[ SizeFormatter.sizeFormat(dbInbound.deviceLimit) ]]</a-tag>
-                    </template>
                     <template slot="traffic" slot-scope="text, dbInbound">
                       <a-popover :overlay-class-name="themeSwitcher.currentTheme">
                         <template slot="content">
@@ -859,7 +856,7 @@
                 }, 500);
             },
             async getOnlineUsers() {
-                const msg = await HttpUtil.post('/panel/inbound/onlines');
+                const msg = await HttpUtil.post('panel/api/inbounds/onlines');
                 if (!msg.success) {
                     return;
                 }
