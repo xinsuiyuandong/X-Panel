@@ -748,7 +748,7 @@ ${dateTime}
             },
             async getStatus() {
                 try {
-                    const msg = await HttpUtil.post('/server/status');
+                    const msg = await HttpUtil.get('/panel/api/server/status');
                     if (msg.success) {
                         if (!this.loadingStates.fetched) {
                             this.loadingStates.fetched = true;
@@ -765,7 +765,7 @@ ${dateTime}
             },
             async openSelectV2rayVersion() {
                 this.loading(true);
-                const msg = await HttpUtil.post('server/getXrayVersion');
+                const msg = await HttpUtil.get('/panel/api/server/getXrayVersion');
                 this.loading(false);
                 if (!msg.success) {
                     return;
@@ -782,7 +782,7 @@ ${dateTime}
                     onOk: async () => {
                         versionModal.hide();
                         this.loading(true, '{{ i18n "pages.index.dontRefresh"}}');
-                        await HttpUtil.post(`/server/installXray/${version}`);
+                        await HttpUtil.post(`/panel/api/server/installXray/${version}`);
                         this.loading(false);
                     },
                 });
@@ -801,8 +801,8 @@ ${dateTime}
                         versionModal.hide();
                         this.loading(true, '{{ i18n "pages.index.dontRefresh"}}');
                         const url = isSingleFile 
-                            ? `/server/updateGeofile/${fileName}` 
-                            : `/server/updateGeofile`;
+                            ? `/panel/api/server/updateGeofile/${fileName}` 
+                            : `/panel/api/server/updateGeofile`;
                         await HttpUtil.post(url);
                         this.loading(false);
                     },
@@ -810,7 +810,7 @@ ${dateTime}
             },
             async stopXrayService() {
                 this.loading(true);
-                const msg = await HttpUtil.post('server/stopXrayService');
+                const msg = await HttpUtil.post('/panel/api/server/stopXrayService');
                 this.loading(false);
                 if (!msg.success) {
                     return;
@@ -818,7 +818,7 @@ ${dateTime}
             },
             async restartXrayService() {
                 this.loading(true);
-                const msg = await HttpUtil.post('server/restartXrayService');
+                const msg = await HttpUtil.post('/panel/api/server/restartXrayService');
                 this.loading(false);
                 if (!msg.success) {
                     return;
@@ -826,7 +826,7 @@ ${dateTime}
             },
             async openLogs(){
                 logModal.loading = true;
-                const msg = await HttpUtil.post('server/logs/'+logModal.rows,{level: logModal.level, syslog: logModal.syslog});
+                const msg = await HttpUtil.post('/panel/api/server/logs/'+logModal.rows,{level: logModal.level, syslog: logModal.syslog});
                 if (!msg.success) {
                     return;
                 }
@@ -836,7 +836,7 @@ ${dateTime}
             },
             async openXrayLogs(){
               xraylogModal.loading = true;
-                const msg = await HttpUtil.post('server/xraylogs/'+xraylogModal.rows,{filter: xraylogModal.filter, showDirect: xraylogModal.showDirect, showBlocked: xraylogModal.showBlocked, showProxy: xraylogModal.showProxy});
+                const msg = await HttpUtil.post('/panel/api/server/xraylogs/'+xraylogModal.rows,{filter: xraylogModal.filter, showDirect: xraylogModal.showDirect, showBlocked: xraylogModal.showBlocked, showProxy: xraylogModal.showProxy});
                 if (!msg.success) {
                     return;
                 }
@@ -846,7 +846,7 @@ ${dateTime}
             },
             async openConfig() {
                 this.loading(true);
-                const msg = await HttpUtil.post('server/getConfigJson');
+                const msg = await HttpUtil.get('/panel/api/server/getConfigJson');
                 this.loading(false);
                 if (!msg.success) {
                     return;
@@ -857,7 +857,7 @@ ${dateTime}
               backupModal.show();
             },
             exportDatabase() {
-                window.location = basePath + 'server/getDb';
+                window.location = basePath + '/panel/api/server/getDb';
             },
             importDatabase() {
                 const fileInput = document.createElement('input');
@@ -870,7 +870,7 @@ ${dateTime}
                         formData.append('db', dbFile);
                         backupModal.hide();
                         this.loading(true);
-                        const uploadMsg = await HttpUtil.post('server/importDB', formData, {
+                        const uploadMsg = await HttpUtil.post('/panel/api/server/importDB', formData, {
                             headers: {
                                 'Content-Type': 'multipart/form-data',
                             }
