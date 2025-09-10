@@ -3,7 +3,7 @@ const Protocols = {
     VLESS: 'vless',
     TROJAN: 'trojan',
     SHADOWSOCKS: 'shadowsocks',
-    DOKODEMO: 'dokodemo-door',
+    TUNNEL: 'tunnel',
     SOCKS: 'socks',
     HTTP: 'http',
     WIREGUARD: 'wireguard',
@@ -743,7 +743,7 @@ class RealityStreamSettings extends XrayCommonClass {
     constructor(
         show = false,
         xver = 0,
-        dest = 'tesla.com:443',
+        target = 'tesla.com:443',
         serverNames = 'tesla.com,www.tesla.com',
         privateKey = '',
         minClientVer = '',
@@ -756,7 +756,7 @@ class RealityStreamSettings extends XrayCommonClass {
         super();
         this.show = show;
         this.xver = xver;
-        this.dest = dest;
+        this.target = target;
         this.serverNames = Array.isArray(serverNames) ? serverNames.join(",") : serverNames;
         this.privateKey = privateKey;
         this.minClientVer = minClientVer;
@@ -781,7 +781,7 @@ class RealityStreamSettings extends XrayCommonClass {
         return new RealityStreamSettings(
             json.show,
             json.xver,
-            json.dest,
+            json.target,
             json.serverNames,
             json.privateKey,
             json.minClientVer,
@@ -797,7 +797,7 @@ class RealityStreamSettings extends XrayCommonClass {
         return {
             show: this.show,
             xver: this.xver,
-            dest: this.dest,
+            target: this.target,
             serverNames: this.serverNames.split(","),
             privateKey: this.privateKey,
             minClientVer: this.minClientVer,
@@ -1726,7 +1726,7 @@ Inbound.Settings = class extends XrayCommonClass {
             case Protocols.VLESS: return new Inbound.VLESSSettings(protocol);
             case Protocols.TROJAN: return new Inbound.TrojanSettings(protocol);
             case Protocols.SHADOWSOCKS: return new Inbound.ShadowsocksSettings(protocol);
-            case Protocols.DOKODEMO: return new Inbound.DokodemoSettings(protocol);
+            case Protocols.TUNNEL: return new Inbound.TunnelSettings(protocol);
             case Protocols.SOCKS: return new Inbound.SocksSettings(protocol);
             case Protocols.HTTP: return new Inbound.HttpSettings(protocol);
             case Protocols.WIREGUARD: return new Inbound.WireguardSettings(protocol);
@@ -1740,7 +1740,7 @@ Inbound.Settings = class extends XrayCommonClass {
             case Protocols.VLESS: return Inbound.VLESSSettings.fromJson(json);
             case Protocols.TROJAN: return Inbound.TrojanSettings.fromJson(json);
             case Protocols.SHADOWSOCKS: return Inbound.ShadowsocksSettings.fromJson(json);
-            case Protocols.DOKODEMO: return Inbound.DokodemoSettings.fromJson(json);
+            case Protocols.TUNNEL: return Inbound.TunnelSettings.fromJson(json);
             case Protocols.SOCKS: return Inbound.SocksSettings.fromJson(json);
             case Protocols.HTTP: return Inbound.HttpSettings.fromJson(json);
             case Protocols.WIREGUARD: return Inbound.WireguardSettings.fromJson(json);
@@ -1968,7 +1968,6 @@ Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
         this.created_at = created_at;
         this.updated_at = updated_at;
     }
-
     
 
     static fromJson(json = {}) {
@@ -2118,6 +2117,23 @@ Inbound.TrojanSettings.Trojan = class extends XrayCommonClass {
         this.updated_at = updated_at;
     }
 
+    toJson() {
+        return {
+            password: this.password,
+            email: this.email,
+            limitIp: this.limitIp,
+            speedLimit: this.speedLimit, // <--- 中文注释: 序列化到 JSON
+            totalGB: this.totalGB,
+            expiryTime: this.expiryTime,
+            enable: this.enable,
+            tgId: this.tgId,
+            subId: this.subId,
+            comment: this.comment,
+            reset: this.reset,
+            created_at: this.created_at,
+            updated_at: this.updated_at,
+        };
+    }
 
     static fromJson(json = {}) {
         return new Inbound.TrojanSettings.Trojan(
@@ -2275,6 +2291,24 @@ Inbound.ShadowsocksSettings.Shadowsocks = class extends XrayCommonClass {
         this.updated_at = updated_at;
     }
     
+    toJson() {
+        return {
+            method: this.method,
+            password: this.password,
+            email: this.email,
+            limitIp: this.limitIp,
+            speedLimit: this.speedLimit, // <--- 中文注释: 序列化到 JSON
+            totalGB: this.totalGB,
+            expiryTime: this.expiryTime,
+            enable: this.enable,
+            tgId: this.tgId,
+            subId: this.subId,
+            comment: this.comment,
+            reset: this.reset,
+            created_at: this.created_at,
+            updated_at: this.updated_at,
+        };
+    }
 
     static fromJson(json = {}) {
         return new Inbound.ShadowsocksSettings.Shadowsocks(
@@ -2322,7 +2356,7 @@ Inbound.ShadowsocksSettings.Shadowsocks = class extends XrayCommonClass {
 
 };
 
-Inbound.DokodemoSettings = class extends Inbound.Settings {
+Inbound.TunnelSettings = class extends Inbound.Settings {
     constructor(
         protocol,
         address,
@@ -2340,8 +2374,8 @@ Inbound.DokodemoSettings = class extends Inbound.Settings {
     }
 
     static fromJson(json = {}) {
-        return new Inbound.DokodemoSettings(
-            Protocols.DOKODEMO,
+        return new Inbound.TunnelSettings(
+            Protocols.TUNNEL,
             json.address,
             json.port,
             XrayCommonClass.toHeaders(json.portMap),
