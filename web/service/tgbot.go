@@ -2129,7 +2129,7 @@ func (t *Tgbot) getInboundsAddClient() (*telego.InlineKeyboardMarkup, error) {
 	}
 
 	excludedProtocols := map[model.Protocol]bool{
-		model.DOKODEMO:  true,
+		model.Tunnel:    true,
 		model.Socks:     true,
 		model.WireGuard: true,
 		model.HTTP:      true,
