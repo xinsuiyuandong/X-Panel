@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sync"
 	"syscall"
 	"time"
 
@@ -102,6 +103,7 @@ type process struct {
 	apiPort int
 
 	onlineClients []string
+	mutex         sync.RWMutex
 
 	config    *Config
 	logWriter *LogWriter
@@ -152,11 +154,17 @@ func (p *Process) GetConfig() *Config {
 }
 
 func (p *Process) GetOnlineClients() []string {
-	return p.onlineClients
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+	clientsCopy := make([]string, len(p.onlineClients))
+	copy(clientsCopy, p.onlineClients)
+	return clientsCopy
 }
 
-func (p *Process) SetOnlineClients(users []string) {
-	p.onlineClients = users
+func (p *Process) SetOnlineClients(clients []string) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.onlineClients = clients
 }
 
 func (p *Process) GetUptime() uint64 {
