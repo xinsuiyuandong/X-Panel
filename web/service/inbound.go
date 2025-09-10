@@ -1014,7 +1014,9 @@ func (s *InboundService) addClientTraffic(tx *gorm.DB, traffics []*xray.ClientTr
 	}
 
 	// Set onlineUsers
-	p.SetOnlineClients(onlineClients)
+	if p != nil {
+		p.SetOnlineClients(onlineClients)
+	}
 
 	err = tx.Save(dbClientTraffics).Error
 	if err != nil {
