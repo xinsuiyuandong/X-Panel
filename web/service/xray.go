@@ -102,8 +102,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	}
 
 	xrayConfig := &xray.Config{}
-	err = json.Unmarshal([]byte(templateConfig), xrayConfig)
-	if err != nil {
+	if err := json.Unmarshal([]byte(templateConfig), xrayConfig); err != nil {
 		return nil, err
 	}
 
@@ -115,19 +114,19 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	}
 
 	// =================================================================
-	// 中文注释: 动态限速核心逻辑 - 第一步: 收集所有限速值
+	// 中文注释: 动态限速核心逻辑 - 第一步: 收集所有限速值 
 	// =================================================================
-	// 创建一个 map 用于存储所有出现过的、不为0的限速值
+                 // 创建一个 map 用于存储所有出现过的、不为0的限速值
 	uniqueSpeeds := make(map[int]bool)
 	for _, inbound := range inbounds {
 		if !inbound.Enable {
 			continue
 		}
-		// 获取该入站下的所有客户端设置
-		clients, _ := s.inboundService.GetClients(inbound)
-		for _, client := range clients {
-			if client.SpeedLimit > 0 {
-				uniqueSpeeds[client.SpeedLimit] = true
+                                  // 获取该入站下的所有客户端设置
+		dbClients, _ := s.inboundService.GetClients(inbound)
+		for _, dbClient := range dbClients {
+			if dbClient.SpeedLimit > 0 {
+				uniqueSpeeds[dbClient.SpeedLimit] = true
 			}
 		}
 	}
@@ -135,135 +134,216 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	// =================================================================
 	// 中文注释: 动态限速核心逻辑 - 第二步: 根据收集到的限速值，动态生成 Policy Levels
 	// =================================================================
-	// 初始化 policy levels，并加入默认的 level 0 (不限速)
-	policyLevels := make(map[string]interface{})
+                 // 初始化 policy levels，并加入默认的 level 0 (不限速)	
+                 policyLevels := make(map[string]interface{})
 	policyLevels["0"] = map[string]interface{}{"handshake": 8, "connIdle": 500}
-
+	
 	// 遍历所有收集到的限速值
-	for speed := range uniqueSpeeds {
+                 for speed := range uniqueSpeeds {
 		// 为每个速率创建一个 level，level 的名字就是速率的字符串形式
 		// 例如，速率 1024 KB/s 对应 level "1024"
 		policyLevels[strconv.Itoa(speed)] = map[string]interface{}{
-			"downlinkOnly": speed, // 限制下载速度
-			"uplinkOnly":   speed, // 同时限制上传速度 (您可以根据需要调整)
+			"downlinkOnly": speed,
+			"uplinkOnly":   speed,
 		}
 	}
 
                 // 将生成的 policy 应用到 Xray 配置中
-                policyJSON, err := json.Marshal(map[string]interface{}{
-                            "levels": policyLevels,
-                         })
-                   if err != nil {
-                        return nil, err
-                }
-                xrayConfig.Policy = json_util.RawMessage(policyJSON)
+	policyJSON, err := json.Marshal(map[string]interface{}{"levels": policyLevels})
+	if err != nil {
+		return nil, err
+	}
+	xrayConfig.Policy = json_util.RawMessage(policyJSON)
+
 
 	// =================================================================
-    // 中文注释: 在这里增加日志，打印最终生成的限速策略
-    // =================================================================
-    if len(uniqueSpeeds) > 0 {
-        finalPolicyLog, _ := json.Marshal(policyLevels)
-        logger.Infof("已为Xray动态生成〔限速策略〕: %s", string(finalPolicyLog))
-    }
-    // =================================================================
-	
+                 // 中文注释: 在这里增加日志，打印最终生成的限速策略
+                 // =================================================================
+	if len(uniqueSpeeds) > 0 {
+		finalPolicyLog, _ := json.Marshal(policyLevels)
+		logger.Infof("已为Xray动态生成〔限速策略〕: %s", string(finalPolicyLog))
+	}
 
 	// =================================================================
-	// 中文注释: 动态限速核心逻辑 - 第三步: 为设置了限速的用户分配对应的 Level
+	// 中文注释: 动态限速核心逻辑 - 第三步: 为设置了限速的用户分配对应的 Level，逐个 inbound 构建 inboundConfig
 	// =================================================================
 	for _, inbound := range inbounds {
 		if !inbound.Enable {
 			continue
 		}
-		// get settings clients
-		settings := map[string]any{}
-		json.Unmarshal([]byte(inbound.Settings), &settings)
-		clients, ok := settings["clients"].([]any)
+
+		// 先生成一个 inboundConfig（后面会覆盖 Settings/StreamSettings）
+		inboundConfig := inbound.GenXrayInboundConfig()
+
+		// 从 DB clients 建立 email/id -> speedLimit 映射（优先使用 DB 的值）
+		speedByEmail := make(map[string]int)
+		speedById := make(map[string]int)
+		dbClients, _ := s.inboundService.GetClients(inbound)
+		for _, dbc := range dbClients {
+			if dbc.Email != "" {
+				speedByEmail[dbc.Email] = dbc.SpeedLimit
+			}
+			// 如果有 id 字段也建立映射（以防 email 不存在）
+			if dbc.ID != "" {
+				speedById[dbc.ID] = dbc.SpeedLimit
+			}
+		}
+
+		// 解析 inbound.Settings
+		var settings map[string]interface{}
+		if err := json.Unmarshal([]byte(inbound.Settings), &settings); err != nil {
+			logger.Warningf("无法解析 inbound.Settings (inbound %d): %v ，跳过该入站", inbound.Id, err)
+			continue
+		}
+
+		originalClients, ok := settings["clients"].([]interface{})
 		if ok {
-			// check users active or not
 			clientStats := inbound.ClientStats
-			for _, clientTraffic := range clientStats {
-				indexDecrease := 0
-				for index, client := range clients {
-					c := client.(map[string]any)
-					if c["email"] == clientTraffic.Email {
-						if !clientTraffic.Enable {
-							clients = RemoveIndex(clients, index-indexDecrease)
-							indexDecrease++
-							logger.Infof("Remove Inbound User %s due to expiration or traffic limit", c["email"])
-						}
+
+			var xrayClients []interface{}
+			for _, clientRaw := range originalClients {
+				c, ok := clientRaw.(map[string]interface{})
+				if !ok {
+					continue
+				}
+
+				// -----------------------------------------------------------------
+				// 中文注释: 用户过滤 - 1) settings 中的 enable 字段检查
+				// -----------------------------------------------------------------
+				if en, ok := c["enable"].(bool); ok && !en {
+					if em, _ := c["email"].(string); em != "" {
+						logger.Infof("已从Xray配置中移除被settings标记为禁用的用户: %s", em)
+					}
+					continue
+				}
+
+				// -----------------------------------------------------------------
+				// 中文注释: 用户过滤 - 2) inbound.ClientStats 检查 (DB/流量层禁用)
+				// -----------------------------------------------------------------
+				email, _ := c["email"].(string)
+				idStr, _ := c["id"].(string)
+				disabledByStat := false
+				for _, stat := range clientStats {
+					if stat.Email == email && !stat.Enable {
+						disabledByStat = true
+						break
 					}
 				}
-			}
+				if disabledByStat {
+					logger.Infof("已从Xray配置中移除被禁用的用户: %s", email)
+					continue
+				}
 
-			// clear client config for additional parameters
-			var final_clients []any
-			for _, client := range clients {
-				c := client.(map[string]any)
-				if enable, ok := c["enable"].(bool); ok && !enable { continue }
+				// -----------------------------------------------------------------
+				// 中文注释: 构建干净的 xrayClient（只保留白名单字段）
+				// -----------------------------------------------------------------
+				xrayClient := make(map[string]interface{})
+				if id, ok := c["id"]; ok { xrayClient["id"] = id }
+				if email != "" { xrayClient["email"] = email }
+
+				// 规范化 flow
+				if flow, ok := c["flow"]; ok {
+					if fs, ok2 := flow.(string); ok2 && fs == "xtls-rprx-vision-udp443" {
+						xrayClient["flow"] = "xtls-rprx-vision"
+					} else {
+						xrayClient["flow"] = flow
+					}
+				}
+				if password, ok := c["password"]; ok { xrayClient["password"] = password }
+				if method, ok := c["method"]; ok { xrayClient["method"] = method }
+
+				// ⚠️ security 字段已移除，不再加入到 xrayClient
+
+				// -----------------------------------------------------------------
+				// 中文注释: 限速等级映射（优先 DB，再回退 settings.speedLimit）
+				// -----------------------------------------------------------------
 
 				// =================================================================
 				// 这里的逻辑是准备将 client 对象提交给 Xray-core。
 				// 我们需要将 speedLimit 转换为 Xray 认识的 level 字段。
-				// 并且，我们不再删除任何字段，因为 Xray-core 会自动忽略它不认识的字段。
 				// 这样可以确保包含 speedLimit 的完整用户信息被用于生成配置。
 				// =================================================================
-                if speedLimit, ok := c["speedLimit"].(float64); ok && speedLimit > 0 {
-					c["level"] = int(speedLimit)
-                    // 【新增功能】在这里添加日志记录
-                    if email, emailOk := c["email"].(string); emailOk {
-                        logger.Infof("为用户 %s 应用〔独立限速〕: %d KB/s", email, int(speedLimit))
-                    }
-				} else {
-					c["level"] = 0
+				level := 0
+				if email != "" {
+					if v, ok := speedByEmail[email]; ok && v > 0 {
+						level = v
+					}
+				}
+				if level == 0 && idStr != "" {
+					if v, ok := speedById[idStr]; ok && v > 0 {
+						level = v
+					}
+				}
+				if level == 0 {
+					if sl, ok := c["speedLimit"]; ok {
+						switch vv := sl.(type) {
+						case float64:
+							level = int(vv)
+						case int:
+							level = vv
+						case int64:
+							level = int(vv)
+						case string:
+							if n, err := strconv.Atoi(vv); err == nil {
+								level = n
+							}
+						}
+					}
 				}
 
-				if c["flow"] == "xtls-rprx-vision-udp443" {
-					c["flow"] = "xtls-rprx-vision"
+				// 【新增功能】在这里添加日志记录
+				// 只有当最终计算出的 level 大于 0，且 email 存在时，才记录日志
+				if level > 0 && email != "" {
+					logger.Infof("为用户 %s 应用〔独立限速〕: %d KB/s", email, level)
 				}
+				// =================================================================
 
-				final_clients = append(final_clients, c)
+				xrayClient["level"] = level
+
+				xrayClients = append(xrayClients, xrayClient)
 			}
 
-			settings["clients"] = final_clients
-			modifiedSettings, err := json.MarshalIndent(settings, "", "  ")
+			// 把纯净的 clients 应用到 settings，并写入 inboundConfig.Settings
+			settings["clients"] = xrayClients
+			finalSettingsForXray, err := json.Marshal(settings)
 			if err != nil {
-				return nil, err
+				logger.Warningf("无法序列化用于Xray的入站设置 in GetXrayConfig for inbound %d: %v，跳过该入站", inbound.Id, err)
+				continue
 			}
-
-			inbound.Settings = string(modifiedSettings)
+			inboundConfig.Settings = json_util.RawMessage(finalSettingsForXray)
 		}
 
+		// -----------------------------------------------------------------
+		// 中文注释: 处理 StreamSettings（清理敏感字段）
+		// -----------------------------------------------------------------
 		if len(inbound.StreamSettings) > 0 {
-			// Unmarshal stream JSON
-			var stream map[string]any
-			json.Unmarshal([]byte(inbound.StreamSettings), &stream)
-
-			// Remove the "settings" field under "tlsSettings" and "realitySettings"
-			tlsSettings, ok1 := stream["tlsSettings"].(map[string]any)
-			realitySettings, ok2 := stream["realitySettings"].(map[string]any)
-			if ok1 || ok2 {
-				if ok1 {
-					delete(tlsSettings, "settings")
-				} else if ok2 {
-					delete(realitySettings, "settings")
-				}
+			var stream map[string]interface{}
+			if err := json.Unmarshal([]byte(inbound.StreamSettings), &stream); err != nil {
+				logger.Warningf("无法解析 StreamSettings (inbound %d): %v ，跳过该入站", inbound.Id, err)
+				continue
 			}
 
+			if tlsSettings, ok := stream["tlsSettings"].(map[string]interface{}); ok {
+				delete(tlsSettings, "settings")
+			}
+			if realitySettings, ok := stream["realitySettings"].(map[string]interface{}); ok {
+				delete(realitySettings, "settings")
+			}
 			delete(stream, "externalProxy")
 
-			newStream, err := json.MarshalIndent(stream, "", "  ")
+			newStream, err := json.Marshal(stream)
 			if err != nil {
 				return nil, err
 			}
-			inbound.StreamSettings = string(newStream)
+			inboundConfig.StreamSettings = json_util.RawMessage(newStream)
 		}
 
-		inboundConfig := inbound.GenXrayInboundConfig()
 		xrayConfig.InboundConfigs = append(xrayConfig.InboundConfigs, *inboundConfig)
 	}
+
 	return xrayConfig, nil
 }
+
 
 func (s *XrayService) GetXrayTraffic() ([]*xray.Traffic, []*xray.ClientTraffic, error) {
 	if !s.IsXrayRunning() {
