@@ -16,7 +16,6 @@ import (
 	"sort"
 	"sync"
 	"time"
-	"strings"
 
 	"x-ui/database"
 	"x-ui/database/model"
