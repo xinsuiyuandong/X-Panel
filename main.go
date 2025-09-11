@@ -86,14 +86,8 @@ func runWebServer() {
 		defer ticker.Stop()
 
         // 〔中文注释〕：初始化 Telegram Bot 服务。
-        // 我们需要一个 settingService 实例来帮助 Tgbot 读取数据库配置。
-		settingService := service.SettingService{}
-        tgbotService := service.Tgbot{
-        SettingService: settingService,  // 把 settingService 传进去
-            }
-        if err := tgbotService.Start(web.i18nFS); err != nil {
-           panic(err)
-            }
+        tgbotService := service.Tgbot{}
+        tgbotService.Start(i18nFS) // 启动Bot服务以使其能够发送消息
 
 
 		// 〔中文注释〕: 创建任务实例时，将 xrayService 和 tgbotService 一同传入。
