@@ -16,6 +16,7 @@ import (
 	"sort"
 	"sync"
 	"time"
+	"strings"
 
 	"x-ui/database"
 	"x-ui/database/model"
@@ -59,8 +60,9 @@ func RandomUUID() string {
 
 // NewCheckDeviceLimitJob 中文注释: 创建一个新的任务实例
 // 〔中文注释〕: (确认点) 确认此函数增加了 service.TelegramService 类型的参数。
-func NewCheckDeviceLimitJob(xrayService *service.XrayService, telegramService service.TelegramService) *CheckDeviceLimitJob {
+func NewCheckDeviceLimitJob(inboundService service.InboundService, xrayService *service.XrayService, telegramService service.TelegramService) *CheckDeviceLimitJob {
 	return &CheckDeviceLimitJob{
+		inboundService:  inboundService,
 		xrayService: xrayService,
 		// 〔中文注释〕: (确认点) 将传入的 telegramService 赋值给结构体实例。
 		telegramService: telegramService,
