@@ -106,7 +106,6 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		return nil, err
 	}
 
-	s.inboundService.AddTraffic(nil, nil)
 
 	inbounds, err := s.inboundService.GetAllInbounds()
 	if err != nil {
@@ -116,13 +115,14 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	// =================================================================
 	// 中文注释: 动态限速核心逻辑 - 第一步: 收集所有限速值 
 	// =================================================================
-                 // 创建一个 map 用于存储所有出现过的、不为0的限速值
+    // 创建一个 map 用于存储所有出现过的、不为0的限速值
 	uniqueSpeeds := make(map[int]bool)
 	for _, inbound := range inbounds {
 		if !inbound.Enable {
 			continue
 		}
-                                  // 获取该入站下的所有客户端设置
+		
+        // 获取该入站下的所有客户端设置
 		dbClients, _ := s.inboundService.GetClients(inbound)
 		for _, dbClient := range dbClients {
 			if dbClient.SpeedLimit > 0 {
@@ -134,31 +134,65 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	// =================================================================
 	// 中文注释: 动态限速核心逻辑 - 第二步: 根据收集到的限速值，动态生成 Policy Levels
 	// =================================================================
-                 // 初始化 policy levels，并加入默认的 level 0 (不限速)	
-                 policyLevels := make(map[string]interface{})
-	policyLevels["0"] = map[string]interface{}{"handshake": 8, "connIdle": 500}
+
+	// 1. 先从模板中解析出已有的 policy 对象
+	var finalPolicy map[string]interface{}
+	if xrayConfig.Policy != nil {
+		if err := json.Unmarshal(xrayConfig.Policy, &finalPolicy); err != nil {
+			logger.Warningf("无法解析模板中的 policy: %v", err)
+			finalPolicy = make(map[string]interface{})
+		}
+	} else {
+		finalPolicy = make(map[string]interface{})
+	}
+
+	// 2. 初始化 policy levels，获取或创建 policy中的 levels map
+	var policyLevels map[string]interface{}
+	if levels, ok := finalPolicy["levels"].(map[string]interface{}); ok {
+		policyLevels = levels
+	} else {
+		policyLevels = make(map[string]interface{})
+	}
 	
-	// 遍历所有收集到的限速值
-                 for speed := range uniqueSpeeds {
+	// 3. 在 level 0 中确保流量统计开关是开启的
+	if level0, ok := policyLevels["0"].(map[string]interface{}); ok {
+		level0["statsUserUplink"] = true
+		level0["statsUserDownlink"] = true
+		policyLevels["0"] = level0
+	} else {
+		policyLevels["0"] = map[string]interface{}{
+			"handshake":         8,
+			"connIdle":          500,
+			"statsUserUplink":   true,
+			"statsUserDownlink": true,
+		}
+	}
+
+	// 4. 遍历所有收集到的限速值，为每个独立的限速值创建对应的 level
+	for speed := range uniqueSpeeds {
 		// 为每个速率创建一个 level，level 的名字就是速率的字符串形式
 		// 例如，速率 1024 KB/s 对应 level "1024"
 		policyLevels[strconv.Itoa(speed)] = map[string]interface{}{
 			"downlinkOnly": speed,
 			"uplinkOnly":   speed,
+			"handshake":         8,
+			"connIdle":          500,
+			"statsUserUplink":   true,
+			"statsUserDownlink": true,
 		}
 	}
 
-                // 将生成的 policy 应用到 Xray 配置中
-	policyJSON, err := json.Marshal(map[string]interface{}{"levels": policyLevels})
+	// 5. 将修改后的 levels 写回 policy 对象，并序列化回 xrayConfig.Policy，将生成的 policy 应用到 Xray 配置中
+	finalPolicy["levels"] = policyLevels
+	policyJSON, err := json.Marshal(finalPolicy)
 	if err != nil {
 		return nil, err
 	}
 	xrayConfig.Policy = json_util.RawMessage(policyJSON)
 
-
 	// =================================================================
-                 // 中文注释: 在这里增加日志，打印最终生成的限速策略
-                 // =================================================================
+    // 中文注释: 在这里增加日志，打印最终生成的限速策略
+    // =================================================================
 	if len(uniqueSpeeds) > 0 {
 		finalPolicyLog, _ := json.Marshal(policyLevels)
 		logger.Infof("已为Xray动态生成〔限速策略〕: %s", string(finalPolicyLog))
@@ -167,6 +201,9 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	// =================================================================
 	// 中文注释: 动态限速核心逻辑 - 第三步: 为设置了限速的用户分配对应的 Level，逐个 inbound 构建 inboundConfig
 	// =================================================================
+    // 触发一次空调用以处理可能的残留任务	
+    s.inboundService.AddTraffic(nil, nil) 
+	
 	for _, inbound := range inbounds {
 		if !inbound.Enable {
 			continue
