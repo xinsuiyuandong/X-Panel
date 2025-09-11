@@ -85,8 +85,14 @@ func runWebServer() {
 		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 
-		// 中文注释: 创建我们的任务实例, 并传入 xrayService
-		checkJob := job.NewCheckDeviceLimitJob(&xrayService)
+        // 〔中文注释〕：初始化 Telegram Bot 服务。
+        // 我们需要一个 settingService 实例来帮助 Tgbot 读取数据库配置。
+        settingService := service.SettingService{}
+        tgbotService := service.Tgbot{}
+        tgbotService.Start(web.I18nFS) // 启动Bot服务以使其能够发送消息
+
+		// 〔中文注释〕: 创建任务实例时，将 xrayService 和 tgbotService 一同传入。
+		checkJob := job.NewCheckDeviceLimitJob(&xrayService, &tgbotService)
 
 		// 中文注释: 使用一个无限循环，每次定时器触发，就执行一次任务的 Run() 函数
 		for {
