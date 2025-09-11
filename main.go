@@ -85,11 +85,6 @@ func runWebServer() {
 		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 
-        // 〔中文注释〕：初始化 Telegram Bot 服务。
-        tgbotService := service.Tgbot{}
-        tgbotService.Start(i18nFS) // 启动Bot服务以使其能够发送消息
-
-
 		// 〔中文注释〕: 创建任务实例时，将 xrayService 和 tgbotService 一同传入。
 		checkJob := job.NewCheckDeviceLimitJob(&xrayService, &tgbotService)
 
