@@ -85,6 +85,9 @@ func runWebServer() {
 		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 
+        // 我们只需要创建 tgbotService，并传给设备限制任务。
+        tgbotService := service.Tgbot{}
+		
 		// 〔中文注释〕: 创建任务实例时，将 xrayService 和 tgbotService 一同传入。
 		checkJob := job.NewCheckDeviceLimitJob(&xrayService, &tgbotService)
 
