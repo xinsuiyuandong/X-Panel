@@ -1,12 +1,13 @@
+
 package xray
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"regexp"
 	"time"
-	"math"
 
 	"x-ui/logger"
 	"x-ui/util/common"
@@ -170,6 +171,41 @@ func (x *XrayAPI) RemoveUser(inboundTag, email string) error {
 
 	return nil
 }
+
+// =================================================================
+// ============== 中文注释: 以下是为设备限制功能新增的函数 ==============
+// =================================================================
+
+// GetOnlineClients 用于获取指定入站的在线用户 IP 列表
+func (x *XrayAPI) GetOnlineClients(inboundTag string) (map[string]int64, error) {
+	// 检查 API 客户端是否已连接
+	if !x.isConnected || x.StatsServiceClient == nil {
+		return nil, common.NewError("Xray API is not connected or StatsServiceClient is not initialized")
+	}
+
+	// 使用 Init() 中已创建好的 StatsServiceClient
+	client := *x.StatsServiceClient
+
+	// 创建请求，Name 的格式是 "inbound>>>{tag}"
+	request := &statsService.GetStatsRequest{
+		Name: fmt.Sprintf("inbound>>>%s", inboundTag),
+	}
+
+	// 设置一个5秒的超时，避免长时间等待
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// 调用 gRPC 方法 GetStatsOnlineIpList
+	resp, err := client.GetStatsOnlineIpList(ctx, request)
+	if err != nil {
+		// 如果调用失败，返回错误
+		return nil, fmt.Errorf("failed to get online ip list for tag %s: %w", inboundTag, err)
+	}
+
+	// 成功后，返回 API 响应中的 Ips 字段 (map[string]int64)
+	return resp.Ips, nil
+}
+
 
 func (x *XrayAPI) GetTraffic(reset bool) ([]*Traffic, []*ClientTraffic, error) {
 	if x.grpcClient == nil {
