@@ -176,34 +176,34 @@ func (x *XrayAPI) RemoveUser(inboundTag, email string) error {
 // ============== 中文注释: 以下是为设备限制功能新增的函数 ==============
 // =================================================================
 
-// GetOnlineClients 用于获取指定入站的在线用户 IP 列表
-func (x *XrayAPI) GetOnlineClients(inboundTag string) (map[string]int64, error) {
+// GetOnlineIpList 调用 Xray 的 StatsService 的 GetStatsOnlineIpList，带上下文参数，可复用
+// 返回 map[ip] -> unixTimestamp（秒）
+func (x *XrayAPI) GetOnlineIpList(ctx context.Context, inboundTag string) (map[string]int64, error) {
 	// 检查 API 客户端是否已连接
 	if !x.isConnected || x.StatsServiceClient == nil {
 		return nil, common.NewError("Xray API is not connected or StatsServiceClient is not initialized")
 	}
 
-	// 使用 Init() 中已创建好的 StatsServiceClient
-	client := *x.StatsServiceClient
-
-	// 创建请求，Name 的格式是 "inbound>>>{tag}"
+	// Name 格式与 Xray stats 一致： inbound>>>{tag}
 	request := &statsService.GetStatsRequest{
 		Name: fmt.Sprintf("inbound>>>%s", inboundTag),
 	}
 
-	// 设置一个5秒的超时，避免长时间等待
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	// 调用 gRPC 方法 GetStatsOnlineIpList
-	resp, err := client.GetStatsOnlineIpList(ctx, request)
+	resp, err := x.StatsServiceClient.GetStatsOnlineIpList(ctx, request)
 	if err != nil {
-		// 如果调用失败，返回错误
 		return nil, fmt.Errorf("failed to get online ip list for tag %s: %w", inboundTag, err)
 	}
 
-	// 成功后，返回 API 响应中的 Ips 字段 (map[string]int64)
 	return resp.Ips, nil
+}
+
+// GetOnlineClients 为兼容现有调用保留的便捷方法，内部使用带 5 秒超时的 GetOnlineIpList
+func (x *XrayAPI) GetOnlineClients(inboundTag string) (map[string]int64, error) {
+	// 设置 5 秒超时，和你原先逻辑一致
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	return x.GetOnlineIpList(ctx, inboundTag)
 }
 
 
