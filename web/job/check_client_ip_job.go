@@ -31,12 +31,12 @@ import (
 // ActiveClientIPs 中文注释: 用于在内存中跟踪每个用户的活跃IP (现在由API填充)
 // 结构: map[用户email] -> map[IP地址] -> 最后活跃时间
 var ActiveClientIPs = make(map[string]map[string]time.Time)
-var activeClientsLock sync.RWMotec
+var activeClientsLock sync.RWMutex
 
 // ClientStatus 中文注释: 用于跟踪每个用户的状态（是否因为设备超限而被禁用）
 // 结构: map[用户email] -> 是否被禁用(true/false)
 var ClientStatus = make(map[string]bool)
-var clientStatusLock sync.RWMutec
+var clientStatusLock sync.RWMutex
 
 // CheckDeviceLimitJob 中文注释: 这是我们的设备限制任务的结构体
 type CheckDeviceLimitJob struct {
