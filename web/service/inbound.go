@@ -85,6 +85,40 @@ func (s *InboundService) GetClients(inbound *model.Inbound) ([]model.Client, err
 	return clients, nil
 }
 
+// 〔中文注释〕: 新增方法：根据入站ID获取其下所有用户的 email 列表。
+// 这个方法是设备限制功能所必需的，用于查询指定入站规则下的所有客户端。
+func (s *InboundService) GetEmailsByInboundId(inboundId int) ([]string, error) {
+	// 〔中文注释〕: 首先，利用现有的 GetInbound 方法通过 ID 获取入站的详细信息。
+	inbound, err := s.GetInbound(inboundId)
+	if err != nil {
+		// 如果找不到入站规则，则返回错误。
+		return nil, err
+	}
+
+	// 〔中文注释〕: 接着，利用现有的 GetClients 方法从入站的 settings 字段中解析出所有客户端对象。
+	clients, err := s.GetClients(inbound)
+	if err != nil {
+		// 如果解析客户端失败，则返回错误。
+		return nil, err
+	}
+
+	// 如果该入站没有任何客户端，则返回一个空的列表。
+	if len(clients) == 0 {
+		return []string{}, nil
+	}
+
+	// 〔中文注释〕: 创建一个用于存放 email 的字符串切片。
+	emails := make([]string, 0, len(clients))
+	
+	// 〔中文注释〕: 遍历所有客户端，将每个客户端的 Email 字段追加到 emails 切片中。
+	for _, client := range clients {
+		emails = append(emails, client.Email)
+	}
+
+	// 〔中文注释〕: 返回包含所有 email 的列表和 nil 错误，表示操作成功。
+	return emails, nil
+}
+
 func (s *InboundService) getAllEmails() ([]string, error) {
 	db := database.GetDB()
 	var emails []string
