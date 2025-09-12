@@ -33,6 +33,12 @@ import (
 	"github.com/valyala/fasthttp/fasthttpproxy"
 )
 
+// 〔中文注释〕: 新增 TelegramService 接口，用于解耦 Job 和 Telegram Bot 的直接依赖。
+// 任何实现了 SendMessage(msg string) error 方法的结构体，都可以被认为是 TelegramService。
+type TelegramService interface {
+    SendMessage(msg string) error
+}
+
 var (
 	bot         *telego.Bot
 	botHandler  *th.BotHandler
@@ -2973,4 +2979,17 @@ func (t *Tgbot) isSingleWord(text string) bool {
 	text = strings.TrimSpace(text)
 	re := regexp.MustCompile(`\s+`)
 	return re.MatchString(text)
+}
+
+// 〔中文注释〕: 新增方法，实现 TelegramService 接口。
+// 当设备限制任务需要发送消息时，会调用此方法。
+// 该方法内部调用了已有的 SendMsgToTgbotAdmins 函数，将消息发送给所有管理员。
+func (t *Tgbot) SendMessage(msg string) error {
+    if !t.IsRunning() {
+        // 〔中文注释〕: 如果 Bot 未运行，返回错误，防止程序出错。
+        return errors.New("Telegram bot is not running")
+    }
+    // 〔中文注释〕: 调用现有方法将消息发送给所有已配置的管理员。
+    t.SendMsgToTgbotAdmins(msg)
+    return nil
 }
