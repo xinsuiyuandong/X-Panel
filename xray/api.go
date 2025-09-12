@@ -189,7 +189,7 @@ func (x *XrayAPI) GetOnlineIpList(ctx context.Context, inboundTag string) (map[s
 		Name: fmt.Sprintf("inbound>>>%s", inboundTag),
 	}
 
-	resp, err := x.StatsServiceClient.GetStatsOnlineIpList(ctx, request)
+	resp, err := *x.StatsServiceClient.GetStatsOnlineIpList(ctx, request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get online ip list for tag %s: %w", inboundTag, err)
 	}
