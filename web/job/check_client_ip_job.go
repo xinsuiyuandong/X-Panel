@@ -282,7 +282,7 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 		if j.telegramService == nil {
 			return
 		}
-		tgMessage := fmt.Sprintf("<b>〔X-Panel面板〕设备超限提醒</b>\n\n<b>用户Email:</b> %s\n<b>设备限制:</b> %d\n<b>当前在线IP数:</b> %d\n\n该用户已被自动封禁。", email, info.Limit, activeIPCount)
+		tgMessage := fmt.Sprintf("<b>〔X-Panel面板〕设备超限提醒</b>\n\n<b>用户Email：</b> %s\n<b>设备限制数量：</b> %d\n<b>当前在线IP数：</b> %d\n\n该用户已被自动掐网封禁！", email, info.Limit, activeIPCount)
 		// 〔中文注释〕: 调用接口方法发送消息。
 		err := j.telegramService.SendMessage(tgMessage)
 		if err != nil {
