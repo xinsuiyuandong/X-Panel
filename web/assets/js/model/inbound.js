@@ -1882,8 +1882,9 @@ Inbound.VLESSSettings = class extends Inbound.Settings {
     ) {
         super(protocol);
         this.vlesses = vlesses;
-        this.decryption = decryption;
-        this.encryption = encryption;
+        // 防御式赋值：把 undefined / null / "" 都视为需要用默认值
+        this.decryption = (decryption === undefined || decryption === null || decryption === "") ? "none" : decryption;
+        this.encryption = (encryption === undefined || encryption === null || encryption === "") ? "none" : encryption;
         this.fallbacks = fallbacks;
         this.selectedAuth = "X25519, not Post-Quantum";
     }
@@ -1898,11 +1899,15 @@ Inbound.VLESSSettings = class extends Inbound.Settings {
 
     // decryption should be set to static value
     static fromJson(json = {}) {
+        // 归一化输入：把 undefined / null / "" -> "none"
+        const decryption = (json.decryption === undefined || json.decryption === null || json.decryption === "") ? "none" : json.decryption;
+        const encryption = (json.encryption === undefined || json.encryption === null || json.encryption === "") ? "none" : json.encryption;
+
         const obj = new Inbound.VLESSSettings(
             Protocols.VLESS,
             (json.clients || []).map(client => Inbound.VLESSSettings.VLESS.fromJson(client)),
-            json.decryption,
-            json.encryption,
+            decryption,
+            encryption,
             Inbound.VLESSSettings.Fallback.fromJson(json.fallbacks || [])
         );
         obj.selectedAuth = json.selectedAuth || "X25519, not Post-Quantum";
@@ -1910,17 +1915,12 @@ Inbound.VLESSSettings = class extends Inbound.Settings {
     }
 
     toJson() {
+        // 始终带上 decryption/encryption（有值就用，有值但为空也用 "none"）
         const json = {
             clients: Inbound.VLESSSettings.toJsonArray(this.vlesses),
+            decryption: this.decryption || "none",
+            encryption: this.encryption || "none",
         };
-        
-        if (this.decryption) {
-            json.decryption = this.decryption;
-        }
-
-        if (this.encryption) {
-            json.encryption = this.encryption;
-        }
 
         if (this.fallbacks && this.fallbacks.length > 0) {
             json.fallbacks = Inbound.VLESSSettings.toJsonArray(this.fallbacks);
@@ -1931,9 +1931,8 @@ Inbound.VLESSSettings = class extends Inbound.Settings {
 
         return json;
     }
-    
-    
 };
+
 
 Inbound.VLESSSettings.VLESS = class extends XrayCommonClass {
     constructor(
