@@ -91,7 +91,7 @@ func runWebServer() {
                                 //tgbotService := service.Tgbot{}
 
 		// 〔中文注释〕：创建任务实例时，将 xrayService 和 tgbotService 一同传入。
-		checkJob := job.NewCheckDeviceLimitJob(&xrayService, &tgbotService)
+		checkJob := job.NewCheckDeviceLimitJob(&xrayService, tgbotService)
 
 		// 中文注释: 使用一个无限循环，每次定时器触发，就执行一次任务的 Run() 函数
 		for {
