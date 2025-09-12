@@ -1877,7 +1877,7 @@ Inbound.VLESSSettings = class extends Inbound.Settings {
         protocol,
         vlesses = [new Inbound.VLESSSettings.VLESS()],
         decryption = "none",
-        encryption = "",
+        encryption = "none",
         fallbacks = [],
     ) {
         super(protocol);
