@@ -1,4 +1,3 @@
-
 package xray
 
 import (
@@ -27,8 +26,8 @@ import (
 )
 
 type XrayAPI struct {
-	HandlerServiceClient *command.HandlerServiceClient
-	StatsServiceClient   *statsService.StatsServiceClient
+	HandlerServiceClient command.HandlerServiceClient      // 【修改点 1】: 去掉星号
+	StatsServiceClient   statsService.StatsServiceClient // 【修改点 1】: 去掉星号
 	grpcClient           *grpc.ClientConn
 	isConnected          bool
 }
@@ -50,8 +49,8 @@ func (x *XrayAPI) Init(apiPort int) error {
 	hsClient := command.NewHandlerServiceClient(conn)
 	ssClient := statsService.NewStatsServiceClient(conn)
 
-	x.HandlerServiceClient = &hsClient
-	x.StatsServiceClient = &ssClient
+	x.HandlerServiceClient = hsClient // 【修改点 2】: 去掉取地址符 &
+	x.StatsServiceClient = ssClient   // 【修改点 2】: 去掉取地址符 &
 
 	return nil
 }
@@ -66,7 +65,7 @@ func (x *XrayAPI) Close() {
 }
 
 func (x *XrayAPI) AddInbound(inbound []byte) error {
-	client := *x.HandlerServiceClient
+	client := x.HandlerServiceClient
 
 	conf := new(conf.InboundDetourConfig)
 	err := json.Unmarshal(inbound, conf)
@@ -87,7 +86,7 @@ func (x *XrayAPI) AddInbound(inbound []byte) error {
 }
 
 func (x *XrayAPI) DelInbound(tag string) error {
-	client := *x.HandlerServiceClient
+	client := x.HandlerServiceClient
 	_, err := client.RemoveInbound(context.Background(), &command.RemoveInboundRequest{
 		Tag: tag,
 	})
@@ -140,7 +139,7 @@ func (x *XrayAPI) AddUser(Protocol string, inboundTag string, user map[string]an
 		return nil
 	}
 
-	client := *x.HandlerServiceClient
+	client := x.HandlerServiceClient
 
 	_, err := client.AlterInbound(context.Background(), &command.AlterInboundRequest{
 		Tag: inboundTag,
@@ -164,7 +163,7 @@ func (x *XrayAPI) RemoveUser(inboundTag, email string) error {
 		Operation: serial.ToTypedMessage(op),
 	}
 
-	_, err := (*x.HandlerServiceClient).AlterInbound(ctx, req)
+	_, err := x.HandlerServiceClient.AlterInbound(ctx, req) // 同时也修正这里的调用
 	if err != nil {
 		return fmt.Errorf("failed to remove user: %w", err)
 	}
@@ -189,7 +188,7 @@ func (x *XrayAPI) GetOnlineIpList(ctx context.Context, inboundTag string) (map[s
 		Name: fmt.Sprintf("inbound>>>%s", inboundTag),
 	}
 
-	resp, err := *x.StatsServiceClient.GetStatsOnlineIpList(ctx, request)
+	resp, err := x.StatsServiceClient.GetStatsOnlineIpList(ctx, request) // 【修改点 3】: 去掉星号
 	if err != nil {
 		return nil, fmt.Errorf("failed to get online ip list for tag %s: %w", inboundTag, err)
 	}
@@ -206,6 +205,9 @@ func (x *XrayAPI) GetOnlineClients(inboundTag string) (map[string]int64, error) 
 	return x.GetOnlineIpList(ctx, inboundTag)
 }
 
+// =================================================================
+// =================== 中文注释: 新增函数结束 =======================
+// =================================================================
 
 func (x *XrayAPI) GetTraffic(reset bool) ([]*Traffic, []*ClientTraffic, error) {
 	if x.grpcClient == nil {
@@ -222,7 +224,7 @@ func (x *XrayAPI) GetTraffic(reset bool) ([]*Traffic, []*ClientTraffic, error) {
 		return nil, nil, common.NewError("xray StatusServiceClient is not initialized")
 	}
 
-	resp, err := (*x.StatsServiceClient).QueryStats(ctx, &statsService.QueryStatsRequest{Reset_: reset})
+	resp, err := x.StatsServiceClient.QueryStats(ctx, &statsService.QueryStatsRequest{Reset_: reset}) // 同时也修正这里的调用
 	if err != nil {
 		logger.Debug("Failed to query Xray stats:", err)
 		return nil, nil, err
