@@ -12,8 +12,9 @@ import (
 	"sort"
 	"time"
 	"sync"
-    "crypto/rand"
-    "encoding/hex"
+                 "crypto/rand"
+                 "encoding/hex"
+                 "fmt" // 中文注释 (新增): 导入 fmt 包用于格式化消息
 
 	"x-ui/database"
 	"x-ui/database/model"
@@ -44,6 +45,8 @@ type CheckDeviceLimitJob struct {
 	xrayApi xray.XrayAPI
 	// lastPosition 中文注释: 用于记录上次读取 access.log 的位置，避免重复读取
 	lastPosition int64
+                 // 〔中文注释〕: 注入 Telegram 服务用于发送通知，确保此行存在。
+	telegramService   service.TelegramService
 }
 
 // RandomUUID 中文注释: 新增一个辅助函数，用于生成一个随机的 UUID
@@ -56,11 +59,14 @@ func RandomUUID() string {
 }
 
 // NewCheckDeviceLimitJob 中文注释: 创建一个新的任务实例
-func NewCheckDeviceLimitJob(xrayService *service.XrayService) *CheckDeviceLimitJob {
+// 〔中文注释〕：增加一个 service.TelegramService 类型的参数。
+func NewCheckDeviceLimitJob(xrayService *service.XrayService, telegramService service.TelegramService) *CheckDeviceLimitJob {
 	return &CheckDeviceLimitJob{
 		xrayService: xrayService,
 		// 中文注释: 初始化 xrayApi 字段
 		xrayApi: xray.XrayAPI{},
+                                 // 〔中文注释〕: 将传入的 telegramService 赋值给结构体实例。
+		telegramService: telegramService,
 	}
 }
 
@@ -269,6 +275,31 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 	}
 	logger.Infof("〔设备限制〕超限：用户 %s. 限制: %d, 当前活跃: %d. 执行封禁掐网。", email, info.Limit, activeIPCount)
 	
+	// 〔中文注释〕: 以下是发送 Telegram 通知的核心代码，
+	// 它会调用我们注入的 telegramService 的 SendMessage 方法。
+	go func() {
+		// 〔中文注释〕: 在调用前，先判断服务实例是否为 nil，增加代码健壮性。
+		if j.telegramService == nil {
+			return
+		}
+		tgMessage := fmt.Sprintf(
+			"<b>〔X-Panel面板〕设备超限提醒</b>\n\n"+
+				"  ------------------------------------\n"+
+				"  👤 用户 Email：%s\n"+
+				"  🖥️ 设备限制数量：%d\n"+
+				"  🌐 当前在线IP数：%d\n"+
+				"  ------------------------------------\n\n"+
+				"<b><i>⚠ 该用户已被自动掐网封禁！</i></b>",
+			email, info.Limit, activeIPCount,
+		)
+		// 〔中文注释〕: 调用接口方法发送消息。
+		err := j.telegramService.SendMessage(tgMessage)
+		if err != nil {
+			logger.Warningf("发送 Telegram 封禁通知失败: %v", err)
+		}
+	}()
+
+
 	// 中文注释: 步骤一：先从 Xray-Core 中删除该用户。
 	j.xrayApi.RemoveUser(info.Tag, email)
     
