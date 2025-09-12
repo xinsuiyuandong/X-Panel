@@ -284,11 +284,11 @@ func (j *CheckDeviceLimitJob) banUser(email string, activeIPCount int, info *str
 		}
 		tgMessage := fmt.Sprintf(
 			"<b>〔X-Panel面板〕设备超限提醒</b>\n\n"+
-				"------------\n"+
+				"  ------------------------\n"+
 				"  👤 用户 Email：%s\n"+
 				"  🖥️ 设备限制数量：%d\n"+
 				"  🌐 当前在线IP数：%d\n"+
-				"------------\n\n"+
+				"  ------------------------\n\n"+
 				"<b><i>⚠ 该用户已被自动掐网封禁！</i></b>",
 			email, info.Limit, activeIPCount,
 		)
