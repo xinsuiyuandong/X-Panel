@@ -105,7 +105,7 @@
         <a-tag :color="inbound.settings.selectedAuth ? 'green' : 'red'">[[ inbound.settings.selectedAuth ? inbound.settings.selectedAuth : '' ]]</a-tag>
       <br />
       {{ i18n "encryption" }}
-        <a-tag :color="inbound.settings.encryption ? 'green' : 'red'">[[ inbound.settings.encryption ? inbound.settings.encryption : '' ]]</a-tag>
+        <a-tag :color="inbound.settings.encryption ? 'green' : 'red'">[[ inbound.settings.encryption ? inbound.settings.encryption : 'none' ]]</a-tag>
       <br />
       <template v-if="inbound.stream.security != 'none'">
         {{ i18n "domainName" }}
