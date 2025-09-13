@@ -42,7 +42,7 @@
     },
     {
       "tag": "api",
-      "protocol": "blackhole",
+      "protocol": "blackhole"
     }
   ],
   "policy": {
