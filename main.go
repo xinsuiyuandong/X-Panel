@@ -85,27 +85,32 @@ func runWebServer() {
 		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 
-		// 〔中文注释〕: 步骤一：在循环外部，只声明一次 tgBotService 变量。
-		// 我们将其声明为接口类型，初始值为 nil。
+		// 〔重要〕: 在循环外部，实例化所有需要的服务
+		settingService := service.SettingService{}
+		inboundService := service.InboundService{} // 〔新增〕: 实例化 InboundService，用于数据库操作
+
+		// 〔中文注释〕: 声明 TelegramService 接口变量
 		var tgBotService service.TelegramService
 
-		// 〔中文注释〕: 步骤二：检查 Telegram Bot 是否在面板设置中启用。
-		settingService := service.SettingService{}
+		// 〔中文注释〕: 检查 Telegram Bot 是否在面板设置中启用
 		tgEnable, err := settingService.GetTgbotEnabled()
 		if err != nil {
 			logger.Warningf("无法获取 Telegram Bot 设置: %v, 设备限制通知功能可能无法使用", err)
 		}
 
-		// 〔中文注释〕: 步骤三：如果 Bot 已启用，则初始化实例并赋值给上面声明的变量。
-		// 注意这里使用的是 `=` 而不是 `:=`，因为我们是给已存在的变量赋值。
+		// 〔中文注释〕: 如果 Bot 已启用，则初始化实例并赋值
 		if tgEnable {
+			// 注意：您的 tgbot.go 中，Tgbot 结构体没有字段，直接 new 就可以。
+			// 如果未来有改动，需要确保这里的初始化是正确的。
 			tgBotService = new(service.Tgbot)
+		} else {
+			// 〔重要〕: 如果tg bot未启用，我们需要传入一个“哑”实现，避免传入nil。
+			// 这里我们创建一个不会做任何事情的 "dummy" service。
+			tgBotService = &service.DummyTelegramService{}
 		}
-		
-		// 〔中文注释〕：步骤四：创建任务实例时，将 xrayService 和 可能为 nil 的 tgBotService 一同传入。
-		// 这样做是安全的，因为 check_client_ip_job.go 内部的 SendMessage 调用前，会先判断服务实例是否可用。
-		checkJob := job.NewCheckDeviceLimitJob(&xrayService, tgBotService)
 
+		// 〔修改〕: 调用我们修正后的 NewCheckDeviceLimitJob 函数，并传入所有必需的服务实例
+		checkJob := job.NewCheckDeviceLimitJob(&xrayService, inboundService, tgBotService)
 
 		// 中文注释: 使用一个无限循环，每次定时器触发，就执行一次任务的 Run() 函数
 		for {
@@ -113,6 +118,7 @@ func runWebServer() {
 			checkJob.Run()
 		}
 	}()
+
 
 	sigCh := make(chan os.Signal, 1)
 	// Trap shutdown signals
