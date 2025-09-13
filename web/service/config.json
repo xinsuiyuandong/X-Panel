@@ -42,12 +42,7 @@
     },
     {
       "tag": "api",
-      "listen": "127.0.0.1",
-      "port": 69789,
-      "protocol": "tunnel",
-      "settings": {
-      "address": "127.0.0.1"
-      }
+      "protocol": "blackhole"
     }
   ],
   "policy": {
