@@ -375,8 +375,6 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 			inboundConfig.StreamSettings = json_util.RawMessage(newStream)
 		}
 		
-		inboundConfig := inbound.GenXrayInboundConfig()
-		
 		xrayConfig.InboundConfigs = append(xrayConfig.InboundConfigs, *inboundConfig)
 	}
 
