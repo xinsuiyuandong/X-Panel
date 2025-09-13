@@ -2993,3 +2993,15 @@ func (t *Tgbot) SendMessage(msg string) error {
     t.SendMsgToTgbotAdmins(msg)
     return nil
 }
+
+
+// 〔中文注释〕: 新增一个 "哑" (Dummy) 的 Telegram 服务实现。
+// 当用户在面板中未启用 Telegram Bot 时，我们会将这个结构的实例传递给设备限制任务。
+// 这样做的好处是，任务代码无需到处判断 telegramService 是否为 nil，可以直接调用 SendMessage 方法，
+// 而这个“哑”方法什么也不做，直接返回 nil，从而保证了程序的健壮性。
+type DummyTelegramService struct{}
+
+// SendMessage 在 "哑" 服务中是一个空方法，它什么也不执行，直接返回成功。
+func (d *DummyTelegramService) SendMessage(msg string) error {
+    return nil // 直接返回，表示“发送”成功，但不做任何实际操作。
+}
