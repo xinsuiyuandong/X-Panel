@@ -96,9 +96,9 @@ func (j *CheckDeviceLimitJob) Run() {
 }
 
 
-// updateAllClientsFromAPI 中文注释 (新增): 通过 Xray API 获取所有在线 IP 并更新到 ActiveClientIPs
+// updateAllClientsFromAPI 中文注释 (重要逻辑重构): 通过 Xray API 直接获取每个用户的在线 IP 并更新到 ActiveClientIPs
 func (j *CheckDeviceLimitJob) updateAllClientsFromAPI() {
-	// 中文注释 (新增): 查询所有开启了设备限制的入站
+	// 中文注释: 查询所有开启了设备限制的入站
 	db := database.GetDB()
 	var inbounds []*model.Inbound
 	db.Where("device_limit > 0 AND enable = ?", true).Find(&inbounds)
@@ -107,41 +107,44 @@ func (j *CheckDeviceLimitJob) updateAllClientsFromAPI() {
 		return
 	}
 
-	// 中文注释 (新增): 创建一个新的 map 用于存放本次 API 查询到的最新数据
+	// 中文注释: 创建一个新的 map 用于存放本次 API 查询到的最新数据
 	latestActiveClients := make(map[string]map[string]time.Time)
 
+	// 〔中文注释〕: 遍历所有需要检查的入站
 	for _, inbound := range inbounds {
-		// 中文注释 (新增): 调用 Xray API 获取该入站的所有在线IP
-		onlineIPs, err := j.xrayApi.GetOnlineClients(inbound.Tag)
-		if err != nil {
-			logger.Warningf("从 API 获取入站 [%s] 的在线 IP 失败: %v", inbound.Tag, err)
-			continue
-		}
-
-		if len(onlineIPs) == 0 {
-			continue
-		}
-
-		// 中文注释 (新增): 获取该入站的所有用户 email
+		// 〔中文注释〕: 获取该入站下的所有用户 email
 		emails, err := j.inboundService.GetEmailsByInboundId(inbound.Id)
 		if err != nil || len(emails) == 0 {
 			continue
 		}
 
-		// 中文注释 (新增): 将 API 返回的在线 IP 平均分配给这个入站下的所有用户
-		// 这是因为 API 只返回 IP 列表，无法直接关联到具体用户
-		// 这种方式可以有效触发对整个入站的设备限制检查
+		// 〔中文注释〕: 遍历该入站下的每一个用户
 		for _, email := range emails {
-			if _, ok := latestActiveClients[email]; !ok {
-				latestActiveClients[email] = make(map[string]time.Time)
+			// 〔中文注释〕: 构造针对该用户的统计查询名称，格式为 "user>>>用户邮箱"
+			queryPattern := "user>>>" + email
+			
+			// 〔中文注释〕: 调用 Xray API，直接获取该用户的在线IP列表
+			onlineIPs, err := j.xrayApi.GetOnlineClients(queryPattern)
+			if err != nil {
+				// 〔中文注释〕: 这里的日志现在会打印用户邮箱，而不是入站tag，排错更精确。
+				// 注意: 如果某个用户从未连接过，查询他/她可能会返回NotFound错误，这是正常现象，所以我们使用Debug级别日志。
+				logger.Debugf("从 API 获取用户 [%s] 的在线 IP 失败: %v", email, err)
+				continue
 			}
-			for ip, timestamp := range onlineIPs {
-				latestActiveClients[email][ip] = time.Unix(timestamp, 0)
+			
+			// 〔中文注释〕: 如果查询成功且该用户有在线IP，则记录到内存中
+			if len(onlineIPs) > 0 {
+				if _, ok := latestActiveClients[email]; !ok {
+					latestActiveClients[email] = make(map[string]time.Time)
+				}
+				for ip, timestamp := range onlineIPs {
+					latestActiveClients[email][ip] = time.Unix(timestamp, 0)
+				}
 			}
 		}
 	}
 
-	// 中文注释 (新增): 使用最新的数据覆盖内存中的旧数据，保证数据实时性
+	// 中文注释: 使用最新的数据覆盖内存中的旧数据，保证数据实时性
 	activeClientsLock.Lock()
 	ActiveClientIPs = latestActiveClients
 	activeClientsLock.Unlock()
