@@ -41,7 +41,7 @@
       "settings": {}
     },
     {
-      "tag": "api", // <--- (修正) 增加这个与路由规则匹配的 blackhole 出站
+      "tag": "api",
       "protocol": "blackhole",
     }
   ],
