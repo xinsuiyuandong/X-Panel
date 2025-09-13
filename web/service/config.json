@@ -21,7 +21,7 @@
       "port": 62789,
       "protocol": "tunnel",
       "settings": {
-        "address": "127.0.0.1"
+      "address": "127.0.0.1"
       }
     }
   ],
@@ -42,7 +42,12 @@
     },
     {
       "tag": "api",
-      "protocol": "blackhole"
+      "listen": "127.0.0.1",
+      "port": 69789,
+      "protocol": "tunnel",
+      "settings": {
+      "address": "127.0.0.1"
+      }
     }
   ],
   "policy": {
