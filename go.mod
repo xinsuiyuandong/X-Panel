@@ -17,7 +17,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shirou/gopsutil/v4 v4.25.8
-	github.com/valyala/fasthttp v1.65.0
+	github.com/valyala/fasthttp v1.66.0
 	github.com/xlzd/gotp v0.1.0
 	github.com/xtls/xray-core v1.250911.0
 	go.uber.org/atomic v1.11.0
@@ -25,7 +25,7 @@ require (
 	golang.org/x/text v0.29.0
 	google.golang.org/grpc v1.75.1
 	gorm.io/driver/sqlite v1.6.0
-	gorm.io/gorm v1.30.5
+	gorm.io/gorm v1.31.0
 )
 
 require (
@@ -70,7 +70,7 @@ require (
 	github.com/refraction-networking/utls v1.8.0 // indirect
 	github.com/riobard/go-bloom v0.0.0-20200614022211-cdc8013cb5b3 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
-	github.com/sagernet/sing v0.7.8 // indirect
+	github.com/sagernet/sing v0.7.10 // indirect
 	github.com/sagernet/sing-shadowsocks v0.2.9 // indirect
 	github.com/seiflotfy/cuckoofilter v0.0.0-20240715131351-a2f2c23f1771 // indirect
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
@@ -98,6 +98,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250908214217-97024824d090 // indirect
 	google.golang.org/protobuf v1.36.9 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	gvisor.dev/gvisor v0.0.0-20250911074633-40dfee4a1a3f // indirect
+	gvisor.dev/gvisor v0.0.0-20250911184808-57697a8f6350 // indirect
 	lukechampine.com/blake3 v1.4.1 // indirect
 )
