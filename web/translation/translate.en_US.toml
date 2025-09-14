@@ -86,7 +86,8 @@
 
 [pages.login]
 "hello" = "Hello"
-"title" = "Welcome"
+"XPanelSystem" = "Management System"
+"title" = "Welcome to Use"
 "loginAgain" = "Your session has expired, please log in again"
 
 [pages.login.toasts]
@@ -231,6 +232,14 @@
 "exportInbound" = "Export Inbound"
 "import" = "Import"
 "importInbound" = "Import an Inbound"
+"reviewTitle"="Please confirm the following configuration information"
+"neverExpire"="Never expires"
+"reviewHint"="If you need to modify, please return to the previous step"
+"unlimited"="No restrictions"
+"deviceLimit"="Device restrictions"
+"deviceLimitDesc"="Please enter the specific quantity, 0 means no limit (leaving it blank also means no limit)"
+"speedLimit"="Independent speedLimit"
+"speedLimitDesc"="Set the maximum upload/download speed for this user in KB/s. 0 means unlimited speed."
 
 [pages.client]
 "add" = "Add Client"
