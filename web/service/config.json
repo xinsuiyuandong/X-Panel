@@ -11,7 +11,8 @@
     "services": [
       "HandlerService",
       "LoggerService",
-      "StatsService"
+      "StatsService",
+      "ObservatoryService"
     ]
   },
   "inbounds": [
@@ -21,7 +22,7 @@
       "port": 62789,
       "protocol": "tunnel",
       "settings": {
-        "address": "127.0.0.1"
+      "address": "127.0.0.1"
       }
     }
   ],
@@ -39,20 +40,29 @@
       "tag": "blocked",
       "protocol": "blackhole",
       "settings": {}
+    },
+    {
+      "tag": "api",
+      "protocol": "blackhole"
     }
   ],
   "policy": {
     "levels": {
       "0": {
-        "statsUserDownlink": true,
-        "statsUserUplink": true
+			"downlinkOnly": 0,
+			"uplinkOnly": 0,
+			"handshake":         8,
+			"connIdle":          500,
+			"statsUserUplink":   true,
+			"statsUserDownlink": true,
+			"statsUserOnline": true
       }
     },
     "system": {
       "statsInboundDownlink": true,
       "statsInboundUplink": true,
-      "statsOutboundDownlink": false,
-      "statsOutboundUplink": false
+      "statsOutboundDownlink": true,
+      "statsOutboundUplink": true
     }
   },
   "routing": {
@@ -85,5 +95,6 @@
   "metrics": {
     "tag": "metrics_out",
     "listen": "127.0.0.1:11111"
-  }
+  },
+  "observatory": {}
 }
