@@ -298,7 +298,7 @@ reset_config() {
         return 0
     fi
     /usr/local/x-ui/x-ui setting -reset
-    echo -e "所有面板设置已重置为默认，请立即重新启动面板，并使用默认的${green}2053${plain}端口访问网页面板"
+    echo -e "所有面板设置已重置为默认，请立即重新启动面板，并使用默认的${green}13688${plain}端口访问网页面板"
     confirm_restart
 }
 
@@ -709,18 +709,18 @@ open_ports() {
         ufw allow ssh
         ufw allow http
         ufw allow https
-        ufw allow 2053/tcp
+        ufw allow 13688/tcp
 
         # Enable the firewall
         ufw --force enable
     fi
 
     # Prompt the user to enter a list of ports
-    read -p "输入您要打开的端口（例如 80,443,2053 或端口范围 400-500): " ports
+    read -p "输入您要打开的端口（例如 80,443,13688 或端口范围 400-500): " ports
 
     # Check if the input is valid
     if ! [[ $ports =~ ^([0-9]+|[0-9]+-[0-9]+)(,([0-9]+|[0-9]+-[0-9]+))*$ ]]; then
-        echo "错误：输入无效。请输入以英文逗号分隔的端口列表或端口范围（例如 80,443,2053 或 400-500)" >&2
+        echo "错误：输入无效。请输入以英文逗号分隔的端口列表或端口范围（例如 80,443,13688 或 400-500)" >&2
         exit 1
     fi
 
@@ -746,11 +746,11 @@ open_ports() {
 
 delete_ports() {
     # Prompt the user to enter the ports they want to delete
-    read -p "输入要删除的端口（例如 80,443,2053 或范围 400-500): " ports
+    read -p "输入要删除的端口（例如 80,443,13688 或范围 400-500): " ports
 
     # Check if the input is valid
     if ! [[ $ports =~ ^([0-9]+|[0-9]+-[0-9]+)(,([0-9]+|[0-9]+-[0-9]+))*$ ]]; then
-        echo "错误：输入无效。请输入以英文逗号分隔的端口列表或端口范围（例如 80,443,2053 或 400-500)" >&2
+        echo "错误：输入无效。请输入以英文逗号分隔的端口列表或端口范围（例如 80,443,13688 或 400-500)" >&2
         exit 1
     fi
 
