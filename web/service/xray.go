@@ -154,19 +154,31 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		policyLevels = make(map[string]interface{})
 	}
 	
-	// 3. 在 level 0 中确保流量统计开关是开启的
-	if level0, ok := policyLevels["0"].(map[string]interface{}); ok {
-		level0["statsUserUplink"] = true
-		level0["statsUserDownlink"] = true
-		policyLevels["0"] = level0
+	// 3. 〔重要修改〕: 确保 level 0 策略的完整性，这是让设备限制和默认用户统计生效的关键
+	var level0 map[string]interface{}
+	if l0, ok := policyLevels["0"].(map[string]interface{}); ok {
+		// 〔中文注释〕: 如果模板中已存在 level 0，使用它作为基础进行修改。
+		level0 = l0
 	} else {
-		policyLevels["0"] = map[string]interface{}{
-			"handshake":         8,
-			"connIdle":          500,
-			"statsUserUplink":   true,
-			"statsUserDownlink": true,
-		}
+		// 〔中文注释〕: 如果模板中不存在，则创建一个全新的 map。
+		level0 = make(map[string]interface{})
 	}
+	// 〔中文注释〕: 无论 level 0 是否存在，都为其补充或覆盖以下关键参数。
+	// handshake 和 connIdle 是激活 Xray 连接统计的前提，
+	// uplinkOnly 和 downlinkOnly 设置为 0 代表不限速，这是 level 0 用户的默认行为。
+	// statsUserUplink 和 statsUserDownlink 确保用户的流量能够被统计。
+	level0["handshake"] = 8
+	level0["connIdle"] = 500
+	level0["uplinkOnly"] = 0
+	level0["downlinkOnly"] = 0
+	level0["statsUserUplink"] = true
+	level0["statsUserDownlink"] = true 
+	// 〔新增〕: 增加此关键选项以启用 Xray-core 的在线 IP 统计功能。
+	// 这是让【设备限制】功能正常工作的前提。
+	level0["statsUserOnline"] = true
+	
+	// 〔中文注释〕: 将完整配置好的 level 0 写回 policyLevels，确保最终生成的 config.json 是正确的。
+	policyLevels["0"] = level0
 
 	// 4. 遍历所有收集到的限速值，为每个独立的限速值创建对应的 level
 	for speed := range uniqueSpeeds {
@@ -179,6 +191,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 			"connIdle":          500,
 			"statsUserUplink":   true,
 			"statsUserDownlink": true,
+			"statsUserOnline": true,
 		}
 	}
 
@@ -374,7 +387,7 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 			}
 			inboundConfig.StreamSettings = json_util.RawMessage(newStream)
 		}
-
+		
 		xrayConfig.InboundConfigs = append(xrayConfig.InboundConfigs, *inboundConfig)
 	}
 
