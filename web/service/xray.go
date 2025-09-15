@@ -167,8 +167,8 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 	// handshake 和 connIdle 是激活 Xray 连接统计的前提，
 	// uplinkOnly 和 downlinkOnly 设置为 0 代表不限速，这是 level 0 用户的默认行为。
 	// statsUserUplink 和 statsUserDownlink 确保用户的流量能够被统计。
-	level0["handshake"] = 8
-	level0["connIdle"] = 500
+	level0["handshake"] = 4
+	level0["connIdle"] = 300
 	level0["uplinkOnly"] = 0
 	level0["downlinkOnly"] = 0
 	level0["statsUserUplink"] = true
@@ -187,8 +187,8 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		policyLevels[strconv.Itoa(speed)] = map[string]interface{}{
 			"downlinkOnly": speed,
 			"uplinkOnly":   speed,
-			"handshake":         8,
-			"connIdle":          500,
+			"handshake":         4,
+			"connIdle":          300,
 			"statsUserUplink":   true,
 			"statsUserDownlink": true,
 			"statsUserOnline": true,
