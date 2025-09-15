@@ -11,8 +11,7 @@
     "services": [
       "HandlerService",
       "LoggerService",
-      "StatsService",
-      "ObservatoryService"
+      "StatsService"
     ]
   },
   "inbounds": [
@@ -49,13 +48,13 @@
   "policy": {
     "levels": {
       "0": {
-			"downlinkOnly": 0,
-			"uplinkOnly": 0,
-			"handshake":         8,
-			"connIdle":          500,
-			"statsUserUplink":   true,
-			"statsUserDownlink": true,
-			"statsUserOnline": true
+        "handshake": 4,
+        "connIdle": 300,
+        "uplinkOnly": 0,
+        "downlinkOnly": 0,
+        "statsUserUplink": true,
+        "statsUserDownlink": true,
+        "statsUserOnline": true 
       }
     },
     "system": {
@@ -95,6 +94,5 @@
   "metrics": {
     "tag": "metrics_out",
     "listen": "127.0.0.1:11111"
-  },
-  "observatory": {}
+  }
 }
