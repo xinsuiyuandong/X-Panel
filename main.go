@@ -77,7 +77,7 @@ func runWebServer() {
 	// 中文注释: 在面板服务启动后，我们在这里启动设备限制的后台任务
 	go func() {
 		// 中文注释: 等待5秒，确保面板和Xray服务已基本稳定，避免任务启动过早
-		time.Sleep(5 * time.Second)
+		time.Sleep(10 * time.Second)
 
 		// 中文注释: 创建一个定时器。这里的 "10 * time.Second" 就是任务执行的间隔时间。
 		// 您可以修改 10 为 2 或 1，来实现更短的延迟。
