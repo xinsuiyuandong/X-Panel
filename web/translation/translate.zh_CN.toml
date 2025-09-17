@@ -241,9 +241,12 @@
 "reviewHint"="如需修改请返回上一步"
 "unlimited"="无限制"
 "deviceLimit"="设备限制"
-"deviceLimitDesc"="请输入具体数量，0表示不限制（留空也表示不限制）"
+"deviceLimitDesc"="请输入具体数量，\r\n0表示不限制（留空也表示不限制）"
 "speedLimit"="独立限速"
-"speedLimitDesc"="设置该用户的最大〔上传/下载速度〕，单位 KB/s，0 表示不限速"
+"speedLimitDesc"="设置该用户的最大〔上传/下载速度〕，\r\n单位 KB/s，0 表示不限速"
+"oneClickConfig"="一键配置"
+"is_subConversion"="订阅转换"
+"confirmCreate"="确认提交创建"
 
 
 [pages.client]
@@ -298,6 +301,31 @@
 "statusDescription" = "状态说明"
 "requestHeader" = "请求头"
 "responseHeader" = "响应头"
+
+[pages.inbounds.oneClick]
+"title" = "一键配置"
+"prompt" = "选择一个预设配置快速创建入站连接。"
+"presetType" = "预设协议配置类型"
+"generateTab" = "生成配置"
+"historyTab" = "历史记录"
+"historyType" = "生成类型"
+"historyLink" = "链接"
+"historyTime" = "生成时间"
+"linkCreated" = "入站链接已创建，请复制以下地址："
+"descriptionTitle" = "\r\n\r\n用法说明："
+"descriptionContent" = "该功能将自动生成 VLESS + TCP + Reality (xtls-rprx-vision) 协议的入站，\r\n或 VLESS Encryption + TCP + TLS（适合套CDN）协议的入站，\r\n并随机分配一个可用端口，请确保此端口放行；你可以在创建后于列表中手动编辑详细信息。"
+
+[pages.inbounds.oneClick.preset]
+"vless_reality" = "VLESS + TCP + Reality + Vision"
+"vless_tls_encryption" = "VLESS Encryption + TLS（适合套CDN）"
+"switch_vision_seed_dev" = "Switch + Vision Seed (开发中)"
+
+[pages.inbounds.subConversion]
+"modalTitle" = "跳转提示......"
+"modalContent" = "\r\n即将检测并跳转至：\r\n您的订阅转换服务页面，是否继续？"
+"modalOk" = "继续"
+"notFoundTitle" = "【订阅转换服务】未安装或无法访问"
+"notFoundContent" = "\r\n请进入VPS服务器终端，输入 x-ui 命令，\r\n并选择选项【25】进行安装。"
 
 [pages.settings]
 "title" = "面板设置"
