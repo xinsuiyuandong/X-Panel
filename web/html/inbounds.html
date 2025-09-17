@@ -6,9 +6,28 @@
     border-radius: 1rem;
     overflow-x: hidden;
   }
+  // 【新增】: 确保表格标题不换行 
+  .ant-table-thead > tr > th {
+      white-space: nowrap;
+  }
   .dark .ant-table:not(.ant-table-expanded-row .ant-table) {
     outline-color: var(--dark-color-table-ring);
   }
+	
+.ant-modal-body .ant-input-group.ant-input-group-compact {
+  display: block;
+}
+
+.ant-modal-body .ant-input-group.ant-input-group-compact .ant-input-affix-wrapper,
+.ant-modal-body .ant-input-group.ant-input-group-compact .ant-input-search-button {
+  width: 100%;
+}
+
+.ant-modal-body .ant-input-group.ant-input-group-compact .ant-input {
+  white-space: normal;
+  height: auto;
+  min-height: 80px; /* 调整此值以控制显示行数 */
+}	
   .ant-table .ant-table-content .ant-table-scroll .ant-table-body {
     overflow-y: hidden;
   }
@@ -273,12 +292,18 @@
                         </a-menu-item>
                       </a-menu>
                     </a-dropdown>
+                    <a-button type="primary" icon="thunderbolt" @click="openOneClickConfig">
+                      <template v-if="!isMobile">{{ i18n "pages.inbounds.oneClickConfig" }}</template>
+                    </a-button>
+                    <a-button type="primary" icon="link" @click="handleSubscriptionConversion">
+                      <template v-if="!isMobile">{{ i18n "pages.inbounds.is_subConversion" }}</template>
+                    </a-button>
                   </a-space>
                 </template>
                 <template #extra>
                   <a-button-group>
                     <a-button icon="sync" @click="manualRefresh" :loading="refreshing"></a-button>
-                    <a-popover placement="bottomRight" trigger="click" :overlay-class-name="themeSwitcher.currentTheme"> 
+                    <a-popover placement="bottomRight" trigger="click" :overlay-class-name="themeSwitcher.currentTheme">
                       <template #title>
                         <div class="ant-custom-popover-title">
                           <a-switch v-model="isRefreshEnabled" @change="toggleRefresh" size="small"></a-switch>
@@ -667,11 +692,76 @@
                     </template>
                   </a-table>
                 </a-space>
-              </a-card> 
+              </a-card>
             </a-col>
           </a-row>
         </transition>
       </a-spin>
+    <a-modal
+      :title="`{{ i18n "pages.inbounds.oneClick.title" }}`"
+      :visible="oneClickModalVisible"
+      :ok-text="`{{ i18n "pages.inbounds.confirmCreate" }}`"
+      :cancel-text="`{{ i18n "cancel" }}`"
+      :class="themeSwitcher.currentTheme"
+      @ok="handleOneClickOk"
+      @cancel="handleOneClickCancel"
+   >
+    <a-tabs default-active-key="1">
+        <a-tab-pane key="1" :tab="`{{ i18n "pages.inbounds.oneClick.generateTab" }}`">
+            <div v-if="!inboundLink" style="padding: 24px;">
+                    <p>{{ i18n "pages.inbounds.oneClick.prompt" }}</p>
+                    
+                    <a-form-item :label="`{{ i18n "pages.inbounds.oneClick.presetType" }}`">
+                        <a-button @click="handleOneClickOk('vless_reality')" block style="margin-bottom: 10px;">
+                        {{ i18n "pages.inbounds.oneClick.preset.vless_reality" }}
+                        </a-button>
+                        <a-button @click="handleOneClickOk('vless_tls_encryption')" block style="margin-bottom: 10px;">
+                        {{ i18n "pages.inbounds.oneClick.preset.vless_tls_encryption" }}
+                        </a-button>
+                        <a-button @click="handleOneClickOk('switch_vision_seed')" disabled block>
+                        {{ i18n "pages.inbounds.oneClick.preset.switch_vision_seed_dev" }}
+                        </a-button>
+                    </a-form-item>
+
+                    <p><b>{{ i18n "pages.inbounds.oneClick.descriptionTitle" }}</b></p>
+                    <p>{{ i18n "pages.inbounds.oneClick.descriptionContent" }}</p>
+                </div>
+                
+                <div v-else>
+                    <p><b>{{ i18n "pages.inbounds.oneClick.linkCreated" }}</b></p>
+                    <a-input-search
+                        :value="inboundLink"
+                        read-only
+                        :enter-button="`{{ i18n "copy" }}`"
+                        @search="copyLink(inboundLink)"
+                    />
+                </div>
+            </a-spin>
+        </a-tab-pane>
+
+        <a-tab-pane v-if="linkHistory.length > 0" key="2" :tab="`{{ i18n "pages.inbounds.oneClick.historyTab" }}`">
+            <div style="padding: 24px;">
+                <a-table 
+                    :dataSource="linkHistory" 
+                    :pagination="false" 
+                    :columns="linkHistoryColumns" 
+                    rowKey="time"
+                >
+                    <template #bodyCell="{ column, record }">
+                        <template v-if="column.dataIndex === 'link'">
+                            <a-input-search
+                                :value="record.link"
+                                read-only
+                                :enter-button="`{{ i18n "copy" }}`"
+                                @search="copyLink(record.link)"
+                            />
+                           </template>
+                       </template>
+                   </a-table>
+                </div>
+            </a-tab-pane>
+         </a-tabs>
+      </a-modal>
     </a-layout-content>
   </a-layout>
 </a-layout>
@@ -733,7 +823,7 @@
         dataIndex: "deviceLimit",
         align: "center",
         width: 40,
-        customRender: (text) => (text > 0 ? text : i18n("pages.inbounds.unlimited")),
+        customRender: (text) => (text > 0 ? text : {{ i18n "pages.inbounds.unlimited" }}),
     }, {
         title: '{{ i18n "pages.inbounds.traffic" }}',
         align: 'center',
@@ -776,14 +866,14 @@
         { title: '{{ i18n "pages.inbounds.client" }}', width: 80, scopedSlots: { customRender: 'client' } },
         { title: '{{ i18n "pages.inbounds.traffic" }}', width: 80, align: 'center', scopedSlots: { customRender: 'traffic' } },
         { title: '{{ i18n "pages.inbounds.allTimeTraffic" }}', width: 80, align: 'center', scopedSlots: { customRender: 'allTime' } },
-        
-		<!-- 中文注释: 在子表格中新增“限速”列 -->
-        { 
+
+		// 中文注释: 在子表格中新增“限速”列
+        {
             title: '{{ i18n "pages.inbounds.speedLimit" }}',
             width: 80,
             align: 'center',
             dataIndex: 'speedLimit',
-            customRender: (text) => (text > 0 ? `${text} KB/s` : i18n("pages.inbounds.unlimited")),
+            customRender: (text) => (text > 0 ? `${text} KB/s` : {{ i18n "pages.inbounds.unlimited" }}),
         },
 
         { title: '{{ i18n "pages.inbounds.expireDate" }}', width: 80, align: 'center', scopedSlots: { customRender: 'expiryTime' } },
@@ -834,7 +924,62 @@
             showAlert: false,
             ipLimitEnable: false,
             pageSize: 50,
+
+			inboundLink: '', // 新增：用来存储生成的可复制链接
+            // 【中文注释】: 新增数据属性，用于控制“一键配置”模态框的显示状态
+            oneClickModalVisible: false,
+
+			    // 【新增】: 用于存储最近生成的链接记录
+                linkHistory: [],
+
+                // 【新增】: 定义链接历史记录表格的列
+                linkHistoryColumns: [
+                    {
+                        title: `{{ i18n "pages.inbounds.oneClick.historyType" }}`,
+                        dataIndex: 'type',
+                        width: 150,
+                    },
+                    {
+                        title: `{{ i18n "pages.inbounds.oneClick.historyLink" }}`,
+                        dataIndex: 'link',
+                    },
+                    {
+                        title: `{{ i18n "pages.inbounds.oneClick.historyTime" }}`,
+                        dataIndex: 'time',
+                        width: 220,
+                    },
+                ],
+            // 【中文注释】: 新增数据属性，用于存储“一键配置”模态框中选择的预设值
+            oneClickPreset: 'vless_reality',
+            // 【中文注释】: 新增Reality SNI的备选列表，用于随机选择
+            realityDestinations: [
+                'tesla.com:443',
+                'sega.com:443',
+                'microsoft.com:443',
+                'apple.com:443',
+                'icloud.com:443',
+                'amazon.com:443',
+                'nintendo.com:443',
+                'lovelive-anime.jp:443',
+                'meta.com:443',
+                'stanford.edu:443',
+            ],
         },
+		
+        mounted() {
+            this.getDefaultSettings();
+            if (this.isRefreshEnabled) {
+                this.startDataRefreshLoop();
+            } else {
+                this.getDBInbounds();
+            }
+            // 【新增】: 从本地存储加载历史记录
+            const history = localStorage.getItem('oneClickLinkHistory');
+            if (history) {
+                this.linkHistory = JSON.parse(history);
+            }
+        },
+		
         methods: {
             loading(spinning = true) {
                 this.loadingStates.spinning = spinning;
@@ -849,7 +994,7 @@
 
                 await this.getLastOnlineMap();
                 await this.getOnlineUsers();
-                
+
                 this.setInbounds(msg.obj);
                 setTimeout(() => {
                     this.refreshing = false;
@@ -1016,6 +1161,348 @@
                     this.searchedInbounds = this.dbInbounds.slice();
                 }
             },
+
+			
+    // 【修改后】: 按照固定长度 2,4,6,8,10,12,14,16 来生成 shortIds
+    generateShortIds() {
+        const chars = "0123456789abcdef"; // 只使用十六进制字符
+        const lengths = [2, 4, 6, 8, 10, 12, 14, 16];
+        const shortIds = [];
+        for (const len of lengths) {
+            let shortId = "";
+            for (let j = 0; j < len; j++) {
+                shortId += chars[Math.floor(Math.random() * chars.length)];
+            }
+            shortIds.push(shortId);
+        }
+        return shortIds;
+    },
+
+            // 【新增】: 保存链接到历史记录，并同步到本地存储
+            saveLinkToHistory(type, link) {
+                const newRecord = { type: type, link: link, time: new Date().toLocaleString() };
+                this.linkHistory.unshift(newRecord); // 添加到数组开头
+                if (this.linkHistory.length > 10) {
+                    this.linkHistory.pop(); // 保持最多10条记录
+                }
+                localStorage.setItem('oneClickLinkHistory', JSON.stringify(this.linkHistory));
+            },
+
+            // 【中文注释】: 以下是新增和修改后的方法，用于处理“一键配置”和“订阅转换”
+            // 【中文注释】: 打开“一键配置”模态框
+            openOneClickConfig() {
+                this.oneClickModalVisible = true;
+            },
+
+            // 【中文注释】: 处理“一键配置”模态框的确认操作
+            async handleOneClickOk(presetType) {
+                this.loadingStates.spinning = true;
+                
+               // 【中文注释】: 根据选择的预设值调用不同的创建函数
+                if (presetType === 'vless_reality') {
+                    await this.createVlessRealityInbound();
+                } else if (presetType === 'vless_tls_encryption') {
+                    await this.createVlessTlsEncryptionInbound();
+                } else if (presetType === 'switch') {
+                    this.$message.info('Switch 模式配置尚未实现');
+                } else {
+                    this.$message.error('未知的预设配置！');
+                }
+
+               // 【中文注释】: 无论如何，最后都关闭加载状态
+                this.loadingStates.spinning = false;
+            },
+
+            // 【中文注释】: 处理“一键配置”模态框的取消操作
+            handleOneClickCancel() {
+                this.oneClickModalVisible = false;
+                this.inboundLink = '';          // 关闭时清空链接，以便下次重新打开时显示选项
+            },
+
+            // 【中文注释】: 创建 VLESS + Reality 入站的具体实现
+            async createVlessRealityInbound() {
+                try {
+                     // 【中文注释】: 使用 Promise.all 并行请求后端的两个接口，以获取密钥对和UUID
+	    // 【重要】: 这里调用的都是项目中已经存在的后端接口
+                    const [keyPairMsg, uuidMsg] = await Promise.all([
+                        HttpUtil.get('/panel/api/server/getNewX25519Cert'),
+                        HttpUtil.get('/panel/api/server/getNewUUID')
+                    ]);
+
+                    if (!keyPairMsg.success || !keyPairMsg.obj || !uuidMsg.success || !uuidMsg.obj) {
+                        this.$message.error('无法从服务器获取 Reality 密钥对或 UUID，请检查后端服务！');
+                        return;
+                    }
+
+                    const { privateKey, publicKey } = keyPairMsg.obj;
+                    const { uuid } = uuidMsg.obj;
+                    const remark = Array.from({length:8}, () => 
+                        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+                        [Math.floor(Math.random() * 62)]
+                    ).join("");
+
+                    // 随机生成 10000-55535 之间的端口
+                    const port = Math.floor(Math.random() * (55535 - 10000 + 1)) + 10000;
+
+	   // 【中文注释】: 从预设列表中随机选择一个SNI
+                    const randomDest = this.realityDestinations[Math.floor(Math.random() * this.realityDestinations.length)];
+          
+                   // 从 randomDest (例如 'microsoft.com:443') 中提取出域名 ('microsoft.com')
+                    const randomSni = randomDest.split(':')[0];
+
+                    // 【随机生成】: 调用新的函数 generateShortIds()
+                    const shortIds = this.generateShortIds();
+                    const linkSid = shortIds[Math.floor(Math.random() * shortIds.length)];
+
+                    const data = {
+                        up: 0,
+                        down: 0,
+                        total: 0,
+                        remark: remark,
+                        enable: true,
+                        expiryTime: 0,
+                        listen: '',
+                        port: port,
+                        protocol: 'vless',
+                        settings: JSON.stringify({
+                            clients: [{
+                                id: uuid,           // 【中文注释】: 使用后端生成的 UUID
+                                flow: "xtls-rprx-vision",
+                                email: remark,
+                                level: 0
+                            }],
+                            decryption: "none",
+                            fallbacks: []
+                        }),
+                        streamSettings: JSON.stringify({
+                            network: "tcp",
+                            security: "reality",
+                            realitySettings: {
+                                show: false,
+                                target: randomDest,
+                                xver: 0,
+                                serverNames: [ randomSni, `www.${randomSni}` ],
+                                privateKey: privateKey,
+                                publicKey: publicKey,
+                                maxClientVer: "",
+                                minClientVer: "",
+                                maxTimediff: 0,
+                                mldsa65Seed: "",         // 【中文注释】: 一般情况下【留空】
+                                "shortIds": shortIds,
+                                "spiderX": "/"
+                            },
+                            tcpSettings: {
+                                acceptProxyProtocol: false,
+                                header: {
+                                    type: "none"
+                                }
+                            }
+                        }),
+
+	       // 【中文注释】：构建完整的 sniffing 对象
+                        sniffing: JSON.stringify({
+                            enabled: true,
+                            destOverride: ["http", "tls", "quic", "fakedns"],
+                            metadataOnly: false,
+                            routeOnly: false
+                        }),
+                    };
+                    
+                    const msg = await HttpUtil.post('/panel/api/inbounds/add', data);
+
+                    if (msg.success) {
+                        const link = `vless://${uuid}@${window.location.hostname}:${port}?type=tcp&encryption=none&security=reality&pbk=${publicKey}&fp=chrome&sni=${randomSni}&sid=${linkSid}&spx=%2F&flow=xtls-rprx-vision#${remark}-${remark}`;
+                        this.inboundLink = link;
+                        
+                        // 【新增】: 调用保存方法，将链接保存到历史记录
+                        this.saveLinkToHistory('vless_reality', link);
+                        
+                        this.$message.success('一键配置入站创建成功!');
+                        await this.getDBInbounds();
+                    } else {
+                        // 如果后端返回失败，显示后端的消息
+                        this.$message.error('创建失败: ' + msg.msg);
+                    }
+                } catch (err) {
+                    console.error("创建一键配置入站时出错:", err);
+                    this.$message.error('创建过程中发生网络错误，请检查后端日志。');
+                }
+            },
+
+            // 【方法】: 创建 VLESS + TLS + Encryption 的入站配置
+            async createVlessTlsEncryptionInbound() {
+                try {
+                    const [encMsg, uuidMsg] = await Promise.all([
+                        HttpUtil.get('/panel/api/server/getNewVlessEnc'),
+                        HttpUtil.get('/panel/api/server/getNewUUID')
+                    ]);
+
+                    // 【修正】: 增加对 API 返回数据的严格检查
+                    if (!encMsg.success || !encMsg.obj || !Array.isArray(encMsg.obj.auths) || encMsg.obj.auths.length === 0 || !uuidMsg.success || !uuidMsg.obj) {
+                         this.$message.error('无法从服务器获取 Vless 加密配置或 UUID，请检查后端服务！');
+                         return;
+                    }
+
+					// 【修正】: 遍历找到正确的 ML-KEM-768 密钥
+                    const mlkemAuth = encMsg.obj.auths.find(auth => auth.label === "ML-KEM-768, Post-Quantum");
+
+                    if (!mlkemAuth || !mlkemAuth.decryption || !mlkemAuth.encryption) {
+                         this.$message.error('未能从服务器获取到 ML-KEM-768 加密密钥，请检查 Xray 版本！');
+                         return;
+                    }
+                    // 【修正】: 正确从嵌套数据中解构出 decryption 和 encryption
+                    const { decryption, encryption } = mlkemAuth;
+
+                    const { uuid } = uuidMsg.obj;
+                    const remark = Array.from({length:8}, () => 
+                        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+                        [Math.floor(Math.random() * 62)]
+                    ).join("");
+
+                    // 随机生成 10000-55535 之间的端口
+                    const port = Math.floor(Math.random() * (55535 - 10000 + 1)) + 10000;
+                    
+                    // 【重要】: 随机选择 SNI
+                    const randomDest = this.realityDestinations[Math.floor(Math.random() * this.realityDestinations.length)];
+                    const serverName = randomDest.split(':')[0];    // 从域名列表中提取 SNI
+
+                    // 【必须】: 动态设置证书路径
+                    const certPath = `/root/cert/${window.location.hostname}/fullchain.pem`;
+                    const keyPath = `/root/cert/${window.location.hostname}/privkey.pem`;
+                    
+                    const data = {
+                        up: 0,
+                        down: 0,
+                        total: 0,
+                        remark: remark,
+                        enable: true,
+                        expiryTime: 0,
+                        listen: '',
+                        port: port,
+                        protocol: 'vless',
+                        settings: JSON.stringify({
+                            clients: [{
+                                id: uuid,        // 【中文注释】: 使用后端生成的 UUID
+                                flow: "xtls-rprx-vision", 
+                                email: remark,
+                                level: 0
+                            }],
+                            decryption: decryption, // 使用从 API 获取的 decryption
+                            encryption: encryption, // 【重要】: 加上 encryption 参数
+                            selectedAuth: "ML-KEM-768, Post-Quantum"
+                        }),
+                        streamSettings: JSON.stringify({
+                            network: "tcp",
+                            security: "tls",
+                            tcpSettings: {
+                                acceptProxyProtocol: false,
+                                header: {
+                                    type: "none"
+                                }
+                            },
+                            tlsSettings: {
+                                alpn: ["http/1.1"],
+                                certificates: [{
+                                    buildChain: false,
+                                    certificateFile: certPath,
+                                    keyFile: keyPath,
+                                    oneTimeLoading: false,
+                                    usage: "encipherment"
+                                }],
+                                cipherSuites: "",
+                                disableSystemRoot: false,
+                                echForceQuery: "none",
+                                echServerKeys: "",
+                                enableSessionResumption: false,
+                                maxVersion: "1.3",
+                                minVersion: "1.2",
+                                rejectUnknownSni: false,
+                                serverName: serverName, // 使用我们定义的 SNI
+                                verifyPeerCertInNames: ["dns.google", "cloudflare-dns.com"]
+                            }
+                        }),
+                        sniffing: JSON.stringify({
+                            enabled: false,
+                            destOverride: ["http", "tls", "quic", "fakedns"],
+                            metadataOnly: false,
+                            routeOnly: false
+                        }),
+                    };
+                    
+                    const msg = await HttpUtil.post('/panel/api/inbounds/add', data);
+
+                    if (msg.success) {
+                        // 【重要】: 分享链接格式，添加 encryption 和 flow
+                        const link = `vless://${uuid}@${window.location.hostname}:${port}?type=tcp&encryption=${encryption}&security=tls&fp=chrome&alpn=http%2F1.1&sni=${serverName}&flow=xtls-rprx-vision#${remark}-${remark}`;
+                        this.inboundLink = link;
+
+                        // 【新增】: 调用保存方法，将链接保存到历史记录
+                        this.saveLinkToHistory('vless_tls_encryption', link);
+                        
+                        this.$message.success('VLESS + TLS + Encryption 配置创建成功!');
+                        await this.getDBInbounds();
+                    } else {
+                        this.$message.error('创建失败: ' + msg.msg);
+                    }
+                } catch (err) {
+                    console.error("创建 VLESS + TLS + Encryption 入站时出错:", err);
+                    this.$message.error('创建过程中发生网络错误，请检查后端日志。');
+                }
+            },
+
+            async copyLink(linkToCopy) {
+                const link = linkToCopy || this.inboundLink;
+                if (!link) {
+                    this.$message.warning('没有可复制的链接。');
+                    return;
+                }
+                try {
+                    await navigator.clipboard.writeText(link);
+                    this.$message.success('链接已成功复制到剪贴板！');
+                } catch (err) {
+                    this.$message.error('复制失败，请手动复制。');
+                }
+            },
+
+            // 【中文注释】: 处理“订阅转换”按钮的点击事件 (已更新逻辑)
+            handleSubscriptionConversion() {
+                this.$confirm({
+                    title: '{{ i18n "pages.inbounds.subConversion.modalTitle"}}',
+                    content: '{{ i18n "pages.inbounds.subConversion.modalContent"}}',
+                    okText: '{{ i18n "pages.inbounds.subConversion.modalOk"}}',
+                    cancelText: '{{ i18n "cancel" }}',
+                    class: themeSwitcher.currentTheme,
+                    onOk: () => {
+                        const subConverterUrl = `https://${window.location.hostname}:15268`;
+                        const loadingMessage = this.$message.loading('正在检测订阅转换服务...', 0);
+
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+                        fetch(subConverterUrl, {
+                            method: 'GET',
+                            mode: 'no-cors',
+                            signal: controller.signal
+                        })
+                        .then(response => {
+                            clearTimeout(timeoutId);
+                            loadingMessage();
+                            this.$message.success('服务检测成功，正在跳转...', 2);
+                            window.open(subConverterUrl, '_blank');
+                        })
+                        .catch(err => {
+                            clearTimeout(timeoutId);
+                            loadingMessage();
+                            this.$info({
+                                title: '{{ i18n "pages.inbounds.subConversion.notFoundTitle"}}',
+                                content: '{{ i18n "pages.inbounds.subConversion.notFoundContent"}}',
+                                class: themeSwitcher.currentTheme,
+                            });
+                        });
+                    },
+                });
+            },
+
             generalActions(action) {
                 switch (action.key) {
                     case "import":
@@ -1148,9 +1635,9 @@
                     remark: dbInbound.remark,
                     enable: dbInbound.enable,
                     expiryTime: dbInbound.expiryTime,
-					
-                   <!-- 新增这一行 -->
-                    deviceLimit: dbInbound.deviceLimit,
+
+                   // 新增这一行
+                   deviceLimit: dbInbound.deviceLimit,
 
                     listen: inbound.listen,
                     port: inbound.port,
@@ -1174,8 +1661,8 @@
                     remark: dbInbound.remark,
                     enable: dbInbound.enable,
                     expiryTime: dbInbound.expiryTime,
-                   <!-- 新增这一行 -->
-	                deviceLimit: dbInbound.deviceLimit,
+                   // 新增这一行
+                   deviceLimit: dbInbound.deviceLimit,
 
                     listen: inbound.listen,
                     port: inbound.port,
@@ -1335,8 +1822,8 @@
             checkFallback(dbInbound) {
                 newDbInbound = new DBInbound(dbInbound);
                 if (dbInbound.listen.startsWith("@")){
-                    rootInbound = this.inbounds.find((i) => 
-                        i.isTcp && 
+                    rootInbound = this.inbounds.find((i) =>
+                        i.isTcp &&
                         ['trojan','vless'].includes(i.protocol) &&
                         i.settings.fallbacks.find(f => f.dest === dbInbound.listen)
                     );
@@ -1390,17 +1877,17 @@
                     await this.getDBInbounds();
                 }
             },
-			
+
             getInboundClients(dbInbound) {
-			  <!-- 先把 dbInbound 转成 inbound 对象 -->
+              // 先把 dbInbound 转成 inbound 对象
               const inbound = dbInbound.toInbound();
               const clients = inbound.clients || [];
 
-		  <!-- 遍历 clients，保证 speedLimit 字段存在且是数字 -->
+          // 遍历 clients，保证 speedLimit 字段存在且是数字
               return clients.map(c => ({
-                  ...c,                                      <!-- 保留原有字段 -->
-                speedLimit: Number(c.speedLimit ?? 0),     <!-- 如果没设置就默认为 0 -->
-                  }));
+                           ...c,                            // 保留原有字段
+                speedLimit: Number(c.speedLimit ?? 0),      // 如果没设置就默认为 0
+                      }));
             },
             resetClientTraffic(client, dbInboundId, confirmation = true) {
                 if (confirmation){
