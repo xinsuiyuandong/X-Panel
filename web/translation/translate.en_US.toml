@@ -237,9 +237,12 @@
 "reviewHint"="If you need to modify, please return to the previous step"
 "unlimited"="No restrictions"
 "deviceLimit"="Device restrictions"
-"deviceLimitDesc"="Please enter the specific quantity, 0 means no limit (leaving it blank also means no limit)"
+"deviceLimitDesc"="Please enter the specific quantity, \r\n0 means no limit (leaving it blank also means no limit)"
 "speedLimit"="Independent speedLimit"
 "speedLimitDesc"="Set the maximum upload/download speed for this user in KB/s. 0 means unlimited speed."
+"oneClickConfig"="One-click configuration"
+"is_subConversion"="Subscription Conversion"
+"confirmCreate"="Confirm submission creation"
 
 [pages.client]
 "add" = "Add Client"
@@ -292,6 +295,31 @@
 "statusDescription" = "Status Desc"
 "requestHeader" = "Request Header"
 "responseHeader" = "Response Header"
+
+[pages.inbounds.oneClick]
+"title" = "One-click configuration"
+"prompt" = "Select a preset configuration to quickly create an inbound connection."
+"presetType" = "Preset protocol configuration type"
+"generateTab" = "Generate Configuration"
+"historyTab" = "History"
+"historyType" = "Generate Type"
+"historyLink" = "Links"
+"historyTime" = "Generated Time"
+"linkCreated" = "The inbound link has been created, please copy the following address:"
+"descriptionTitle" = "\r\n\r\nUsage notes"
+"descriptionContent" = "This feature will automatically generate an inbound connection for the VLESS + TCP + Reality (xtls-rprx-vision) protocol,\r\nor the VLESS Encryption + TCP + TLS (suitable for CDN) protocol,\r\nand randomly assign an available port. Please ensure that this port is allowed. You can manually edit the details in the list after creation."
+
+[pages.inbounds.oneClick.preset]
+"vless_reality" = "VLESS + TCP + Reality + Vision"
+"vless_tls_encryption" = "VLESS Encryption + TLS (suitable for CDN)"
+"switch_vision_seed_dev" = "Switch + Vision Seed (in development)"
+
+[pages.inbounds.subConversion]
+"modalTitle" = "Jump to tip..."
+"modalContent" = "We are about to detect and redirect you to your subscription conversion service page. Do you want to continue?"
+"modalOk" = "continue"
+"notFoundTitle" = "[Subscription Conversion Service] is not installed or cannot be accessed"
+"notFoundContent" = "Please enter the VPS server terminal, enter the x-ui command, and select option [25] to install."
 
 [pages.settings]
 "title" = "Panel Settings"
