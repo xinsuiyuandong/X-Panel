@@ -489,6 +489,10 @@
                         </a-popover>
                       </template>
                     </template>
+				    <template slot="deviceLimit" slot-scope="text, dbInbound">
+                        <span v-if="dbInbound.deviceLimit > 0">[[ dbInbound.deviceLimit ]]</span>
+                        <span v-else>{{ i18n "pages.inbounds.unlimited" }}</span>
+                    </template>
                     <template slot="traffic" slot-scope="text, dbInbound">
                       <a-popover :overlay-class-name="themeSwitcher.currentTheme">
                         <template slot="content">
@@ -819,11 +823,13 @@
         width: 40,
         scopedSlots: { customRender: 'clients' },
     }, {
+       // 【中文注释】: 这是修改后的“设备限制”列定义
         title: '{{ i18n "pages.inbounds.deviceLimit" }}',
         dataIndex: "deviceLimit",
         align: "center",
         width: 40,
-        customRender: (text) => (text > 0 ? text : {{ i18n "pages.inbounds.unlimited" }}),
+       // 【中文注释】: 将错误的 customRender 改为 scopedSlots
+        scopedSlots: { customRender: 'deviceLimit' },
     }, {
         title: '{{ i18n "pages.inbounds.traffic" }}',
         align: 'center',
@@ -967,16 +973,32 @@
         },
 		
         mounted() {
+            // 【中文注释】：这是唯一且正确的 mounted 钩子。
+            // 【修改】：将两个 mounted 钩子的逻辑合并到这里。
+
+            // 检查非 https 协议，用于安全提示
+            if (window.location.protocol !== "https:") {
+                this.showAlert = true;
+            }
+
+            // 初始化面板设置和入站列表
             this.getDefaultSettings();
             if (this.isRefreshEnabled) {
                 this.startDataRefreshLoop();
             } else {
                 this.getDBInbounds();
             }
-            // 【新增】: 从本地存储加载历史记录
+            
+            // 【修正】：从本地存储加载“一键配置”的历史记录
             const history = localStorage.getItem('oneClickLinkHistory');
             if (history) {
-                this.linkHistory = JSON.parse(history);
+                try {
+                    this.linkHistory = JSON.parse(history);
+                } catch (e) {
+                    console.error("无法解析历史记录:", e);
+                    // 如果解析失败，清空错误的记录
+                    localStorage.removeItem('oneClickLinkHistory');
+                }
             }
         },
 		
@@ -1244,10 +1266,10 @@
                     // 随机生成 10000-55535 之间的端口
                     const port = Math.floor(Math.random() * (55535 - 10000 + 1)) + 10000;
 
-	   // 【中文注释】: 从预设列表中随机选择一个SNI
+	                // 【中文注释】: 从预设列表中随机选择一个SNI
                     const randomDest = this.realityDestinations[Math.floor(Math.random() * this.realityDestinations.length)];
           
-                   // 从 randomDest (例如 'microsoft.com:443') 中提取出域名 ('microsoft.com')
+                    // 从 randomDest (例如 'microsoft.com:443') 中提取出域名 ('microsoft.com')
                     const randomSni = randomDest.split(':')[0];
 
                     // 【随机生成】: 调用新的函数 generateShortIds()
@@ -1269,7 +1291,8 @@
                                 id: uuid,           // 【中文注释】: 使用后端生成的 UUID
                                 flow: "xtls-rprx-vision",
                                 email: remark,
-                                level: 0
+                                level: 0,
+                                enable: true
                             }],
                             decryption: "none",
                             fallbacks: []
@@ -1279,7 +1302,7 @@
                             security: "reality",
                             realitySettings: {
                                 show: false,
-                                target: randomDest,
+                                dest: randomDest,
                                 xver: 0,
                                 serverNames: [ randomSni, `www.${randomSni}` ],
                                 privateKey: privateKey,
@@ -1385,7 +1408,8 @@
                                 id: uuid,        // 【中文注释】: 使用后端生成的 UUID
                                 flow: "xtls-rprx-vision", 
                                 email: remark,
-                                level: 0
+                                level: 0,
+                                enable: true
                             }],
                             decryption: decryption, // 使用从 API 获取的 decryption
                             encryption: encryption, // 【重要】: 加上 encryption 参数
@@ -1879,16 +1903,9 @@
             },
 
             getInboundClients(dbInbound) {
-              // 先把 dbInbound 转成 inbound 对象
-              const inbound = dbInbound.toInbound();
-              const clients = inbound.clients || [];
-
-          // 遍历 clients，保证 speedLimit 字段存在且是数字
-              return clients.map(c => ({
-                           ...c,                            // 保留原有字段
-                speedLimit: Number(c.speedLimit ?? 0),      // 如果没设置就默认为 0
-                      }));
+                return dbInbound.toInbound().clients;
             },
+			
             resetClientTraffic(client, dbInboundId, confirmation = true) {
                 if (confirmation){
                     this.$confirm({
@@ -2140,20 +2157,6 @@
             searchKey: Utils.debounce(function (newVal) {
                 this.searchInbounds(newVal);
             }, 500)
-        },
-        mounted() {
-            if (window.location.protocol !== "https:") {
-                this.showAlert = true;
-            }
-            this.loading();
-            this.getDefaultSettings();
-            if (this.isRefreshEnabled) {
-                this.startDataRefreshLoop();
-            }
-            else {
-                this.getDBInbounds();
-            }
-            this.loading(false);
         },
         computed: {
             total() {
