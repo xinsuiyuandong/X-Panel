@@ -1313,7 +1313,7 @@ class Inbound extends XrayCommonClass {
         const security = forceTls == 'same' ? this.stream.security : forceTls;
         const params = new Map();
         params.set("type", this.stream.network);
-        params.set("encryption", this.settings.encryption);
+        params.set("encryption", this.settings.encryption || "none");
         switch (type) {
             case "tcp":
                 const tcp = this.stream.tcp;
