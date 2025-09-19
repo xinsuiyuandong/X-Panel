@@ -704,11 +704,11 @@
     <a-modal
       :title="`{{ i18n "pages.inbounds.oneClick.title" }}`"
       :visible="oneClickModalVisible"
-      :ok-text="`{{ i18n "pages.inbounds.confirmCreate" }}`"
       :cancel-text="`{{ i18n "cancel" }}`"
       :class="themeSwitcher.currentTheme"
-      @ok="handleOneClickOk"
       @cancel="handleOneClickCancel"
+     :ok-text="null"
+     :ok-button-props="{ style: { display: 'none' } }"
    >
     <a-tabs default-active-key="1">
         <a-tab-pane key="1" :tab="`{{ i18n "pages.inbounds.oneClick.generateTab" }}`">
@@ -716,10 +716,10 @@
                     <p>{{ i18n "pages.inbounds.oneClick.prompt" }}</p>
                     
                     <a-form-item :label="`{{ i18n "pages.inbounds.oneClick.presetType" }}`">
-                        <a-button @click="handleOneClickOk('vless_reality')" block style="margin-bottom: 10px;">
+                        <a-button @click="handleOneClickOk('vless_reality')" block style="margin-bottom: 10px;" html-type="button">
                         {{ i18n "pages.inbounds.oneClick.preset.vless_reality" }}
                         </a-button>
-                        <a-button @click="handleOneClickOk('vless_tls_encryption')" block style="margin-bottom: 10px;">
+                        <a-button @click="handleOneClickOk('vless_tls_encryption')" block style="margin-bottom: 10px;" html-type="button">
                         {{ i18n "pages.inbounds.oneClick.preset.vless_tls_encryption" }}
                         </a-button>
                         <a-button @click="handleOneClickOk('switch_vision_seed')" disabled block>
@@ -961,14 +961,10 @@
             realityDestinations: [
                 'tesla.com:443',
                 'sega.com:443',
-                'microsoft.com:443',
                 'apple.com:443',
                 'icloud.com:443',
-                'amazon.com:443',
-                'nintendo.com:443',
                 'lovelive-anime.jp:443',
                 'meta.com:443',
-                'stanford.edu:443',
             ],
         },
 		
@@ -989,17 +985,8 @@
                 this.getDBInbounds();
             }
             
-            // 【修正】：从本地存储加载“一键配置”的历史记录
-            const history = localStorage.getItem('oneClickLinkHistory');
-            if (history) {
-                try {
-                    this.linkHistory = JSON.parse(history);
-                } catch (e) {
-                    console.error("无法解析历史记录:", e);
-                    // 如果解析失败，清空错误的记录
-                    localStorage.removeItem('oneClickLinkHistory');
-                }
-            }
+            // 【核心修改】: 从后端加载历史记录，而不是从 localStorage
+            this.loadHistoryFromServer();
         },
 		
         methods: {
@@ -1200,14 +1187,30 @@
         return shortIds;
     },
 
-            // 【新增】: 保存链接到历史记录，并同步到本地存储
-            saveLinkToHistory(type, link) {
-                const newRecord = { type: type, link: link, time: new Date().toLocaleString() };
-                this.linkHistory.unshift(newRecord); // 添加到数组开头
-                if (this.linkHistory.length > 10) {
-                    this.linkHistory.pop(); // 保持最多10条记录
+         // 【中文注释】: 添加这个新函数
+            async loadHistoryFromServer() {
+               const msg = await HttpUtil.get('/panel/api/server/history/load');
+                  if (msg.success && Array.isArray(msg.obj)) {
+                 // 后端返回的是标准对象，我们需要转换成前端需要的格式
+                     this.linkHistory = msg.obj.map(item => ({
+                        type: item.Type,
+                        link: item.Link,
+                        time: new Date(item.CreatedAt).toLocaleString()
+                  }));
                 }
-                localStorage.setItem('oneClickLinkHistory', JSON.stringify(this.linkHistory));
+             },
+			
+            // 【中文注释】: 保存链接到历史记录，现在是调用后端 API
+            async saveLinkToHistory(type, link) {
+            // 1. 在前端立即更新UI，提供即时反馈
+                const newRecord = { type: type, link: link, time: new Date().toLocaleString() };
+                this.linkHistory.unshift(newRecord);   // 添加到数组开头
+                if (this.linkHistory.length > 10) {
+                    this.linkHistory.pop();     // 保持最多10条记录
+                }
+
+            // 2. 发送数据到后端进行持久化保存
+            await HttpUtil.post('/panel/api/server/history/save', { type: type, link: link });
             },
 
             // 【中文注释】: 以下是新增和修改后的方法，用于处理“一键配置”和“订阅转换”
@@ -1283,6 +1286,7 @@
                         remark: remark,
                         enable: true,
                         expiryTime: 0,
+						deviceLimit: 0, 
                         listen: '',
                         port: port,
                         protocol: 'vless',
@@ -1295,6 +1299,7 @@
                                 enable: true
                             }],
                             decryption: "none",
+							encryption: "",
                             fallbacks: []
                         }),
                         streamSettings: JSON.stringify({
@@ -1382,12 +1387,17 @@
                         [Math.floor(Math.random() * 62)]
                     ).join("");
 
-                    // 随机生成 10000-55535 之间的端口
-                    const port = Math.floor(Math.random() * (55535 - 10000 + 1)) + 10000;
+                    // 随机生成2053, 2083, 2087, 2096, 8443这5个端口中的其中一个
+                    const allowedPorts = [2053, 2083, 2087, 2096, 8443];
+                    const port = allowedPorts[Math.floor(Math.random() * allowedPorts.length)];
                     
-                    // 【重要】: 随机选择 SNI
-                    const randomDest = this.realityDestinations[Math.floor(Math.random() * this.realityDestinations.length)];
-                    const serverName = randomDest.split(':')[0];    // 从域名列表中提取 SNI
+					// 随机生成一个8位大小写字母的路径
+					const path = "/" + Array.from({ length: 8 }, () =>
+                        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 52)]
+                         ).join("");
+
+					// 固定使用面板域名作为 SNI
+                    const serverName = window.location.hostname; 
 
                     // 【必须】: 动态设置证书路径
                     const certPath = `/root/cert/${window.location.hostname}/fullchain.pem`;
@@ -1400,15 +1410,17 @@
                         remark: remark,
                         enable: true,
                         expiryTime: 0,
+						deviceLimit: 0, 
                         listen: '',
                         port: port,
                         protocol: 'vless',
                         settings: JSON.stringify({
                             clients: [{
                                 id: uuid,        // 【中文注释】: 使用后端生成的 UUID
-                                flow: "xtls-rprx-vision", 
+                                flow: "", 
                                 email: remark,
                                 level: 0,
+								password: "",
                                 enable: true
                             }],
                             decryption: decryption, // 使用从 API 获取的 decryption
@@ -1416,16 +1428,10 @@
                             selectedAuth: "ML-KEM-768, Post-Quantum"
                         }),
                         streamSettings: JSON.stringify({
-                            network: "tcp",
+                            network: "xhttp",       // 使用 XHTTP 传输
                             security: "tls",
-                            tcpSettings: {
-                                acceptProxyProtocol: false,
-                                header: {
-                                    type: "none"
-                                }
-                            },
                             tlsSettings: {
-                                alpn: ["http/1.1"],
+                                alpn: ["h2", "http/1.1"],   // 优先 h2，再 http/1.1
                                 certificates: [{
                                     buildChain: false,
                                     certificateFile: certPath,
@@ -1441,9 +1447,20 @@
                                 maxVersion: "1.3",
                                 minVersion: "1.2",
                                 rejectUnknownSni: false,
-                                serverName: serverName, // 使用我们定义的 SNI
+                                serverName: serverName, // 使用面板域名的 SNI
                                 verifyPeerCertInNames: ["dns.google", "cloudflare-dns.com"]
-                            }
+                           },
+						   xhttpSettings: {
+                                headers: {},                 // 可按需填充
+                                host: "",                    // 一般默认保持空
+                                mode: "packet-up",           // packet-up 分包上行
+                                noSSEHeader: false,
+                                path: path,                  // 随机 8 位大小写字母路径
+                                scMaxBufferedPosts: 30,
+                                scMaxEachPostBytes: "1000000",
+                                scStreamUpServerSecs: "20-80",
+                                xPaddingBytes: "100-1000"
+                           }
                         }),
                         sniffing: JSON.stringify({
                             enabled: false,
