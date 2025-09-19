@@ -12,7 +12,7 @@ type LinkHistory struct {
 	CreatedAt  time.Time `gorm:"not null"`
 }
 
-// AddLinkHistory adds a new link record and trims old ones
+// AddLinkHistory adds a new link record, trims old ones, and ensures data is persisted.
 func AddLinkHistory(record *LinkHistory) error {
 	// 1. Add the new record
 	if err := db.Create(record).Error; err != nil {
@@ -34,7 +34,10 @@ func AddLinkHistory(record *LinkHistory) error {
 			}
 		}
 	}
-	return nil
+
+	// 【核心修正】: 在所有数据库写入和删除操作完成后，
+	// 立即在此处调用 Checkpoint，确保本次操作被完整持久化到数据库文件。
+	return Checkpoint()
 }
 
 // GetLinkHistory retrieves the 10 most recent link records
@@ -46,3 +49,4 @@ func GetLinkHistory() ([]*LinkHistory, error) {
 	}
 	return histories, nil
 }
+
