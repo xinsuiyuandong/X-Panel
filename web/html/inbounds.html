@@ -1299,7 +1299,6 @@
                                 enable: true
                             }],
                             decryption: "none",
-							encryption: "",
                             fallbacks: []
                         }),
                         streamSettings: JSON.stringify({
@@ -1307,7 +1306,7 @@
                             security: "reality",
                             realitySettings: {
                                 show: false,
-                                dest: randomDest,
+                                target: randomDest,
                                 xver: 0,
                                 serverNames: [ randomSni, `www.${randomSni}` ],
 								settings: {
