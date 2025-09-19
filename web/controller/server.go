@@ -56,6 +56,8 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.POST("/xraylogs/:count", a.getXrayLogs)
 	g.POST("/importDB", a.importDB)
 	g.POST("/getNewEchCert", a.getNewEchCert)
+	g.POST("/history/save", a.saveHistory)
+	g.GET("/history/load", a.loadHistory)
 }
 
 func (a *ServerController) refreshStatus() {
@@ -294,4 +296,40 @@ func (a *ServerController) getNewmlkem768(c *gin.Context) {
 		return
 	}
 	jsonObj(c, out, nil)
+}
+
+func (a *ServerController) saveHistory(c *gin.Context) {
+	/* 【中文注释】: 旧的错误代码，因为它期望一个 JSON 请求体，但前端发送的是表单数据
+	var req struct {
+		Type string `json:"type"`
+		Link string `json:"link"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		jsonMsg(c, "Invalid request", err)
+		return
+	}
+	err := a.serverService.SaveLinkHistory(req.Type, req.Link)
+	*/
+
+	// 【中文注释】: 修改后的新代码，直接从 POST 表单中获取 'type' 和 'link' 参数
+	// 【中文注释】: 这与其他 POST 方法（如 getLogs, getXrayLogs）的处理方式保持一致，解决了数据格式不匹配的问题。
+	historyType := c.PostForm("type")
+	link := c.PostForm("link")
+
+	// 【中文注释】: 调用服务层方法来保存历史记录
+	err := a.serverService.SaveLinkHistory(historyType, link)
+	if err != nil {
+		jsonMsg(c, "Failed to save history", err)
+		return
+	}
+	jsonMsg(c, "History saved successfully", nil)
+}
+
+func (a *ServerController) loadHistory(c *gin.Context) {
+	history, err := a.serverService.LoadLinkHistory()
+	if err != nil {
+		jsonMsg(c, "Failed to load history", err)
+		return
+	}
+	jsonObj(c, history, nil)
 }
