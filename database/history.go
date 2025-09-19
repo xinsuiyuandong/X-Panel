@@ -46,4 +46,3 @@ func GetLinkHistory() ([]*LinkHistory, error) {
 	}
 	return histories, nil
 }
-
