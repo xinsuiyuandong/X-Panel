@@ -975,14 +975,9 @@ func (s *ServerService) SaveLinkHistory(historyType, link string) error {
         Link:      link,
         CreatedAt: time.Now(),
     }
-    // 【中文注释】: 调用数据库方法将记录写入 WAL 文件
-    err := database.AddLinkHistory(record)
-    if err != nil {
-        return err
-    }
-    // 【中文注释】【新增代码】: 强制执行一次 Checkpoint 操作。
-    // 【中文注释】: 确保 WAL 文件中的新数据被立即写入并持久化到主数据库文件中，从而解决刷新后数据丢失的问题。
-    return database.Checkpoint()
+    // 【核心修正】: 直接调用 AddLinkHistory 并返回其结果。
+    // 我们将把 Checkpoint 的逻辑移入 AddLinkHistory 内部，确保操作的原子性。
+    return database.AddLinkHistory(record)
 }
 
 // LoadLinkHistory loads the latest 10 links from the database
