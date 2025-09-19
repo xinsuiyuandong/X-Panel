@@ -313,11 +313,11 @@
 "historyTime" = "生成时间"
 "linkCreated" = "入站链接已创建，请复制以下地址："
 "descriptionTitle" = "\r\n\r\n用法说明："
-"descriptionContent" = "该功能将自动生成 VLESS + TCP + Reality (xtls-rprx-vision) 协议的入站，\r\n或 VLESS Encryption + TCP + TLS（适合套CDN）协议的入站，\r\n并随机分配一个可用端口，请确保此端口放行；你可以在创建后于列表中手动编辑详细信息。"
+"descriptionContent" = "该功能将自动生成 VLESS + TCP + Reality (xtls-rprx-vision) 协议的入站，\r\n或 VLESS Encryption + XHTTP + TLS（可选套CDN）协议的入站，\r\n并随机分配一个可用端口，请确保此端口放行；你可以在创建后于列表中手动编辑详细信息。"
 
 [pages.inbounds.oneClick.preset]
 "vless_reality" = "VLESS + TCP + Reality + Vision"
-"vless_tls_encryption" = "VLESS Encryption + TLS（适合套CDN）"
+"vless_tls_encryption" = "VLESS Encryption + TLS（可选套CDN）"
 "switch_vision_seed_dev" = "Switch + Vision Seed (开发中)"
 
 [pages.inbounds.subConversion]
