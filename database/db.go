@@ -35,6 +35,7 @@ func initModels() error {
 		&model.InboundClientIps{},
 		&xray.ClientTraffic{},
 		&model.HistoryOfSeeders{},
+		&LinkHistory{},   // 把 LinkHistory 表也迁移
 	}
 	for _, model := range models {
 		if err := db.AutoMigrate(model); err != nil {
