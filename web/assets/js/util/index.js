@@ -29,6 +29,22 @@ class HttpUtil {
         return typeof data === 'object' ? data : new Msg(false, 'unknown data:', data);
     }
 
+    static async postForm(url, data) {
+    const formData = new URLSearchParams();
+    for (const key in data) {
+        formData.append(key, data[key]);
+    }
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData.toString()
+    });
+    return res.json();
+}
+
+
     static async get(url, params, options = {}) {
         try {
             const resp = await axios.get(url, { params, ...options });
