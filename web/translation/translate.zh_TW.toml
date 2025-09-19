@@ -312,11 +312,11 @@
 "historyTime" = "生成時間"
 "linkCreated" = "入站連結已創建，請複製以下地址："
 "descriptionTitle" = "\r\n\r\n用法說明："
-"descriptionContent" = "此功能將自動產生 VLESS + TCP + Reality (xtls-rprx-vision) 協定的入站，\r\n或 VLESS Encryption + TCP + TLS（適合套CDN）協定的入站，\r\n並隨機分配一個可用連接埠，請確保此連接埠放行；你可以在建立後於清單中手動編輯詳細資訊。"
+"descriptionContent" = "此功能將自動產生 VLESS + TCP + Reality (xtls-rprx-vision) 協定的入站，\r\n或 VLESS Encryption + XHTTP + TLS（可選套CDN）協定的入站，\r\n並隨機分配一個可用連接埠，請確保此放行；你可以在建立後於清單中手動編輯資訊。"
 
 [pages.inbounds.oneClick.preset]
 "vless_reality" = "VLESS + TCP + Reality + Vision"
-"vless_tls_encryption" = "VLESS Encryption + TLS（適合套CDN）"
+"vless_tls_encryption" = "VLESS Encryption + TLS（可選套CDN）"
 "switch_vision_seed_dev" = "Switch + Vision Seed (開發中)"
 
 [pages.inbounds.subConversion]
