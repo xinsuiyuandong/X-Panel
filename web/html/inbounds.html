@@ -963,6 +963,7 @@
                 'sega.com:443',
                 'apple.com:443',
                 'icloud.com:443',
+                'amazon.com:443',
                 'lovelive-anime.jp:443',
                 'meta.com:443',
             ],
@@ -1209,8 +1210,8 @@
                     this.linkHistory.pop();     // 保持最多10条记录
                 }
 
-            // 2. 发送数据到后端进行持久化保存
-            await HttpUtil.post('/panel/api/server/history/save', { type: type, link: link });
+            // 2. 发送数据到后端进行持久化保存，发送表单格式，而不是 JSON
+             await HttpUtil.postForm('/panel/api/server/history/save', { type: type, link: link });
             },
 
             // 【中文注释】: 以下是新增和修改后的方法，用于处理“一键配置”和“订阅转换”
@@ -1310,14 +1311,17 @@
                                 dest: randomDest,
                                 xver: 0,
                                 serverNames: [ randomSni, `www.${randomSni}` ],
-                                privateKey: privateKey,
-                                publicKey: publicKey,
+								settings: {
+                                    publicKey: publicKey,
+                                    spiderX: "/",
+                                    mldsa65Verify: ""
+                                },
+								privateKey: privateKey,
                                 maxClientVer: "",
                                 minClientVer: "",
                                 maxTimediff: 0,
                                 mldsa65Seed: "",         // 【中文注释】: 一般情况下【留空】
-                                "shortIds": shortIds,
-                                "spiderX": "/"
+                                "shortIds": shortIds
                             },
                             tcpSettings: {
                                 acceptProxyProtocol: false,
