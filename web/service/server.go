@@ -967,3 +967,25 @@ func (s *ServerService) GetNewmlkem768() (any, error) {
 
 	return keyPair, nil
 }
+
+// SaveLinkHistory saves a new link and trims the history to the latest 10
+func (s *ServerService) SaveLinkHistory(historyType, link string) error {
+    record := &database.LinkHistory{
+        Type:      historyType,
+        Link:      link,
+        CreatedAt: time.Now(),
+    }
+    // 【中文注释】: 调用数据库方法将记录写入 WAL 文件
+    err := database.AddLinkHistory(record)
+    if err != nil {
+        return err
+    }
+    // 【中文注释】【新增代码】: 强制执行一次 Checkpoint 操作。
+    // 【中文注释】: 确保 WAL 文件中的新数据被立即写入并持久化到主数据库文件中，从而解决刷新后数据丢失的问题。
+    return database.Checkpoint()
+}
+
+// LoadLinkHistory loads the latest 10 links from the database
+func (s *ServerService) LoadLinkHistory() ([]*database.LinkHistory, error) {
+	return database.GetLinkHistory()
+}
