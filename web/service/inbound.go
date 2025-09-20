@@ -153,7 +153,9 @@ func (s *InboundService) checkEmailExistForInbound(inbound *model.Inbound) (stri
 	return "", nil
 }
 
+// AddInbound adds a new inbound to db
 func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, bool, error) {
+	// 中文注释：检查端口是否已存在
 	exist, err := s.checkPortExist(inbound.Listen, inbound.Port, 0)
 	if err != nil {
 		return inbound, false, err
@@ -162,6 +164,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		return inbound, false, common.NewError("Port already exists:", inbound.Port)
 	}
 
+	// 中文注释：检查邮箱是否重复
 	existEmail, err := s.checkEmailExistForInbound(inbound)
 	if err != nil {
 		return inbound, false, err
@@ -170,12 +173,13 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		return inbound, false, common.NewError("Duplicate email:", existEmail)
 	}
 
+	// 中文注释：获取入站规则中的客户端信息
 	clients, err := s.GetClients(inbound)
 	if err != nil {
 		return inbound, false, err
 	}
 
-	// Ensure created_at and updated_at on clients in settings
+	// 中文注释：确保客户端设置中包含创建和更新时间戳
 	if len(clients) > 0 {
 		var settings map[string]any
 		if err2 := json.Unmarshal([]byte(inbound.Settings), &settings); err2 == nil && settings != nil {
@@ -199,7 +203,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		}
 	}
 
-	// Secure client ID
+	// 中文注释：根据不同协议，验证客户端ID/密码是否为空
 	for _, client := range clients {
 		switch inbound.Protocol {
 		case "trojan":
@@ -217,16 +221,53 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		}
 	}
 
+	// =================================================================
+	// 中文注释：【新增逻辑】开始：手动计算和分配 ID
+	// =================================================================
+	// 1. 查询数据库中所有已存在的入站规则的 ID
+	var existingIDs []int
+	//    使用 Pluck 方法可以更高效地只查询出 id 这一列，而不是整个对象
+	if err := database.GetDB().Model(&model.Inbound{}).Pluck("id", &existingIDs).Error; err != nil {
+		return inbound, false, err
+	}
+
+	// 2. 对所有已存在的 ID 进行升序排序
+	sort.Ints(existingIDs)
+
+	// 3. 查找第一个可用的、空缺的 ID
+	//    我们从 1 开始作为期望的 ID 进行检查。
+	//    例如，如果 ID 列表是 [1, 2, 4, 5]，当 nextID 是 3 时，它在列表中找不到匹配的 id=3，循环就会中断，nextID 就确定为 3。
+	//    如果 ID 列表是 [1, 2, 3]，循环结束后 nextID 会是 4。
+	nextID := 1
+	for _, id := range existingIDs {
+		if id == nextID {
+			nextID++
+		} else {
+			// 找到了第一个不连续的空缺
+			break
+		}
+	}
+
+	// 4. 将计算出的可用 ID 赋值给即将创建的入站对象
+	inbound.Id = nextID
+	// =================================================================
+	// 中文注释：【新增逻辑】结束：手动计算和分配 ID
+	// =================================================================
+
+	// 中文注释：开始数据库事务
 	db := database.GetDB()
 	tx := db.Begin()
 	defer func() {
 		if err == nil {
+			// 中文注释：如果没有错误，提交事务
 			tx.Commit()
 		} else {
+			// 中文注释：如果出现错误，回滚事务
 			tx.Rollback()
 		}
 	}()
 
+	// 中文注释：保存入站信息到数据库 (此时 inbound 对象已包含我们手动设置的 ID)
 	err = tx.Save(inbound).Error
 	if err == nil {
 		if len(inbound.ClientStats) == 0 {
@@ -238,6 +279,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		return inbound, false, err
 	}
 
+	// 中文注释：如果入站规则是启用的，则尝试通过 API 热加载到 Xray-core
 	needRestart := false
 	if inbound.Enable {
 		s.xrayApi.Init(p.GetAPIPort())
@@ -250,12 +292,14 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 		if err1 == nil {
 			logger.Debug("New inbound added by api:", inbound.Tag)
 		} else {
+			// 中文注释：如果 API 调用失败，则标记需要重启面板以应用更改
 			logger.Debug("Unable to add inbound by api:", err1)
 			needRestart = true
 		}
 		s.xrayApi.Close()
 	}
 
+	// 中文注释：返回创建好的入站对象、是否需要重启以及错误信息
 	return inbound, needRestart, err
 }
 
