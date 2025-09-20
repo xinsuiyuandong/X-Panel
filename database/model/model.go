@@ -27,7 +27,7 @@ type User struct {
 }
 
 type Inbound struct {
-	Id          int                  `json:"id" form:"id" gorm:"primaryKey;autoIncrement"`
+	Id          int                  `json:"id" form:"id" gorm:"primaryKey"`
 	UserId      int                  `json:"-"`
 	Up          int64                `json:"up" form:"up"`
 	Down        int64                `json:"down" form:"down"`
