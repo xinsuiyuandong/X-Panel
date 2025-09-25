@@ -1187,21 +1187,50 @@
                 }
             },
 
-			// 〔中文注释〕: 新增一个专门用于生成“一键配置”二维码的方法
-            generateOneClickQrCode(link) {
-                // 〔中文注释〕: this.$nextTick 是一个 Vue 特有的功能，它会等待 DOM 更新完成后再执行内部的代码。
-                // 这是必需的，因为 <canvas> 元素只有在 inboundLink 被赋值后才会显示出来，我们需要确保它存在才能进行绘制。
-                this.$nextTick(() => {
-                    const canvasElement = document.getElementById('oneClickQrcodeCanvas');
-                    if (canvasElement) {
-                        new QRious({
-                            element: canvasElement, // 〔中文注释〕: 关联到我们刚刚在 HTML 中添加的 canvas 元素
-                            value: link,            // 〔中文注释〕: 二维码的内容就是生成的分享链接
-                            size: 200,              // 〔中文注释〕: 设置二维码的尺寸为 200x200 像素
-                            level: 'M'              // 〔中文注释〕: 设置较高的容错率
+			// 〔中文注释〕：【重要】这是替换后的二维码生成方法，它会使用短链接来生成二维码，同时保证复制功能不变
+            generateOneClickQrCode(fullLink) {
+                // 〔中文注释〕：【保证复制功能不变】先把完整的长链接保存到 inboundLink，这样输入框、点击复制和按钮复制功能都会使用这个完整链接。
+                this.inboundLink = fullLink;
+
+                // 〔中文注释〕：调用后端 API /shortlink/save 来保存长链接并获取短代码
+                HttpUtil.postForm('/panel/api/server/shortlink/save', { link: fullLink })
+                    .then(res => {
+                        let qrValue = fullLink; // 〔中文注释〕：默认值，如果后端API调用失败，二维码内容仍然是原始长链接，确保功能可用
+
+                        if (res.success && res.obj && res.obj.shortCode) {
+                            // 〔中文注释〕：如果成功，则拼接出完整的短链接 URL。这个短链接仅用于生成二维码。
+                            // 格式为：https://你的域名/panel/api/server/s/短代码
+                            qrValue = window.location.origin + "/panel/api/server/s/" + res.obj.shortCode;
+                        }
+
+                        // 〔中文注释〕：this.$nextTick 确保 DOM 更新完毕后才执行二维码绘制
+                        this.$nextTick(() => {
+                            const canvasElement = document.getElementById('oneClickQrcodeCanvas');
+                            if (canvasElement) {
+                                new QRious({
+                                    element: canvasElement, // 〔中文注释〕: 关联到 HTML 中的 canvas 元素
+                                    value: qrValue,         // 〔中文注释〕: 二维码的内容现在是【短链接】或【原始链接(备用)】
+                                    size: 200,              // 〔中文注释〕: 250x250 的尺寸对于短链接来说非常清晰了
+                                    level: 'H'              // 〔中文注释〕: 可以使用更高的容错率 'H'，让二维码图案更强壮，更容易被识别
+                                });
+                            }
                         });
-                    }
-                });
+                    })
+                    .catch(err => {
+                        console.error("生成短链接失败，将使用原始链接生成二维码:", err);
+                        // 〔中文注释〕：增加错误处理，即使短链API请求失败，也要确保能用原始链接生成一个二维码
+                        this.$nextTick(() => {
+                            const canvasElement = document.getElementById('oneClickQrcodeCanvas');
+                             if (canvasElement) {
+                                new QRious({
+                                    element: canvasElement,
+                                    value: fullLink, // 〔中文注释〕: 出错时使用原始长链接
+                                    size: 200,
+                                    level: 'L'       // 〔中文注释〕: 长链接使用低容错率，让图案尽可能简单一些
+                                });
+                            }
+                        });
+                    });
             },
 			
     // 【修改后】: 按照固定长度 2,4,6,8,10,12,14,16 来生成 shortIds
