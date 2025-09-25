@@ -767,13 +767,15 @@
                     :columns="linkHistoryColumns" 
                     rowKey="time"
                 >
-                    <template slot="linkColumn" slot-scope="link, record">
+                    <template #bodyCell="{ column, record }">
+                        <template v-if="column.dataIndex === 'link'">
                             <a-input-search
                                 :value="record.link"
                                 read-only
                                 :enter-button="`{{ i18n "copy" }}`"
                                 @search="copyLink(record.link)"
                             />
+                           </template>
                        </template>
                    </a-table>
                 </div>
@@ -962,8 +964,6 @@
                     {
                         title: `{{ i18n "pages.inbounds.oneClick.historyLink" }}`,
                         dataIndex: 'link',
-                        // 〔中文注释〕: 为 'link' 这一列指定一个名为 'linkColumn' 的自定义渲染插槽
-                        scopedSlots: { customRender: 'linkColumn' }, 
                     },
                     {
                         title: `{{ i18n "pages.inbounds.oneClick.historyTime" }}`,
@@ -1198,7 +1198,7 @@
                             element: canvasElement, // 〔中文注释〕: 关联到我们刚刚在 HTML 中添加的 canvas 元素
                             value: link,            // 〔中文注释〕: 二维码的内容就是生成的分享链接
                             size: 200,              // 〔中文注释〕: 设置二维码的尺寸为 200x200 像素
-                            level: 'H'              // 〔中文注释〕: 设置较高的容错率
+                            level: 'M'              // 〔中文注释〕: 设置较高的容错率
                         });
                     }
                 });
