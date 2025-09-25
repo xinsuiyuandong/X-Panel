@@ -307,7 +307,7 @@
 "historyTime" = "Generated Time"
 "linkCreated" = "The inbound link has been created, please copy the following address:"
 "descriptionTitle" = "\r\n\r\nUsage notes"
-"descriptionContent" = "This function will automatically generate an inbound connection for the VLESS + TCP + Reality (xtls-rprx-vision) protocol,\r\nor the VLESS Encryption + XHTTP + TLS (optional CDN) protocol,\r\nand randomly assign an available port. Please ensure that this port is open. The [One-click Configuration] generation function here is connected to the [Inbound] data.\r\nAfter one-click creation, you can manually view/copy or edit the details in the list to add other parameters."
+"descriptionContent" = "This function will automatically generate an inbound connection for the VLESS + TCP + Reality (xtls-rprx-vision) protocol,\r\nor the VLESS Encryption + XHTTP + TLS (optional CDN) protocol,\r\nand randomly assign an available port. Please ensure that this port is open. After generation, please copy the [Link Address] directly.\r\nThe [One-Click Configuration] generation function here is connected to the [Inbound] data.\r\nAfter one-click creation, you can manually view/copy or edit the details in the list to add other parameters."
 
 [pages.inbounds.oneClick.preset]
 "vless_reality" = "VLESS + TCP + Reality + Vision"
