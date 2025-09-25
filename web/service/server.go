@@ -968,16 +968,24 @@ func (s *ServerService) GetNewmlkem768() (any, error) {
 	return keyPair, nil
 }
 
-// SaveLinkHistory saves a new link and trims the history to the latest 10
+// SaveLinkHistory 保存一个新的链接记录，并确保其被永久写入数据库文件。
 func (s *ServerService) SaveLinkHistory(historyType, link string) error {
     record := &database.LinkHistory{
         Type:      historyType,
         Link:      link,
         CreatedAt: time.Now(),
     }
-    // 【核心修正】: 直接调用 AddLinkHistory 并返回其结果。
-    // 我们将把 Checkpoint 的逻辑移入 AddLinkHistory 内部，确保操作的原子性。
-    return database.AddLinkHistory(record)
+    
+    // 【核心修正】: 第一步，调用重构后的 AddLinkHistory 函数。
+    // 这个函数现在是一个原子事务。如果它没有返回错误，就意味着数据已经成功提交到了 .wal 日志文件。
+    err := database.AddLinkHistory(record)
+    if err != nil {
+        return err // 如果事务失败，直接返回错误，不执行后续操作
+    }
+
+    // 【核心修正】: 第二步，在事务成功提交后，我们在这里调用 Checkpoint。
+    // 此时 .wal 文件中已经包含了我们的新数据，调用 Checkpoint 可以确保这些数据被立即写入主数据库文件。
+    return database.Checkpoint()
 }
 
 // LoadLinkHistory loads the latest 10 links from the database
