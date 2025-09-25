@@ -58,6 +58,10 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.POST("/getNewEchCert", a.getNewEchCert)
 	g.POST("/history/save", a.saveHistory)
 	g.GET("/history/load", a.loadHistory)
+	// 用于前端请求创建短链接
+	g.POST("/shortlink/save", a.saveShortLink)
+	// 用于处理短链接的跳转
+	g.GET("/s/:code", a.redirectShortLink)
 }
 
 func (a *ServerController) refreshStatus() {
@@ -332,4 +336,39 @@ func (a *ServerController) loadHistory(c *gin.Context) {
 		return
 	}
 	jsonObj(c, history, nil)
+}
+
+// saveShortLink 处理保存长链接并返回短代码的请求
+func (a *ServerController) saveShortLink(c *gin.Context) {
+	fullLink := c.PostForm("link")
+	if fullLink == "" {
+		jsonMsg(c, "link is required", fmt.Errorf("missing link parameter"))
+		return
+	}
+
+	shortCode, err := a.serverService.SaveShortLink(fullLink)
+	if err != nil {
+		jsonMsg(c, "Failed to save short link", err)
+		return
+	}
+
+	jsonObj(c, gin.H{
+		"shortCode": shortCode,
+	}, nil)
+}
+
+// redirectShortLink 处理短链接的重定向
+func (a *ServerController) redirectShortLink(c *gin.Context) {
+	code := c.Param("code")
+	fullLink, err := a.serverService.GetFullLinkByCode(code)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Error finding link")
+		return
+	}
+	if fullLink == "" {
+		c.String(http.StatusNotFound, "Link not found")
+		return
+	}
+	// 〔中文注释〕：使用 302 Found 进行重定向，这是短链接服务的标准做法
+	c.Redirect(http.StatusFound, fullLink)
 }
