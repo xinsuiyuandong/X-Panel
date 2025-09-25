@@ -992,3 +992,55 @@ func (s *ServerService) SaveLinkHistory(historyType, link string) error {
 func (s *ServerService) LoadLinkHistory() ([]*database.LinkHistory, error) {
 	return database.GetLinkHistory()
 }
+
+// 定义用于生成随机短代码的字符集
+const shortLinkCharset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+// 〔中文注释〕：生成指定长度的随机字符串
+func randString(length int) string {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = shortLinkCharset[seededRand.Intn(len(shortLinkCharset))]
+	}
+	return string(b)
+}
+
+// SaveShortLink 保存长链接并返回一个唯一的短代码
+func (s *ServerService) SaveShortLink(fullLink string) (string, error) {
+	// 〔中文注释〕：循环生成，直到找到一个数据库里不存在的短代码，避免冲突
+	for {
+		code := randString(8) // 生成一个8位的随机字符串
+		shortLink, err := database.GetShortLink(code)
+		if err != nil {
+			return "", err
+		}
+		if shortLink == nil {
+			// 〔中文注释〕：数据库中没有这个code，是可用的
+			newLink := &database.ShortLink{
+				Code:     code,
+				FullLink: fullLink,
+				CreatedAt: time.Now(),
+			}
+			err = database.AddShortLink(newLink)
+			if err != nil {
+				return "", err
+			}
+			return code, nil
+		}
+		// 〔中文注释〕：如果code已存在，循环将继续，生成新的code再次尝试
+	}
+}
+
+// GetFullLinkByCode 根据短代码查找对应的原始长链接
+func (s *ServerService) GetFullLinkByCode(code string) (string, error) {
+	shortLink, err := database.GetShortLink(code)
+	if err != nil {
+		return "", err
+	}
+	if shortLink == nil {
+		return "", nil // 〔中文注释〕：如果没有找到，返回空字符串
+	}
+	return shortLink.FullLink, nil
+}
