@@ -1531,17 +1531,49 @@
                 }
             },
 
+            // 【中文注释】: 这是修复后的 copyLink 方法
             async copyLink(linkToCopy) {
                 const link = linkToCopy || this.inboundLink;
                 if (!link) {
                     this.$message.warning('没有可复制的链接。');
                     return;
                 }
+
+                // 【中文注释】: 优先使用 Clipboard API，但它需要安全上下文 (HTTPS)
+                if (navigator.clipboard && window.isSecureContext) {
+                    try {
+                        await navigator.clipboard.writeText(link);
+                        this.$message.success('链接已成功复制到剪贴板！');
+                        return;
+                    } catch (err) {
+                        console.error('Clipboard API 复制失败，将尝试回退方法:', err);
+                        // 如果失败，则继续执行下面的回退方法
+                    }
+                }
+
+                // 【中文注释】: 回退方案，使用 document.execCommand，兼容性更好
+                const textArea = document.createElement("textarea");
+                textArea.value = link;
+                // 将输入框移动到屏幕外，防止干扰
+                textArea.style.position = "absolute";
+                textArea.style.left = "-9999px";
+                textArea.setAttribute("readonly", "");
+
+                document.body.appendChild(textArea);
+                
+                // 选择输入框中的内容
+                textArea.select();
+                
                 try {
-                    await navigator.clipboard.writeText(link);
+                    // 执行复制命令
+                    document.execCommand('copy');
                     this.$message.success('链接已成功复制到剪贴板！');
                 } catch (err) {
+                    console.error('execCommand 复制失败:', err);
                     this.$message.error('复制失败，请手动复制。');
+                } finally {
+                    // 无论成功与否，最后都移除这个临时输入框
+                    document.body.removeChild(textArea);
                 }
             },
 
