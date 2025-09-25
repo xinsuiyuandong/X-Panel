@@ -1028,6 +1028,12 @@ func (s *ServerService) SaveShortLink(fullLink string) (string, error) {
 			if err != nil {
 				return "", err
 			}
+			if err := database.Checkpoint(); err != nil {
+				// 即使 Checkpoint 失败，数据仍在 .wal 中，理论上不会丢失。
+				// 但为了保证数据一致性和即时可用性，最好还是处理这个错误。
+				// 这里我们选择返回错误，让调用方知道可能存在延迟。
+				return "", err
+			}
 			return code, nil
 		}
 		// 〔中文注释〕：如果code已存在，循环将继续，生成新的code再次尝试
