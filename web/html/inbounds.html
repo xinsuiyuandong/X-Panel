@@ -731,23 +731,7 @@
                     <p>{{ i18n "pages.inbounds.oneClick.descriptionContent" }}</p>
                 </div>
                 
-                <div v-else style="padding: 24px;">
-                    <div 
-                      @click="copyLink(inboundLink)" 
-                      style="text-align: center; margin-bottom: 20px; cursor: pointer; padding: 10px; border-radius: 8px;"
-                      :title="`{{ i18n 'pages.inbounds.oneClick.clickToCopyTitle' }}`"
-                    >
-                      <p style="font-weight: bold; font-size: 16px; margin-bottom: 10px;">
-                        {{ i18n "pages.inbounds.oneClick.scanQrcodeTitle" }}
-                      </p>
-                      
-                      <canvas id="oneClickQrcodeCanvas"></canvas>
-                      
-                      <p style="margin-top: 8px; font-size: 12px; color: #888;">
-                        {{ i18n "pages.inbounds.oneClick.clickToCopyHint" }}
-                      </p>
-                    </div>
-
+                <div v-else>
                     <p><b>{{ i18n "pages.inbounds.oneClick.linkCreated" }}</b></p>
                     <a-input-search
                         :value="inboundLink"
@@ -1187,22 +1171,6 @@
                 }
             },
 
-			// 〔中文注释〕: 新增一个专门用于生成“一键配置”二维码的方法
-            generateOneClickQrCode(link) {
-                // 〔中文注释〕: this.$nextTick 是一个 Vue 特有的功能，它会等待 DOM 更新完成后再执行内部的代码。
-                // 这是必需的，因为 <canvas> 元素只有在 inboundLink 被赋值后才会显示出来，我们需要确保它存在才能进行绘制。
-                this.$nextTick(() => {
-                    const canvasElement = document.getElementById('oneClickQrcodeCanvas');
-                    if (canvasElement) {
-                        new QRious({
-                            element: canvasElement, // 〔中文注释〕: 关联到我们刚刚在 HTML 中添加的 canvas 元素
-                            value: link,            // 〔中文注释〕: 二维码的内容就是生成的分享链接
-                            size: 200,              // 〔中文注释〕: 设置二维码的尺寸为 200x200 像素
-                            level: 'H'              // 〔中文注释〕: 设置较高的容错率
-                        });
-                    }
-                });
-            },
 			
     // 【修改后】: 按照固定长度 2,4,6,8,10,12,14,16 来生成 shortIds
     generateShortIds() {
@@ -1375,9 +1343,6 @@
                     if (msg.success) {
                         const link = `vless://${uuid}@${window.location.hostname}:${port}?type=tcp&encryption=none&security=reality&pbk=${publicKey}&fp=chrome&sni=${randomSni}&sid=${linkSid}&spx=%2F&flow=xtls-rprx-vision#${remark}-${remark}`;
                         this.inboundLink = link;
-
-						// 〔中文注释〕: 在这里调用新增的二维码生成方法，把链接传进去
-                        this.generateOneClickQrCode(link);
                         
                         // 【新增】: 调用保存方法，将链接保存到历史记录
                         this.saveLinkToHistory('vless_reality', link);
@@ -1513,9 +1478,6 @@
                         // 【重要】: 分享链接格式，添加 encryption 和 flow
                         const link = `vless://${uuid}@${window.location.hostname}:${port}?type=tcp&encryption=${encryption}&security=tls&fp=chrome&alpn=http%2F1.1&sni=${serverName}&flow=xtls-rprx-vision#${remark}-${remark}`;
                         this.inboundLink = link;
-
-						// 〔中文注释〕: 在这里调用新增的二维码生成方法，把链接传进去
-                        this.generateOneClickQrCode(link);
 
                         // 【新增】: 调用保存方法，将链接保存到历史记录
                         this.saveLinkToHistory('vless_tls_encryption', link);
