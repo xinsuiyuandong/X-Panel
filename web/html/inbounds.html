@@ -295,7 +295,7 @@
                     <a-button type="primary" icon="thunderbolt" @click="openOneClickConfig">
                       <template v-if="!isMobile">{{ i18n "pages.inbounds.oneClickConfig" }}</template>
                     </a-button>
-                    <a-button type="primary" icon="link" @click="handleSubscriptionConversion">
+					<a-button type="primary" icon="link" @click="openSubConversionModal">
                       <template v-if="!isMobile">{{ i18n "pages.inbounds.is_subConversion" }}</template>
                     </a-button>
                   </a-space>
@@ -782,6 +782,42 @@
             </a-tab-pane>
          </a-tabs>
       </a-modal>
+	  <a-modal
+          title="通用订阅转换"
+          :visible="subConvert.visible"
+          :confirm-loading="subConvert.loading"
+          @ok="handleSubConversion"
+          @cancel="() => { subConvert.visible = false }"
+          :class="themeSwitcher.currentTheme"
+          ok-text="开始转换"
+          cancel-text="关闭"
+        >
+          <a-form>
+            <a-form-item label="订阅地址">
+              <a-input v-model="subConvert.url" placeholder="请粘贴原始订阅链接"></a-input>
+            </a-form-item>
+            <a-form-item label="目标客户端">
+              <a-select v-model="subConvert.target" style="width: 100%">
+                <a-select-option value="clash">Clash</a-select-option>
+                <a-select-option value="surge">Surge</a-select-option>
+                <a-select-option value="v2ray">V2Ray (Base64)</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-form>
+
+          <div v-if="subConvert.result.link" style="margin-top: 20px;">
+            <p><strong>转换成功！</strong></p>
+            <div style="text-align: center; margin-bottom: 15px;">
+              <canvas id="subConvertQrcodeCanvas"></canvas>
+            </div>
+            <a-input-search
+                :value="subConvert.result.link"
+                read-only
+                enter-button="复制"
+                @search="() => copyLink(subConvert.result.link)"
+            />
+          </div>
+        </a-modal>
     </a-layout-content>
   </a-layout>
 </a-layout>
@@ -947,6 +983,18 @@
             ipLimitEnable: false,
             pageSize: 50,
 
+            // 〔中文注释〕: 为“通用订阅转换”模态框添加新的数据模型
+            subConvert: {
+              visible: false,
+              loading: false,
+              url: '',
+              target: 'clash', // 默认选项
+              result: {
+                link: '',
+                qrcode: null
+              }
+            },
+			
 			inboundLink: '', // 新增：用来存储生成的可复制链接
             // 【中文注释】: 新增数据属性，用于控制“一键配置”模态框的显示状态
             oneClickModalVisible: false,
@@ -1187,50 +1235,123 @@
                 }
             },
 
-			// 〔中文注释〕：【重要】这是替换后的二维码生成方法，它会使用短链接来生成二维码，同时保证复制功能不变
+            // 〔中文注释〕: 【订阅转换解决方案】打开模态框的函数
+            openSubConversionModal() {
+              // 重置状态，以便每次打开都是全新的
+              this.subConvert.url = '';
+              this.subConvert.result.link = '';
+              this.subConvert.visible = true;
+            },
+
+            // 〔中文注释〕: 【订阅转换解决方案】执行转换的核心函数
+            async handleSubConversion() {
+              if (!this.subConvert.url) {
+                this.$message.error('请输入订阅地址！');
+                return;
+              }
+              this.subConvert.loading = true;
+              this.subConvert.result.link = '';
+
+              const sublinkApiUrl = `http://${window.location.hostname}:8000/api/convert`;
+              
+              try {
+                const response = await fetch(sublinkApiUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    url: this.subConvert.url,
+                    target: this.subConvert.target,
+                  }),
+                });
+
+                if (!response.ok) {
+                  const errData = await response.json();
+                  throw new Error(errData.error || `转换失败: ${response.status}`);
+                }
+
+                const convertedText = await response.text();
+
+                // 为了能让客户端直接使用，我们需要将转换后的文本内容也通过 sublink 变成一个短链接
+                const shortLinkResponse = await fetch(`http://${window.location.hostname}:8000/api/short`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: convertedText })
+                });
+
+                if (!shortLinkResponse.ok) throw new Error('生成分享链接失败');
+
+                const finalShortLink = await shortLinkResponse.text();
+                this.subConvert.result.link = finalShortLink;
+                
+                // 生成二维码
+                this.$nextTick(() => {
+                    const canvas = document.getElementById('subConvertQrcodeCanvas');
+                    if (canvas) {
+                        new QRious({ element: canvas, value: finalShortLink, size: 180 });
+                    }
+                });
+
+              } catch (err) {
+                this.$message.error(err.message);
+              } finally {
+                this.subConvert.loading = false;
+              }
+            },
+			
+            // 〔中文注释〕：【二维码解决方案】这是最终版的二维码生成方法。
             generateOneClickQrCode(fullLink) {
-                // 〔中文注释〕：【保证复制功能不变】先把完整的长链接保存到 inboundLink，这样输入框、点击复制和按钮复制功能都会使用这个完整链接。
+                // 〔中文注释〕：先把完整的长链接保存到 inboundLink，这样输入框、复制按钮等功能仍然使用原始长链接。
                 this.inboundLink = fullLink;
 
-                // 〔中文注释〕：调用后端 API /shortlink/save 来保存长链接并获取短代码
-                HttpUtil.postForm('/panel/api/server/shortlink/save', { link: fullLink })
-                    .then(res => {
-                        let qrValue = fullLink; // 〔中文注释〕：默认值，如果后端API调用失败，二维码内容仍然是原始长链接，确保功能可用
+                // 〔中文注释〕：【请在这里配置你的 sublink 服务地址】
+                // 它会自动使用当前页面的域名和 8000 端口。
+                // 如果你给 sublink 配置了其他域名或端口，请修改这里！
+                const sublinkApiUrl = `http://${window.location.hostname}:8000/api/short`;
 
-                        if (res.success && res.obj && res.obj.shortCode) {
-                            // 〔中文注释〕：如果成功，则拼接出完整的短链接 URL。这个短链接仅用于生成二维码。
-                            // 格式为：https://你的域名/panel/api/server/s/短代码
-                            qrValue = window.location.origin + "/panel/api/server/s/" + res.obj.shortCode;
+                this.$message.loading('正在生成高清二维码...', 0);
+
+                // 〔中文注释〕：使用 fetch API 向 sublink 服务发送 POST 请求。
+                fetch(sublinkApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: fullLink }), // 发送长链接
+                })
+                .then(response => {
+                    this.$message.destroy(); // 清除加载提示
+                    if (!response.ok) throw new Error(`网络响应失败: ${response.status}`);
+                    return response.text(); // 获取返回的短链接文本
+                })
+                .then(shortLink => {
+                    this.$message.success('高清二维码生成成功！');
+                    this.$nextTick(() => {
+                        const canvasElement = document.getElementById('oneClickQrcodeCanvas');
+                        if (canvasElement) {
+                            new QRious({
+                                element: canvasElement,
+                                value: shortLink, // 使用 sublink 返回的短链接
+                                size: 200,
+                                level: 'H',
+                            });
                         }
-
-                        // 〔中文注释〕：this.$nextTick 确保 DOM 更新完毕后才执行二维码绘制
-                        this.$nextTick(() => {
-                            const canvasElement = document.getElementById('oneClickQrcodeCanvas');
-                            if (canvasElement) {
-                                new QRious({
-                                    element: canvasElement, // 〔中文注释〕: 关联到 HTML 中的 canvas 元素
-                                    value: qrValue,         // 〔中文注释〕: 二维码的内容现在是【短链接】或【原始链接(备用)】
-                                    size: 200,              // 〔中文注释〕: 250x250 的尺寸对于短链接来说非常清晰了
-                                    level: 'H'              // 〔中文注释〕: 可以使用更高的容错率 'H'，让二维码图案更强壮，更容易被识别
-                                });
-                            }
-                        });
-                    })
-                    .catch(err => {
-                        console.error("生成短链接失败，将使用原始链接生成二维码:", err);
-                        // 〔中文注释〕：增加错误处理，即使短链API请求失败，也要确保能用原始链接生成一个二维码
-                        this.$nextTick(() => {
-                            const canvasElement = document.getElementById('oneClickQrcodeCanvas');
-                             if (canvasElement) {
-                                new QRious({
-                                    element: canvasElement,
-                                    value: fullLink, // 〔中文注释〕: 出错时使用原始长链接
-                                    size: 200,
-                                    level: 'L'       // 〔中文注释〕: 长链接使用低容错率，让图案尽可能简单一些
-                                });
-                            }
-                        });
                     });
+                })
+                .catch(err => {
+                    this.$message.destroy();
+                    console.error("调用 sublink 服务失败:", err);
+                    this.$message.warning('连接转换服务失败，二维码可能难以扫描。');
+                    // 〔中文注释〕：备用方案：仍然用原始长链接生成二维码
+                    this.$nextTick(() => {
+                        const canvasElement = document.getElementById('oneClickQrcodeCanvas');
+                        if (canvasElement) {
+                            new QRious({
+                                element: canvasElement,
+                                value: fullLink,
+                                size: 200,
+                                level: 'L',
+                            });
+                        }
+                    });
+                });
             },
 			
     // 【修改后】: 按照固定长度 2,4,6,8,10,12,14,16 来生成 shortIds
@@ -1606,7 +1727,7 @@
                 }
             },
 
-            // 【中文注释】: 处理“订阅转换”按钮的点击事件 (已更新逻辑)
+            /* 【中文注释】: 处理“订阅转换”按钮的点击事件 (已更新逻辑)
             handleSubscriptionConversion() {
                 this.$confirm({
                     title: '{{ i18n "pages.inbounds.subConversion.modalTitle"}}',
@@ -1644,6 +1765,7 @@
                     },
                 });
             },
+			这一段待定  */ 
 
             generalActions(action) {
                 switch (action.key) {
