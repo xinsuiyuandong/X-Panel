@@ -1728,46 +1728,6 @@
                 }
             },
 
-            /* 【中文注释】: 处理“订阅转换”按钮的点击事件 (已更新逻辑)
-            handleSubscriptionConversion() {
-                this.$confirm({
-                    title: '{{ i18n "pages.inbounds.subConversion.modalTitle"}}',
-                    content: '{{ i18n "pages.inbounds.subConversion.modalContent"}}',
-                    okText: '{{ i18n "pages.inbounds.subConversion.modalOk"}}',
-                    cancelText: '{{ i18n "cancel" }}',
-                    class: themeSwitcher.currentTheme,
-                    onOk: () => {
-                        const subConverterUrl = `https://${window.location.hostname}:15268`;
-                        const loadingMessage = this.$message.loading('正在检测订阅转换服务...', 0);
-
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-                        fetch(subConverterUrl, {
-                            method: 'GET',
-                            mode: 'no-cors',
-                            signal: controller.signal
-                        })
-                        .then(response => {
-                            clearTimeout(timeoutId);
-                            loadingMessage();
-                            this.$message.success('服务检测成功，正在跳转...', 2);
-                            window.open(subConverterUrl, '_blank');
-                        })
-                        .catch(err => {
-                            clearTimeout(timeoutId);
-                            loadingMessage();
-                            this.$info({
-                                title: '{{ i18n "pages.inbounds.subConversion.notFoundTitle"}}',
-                                content: '{{ i18n "pages.inbounds.subConversion.notFoundContent"}}',
-                                class: themeSwitcher.currentTheme,
-                            });
-                        });
-                    },
-                });
-            },
-			这一段待定  */ 
-
             generalActions(action) {
                 switch (action.key) {
                     case "import":
