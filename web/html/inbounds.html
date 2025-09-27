@@ -947,6 +947,8 @@
         { title: '{{ i18n "pages.inbounds.info" }}', width: 10, align: 'center', scopedSlots: { customRender: 'info' } },
     ];
 
+	const FIXED_API_KEY = "Your_Fixed_Static_API_Key_For_Sublink_is_20251010_xyz";
+	
     const app = new Vue({
         delimiters: ['[[', ']]'],
         el: '#app',
@@ -1262,7 +1264,11 @@
       try {
         const response = await fetch(`${apiBaseUrl}/api/convert`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+		  headers: { 
+             'Content-Type': 'application/json',
+              // 发送固定的 API 密钥
+             'Authorization': `Bearer ${FIXED_API_KEY}`, 
+          },
           body: JSON.stringify({
             url: this.subConvert.url,
             target: this.subConvert.target,
@@ -1279,7 +1285,11 @@
         // 为了能让客户端直接使用，我们需要将转换后的文本内容也通过 sublink 变成一个短链接
         const shortLinkResponse = await fetch(`${apiBaseUrl}/api/short`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+             'Content-Type': 'application/json',
+              // 发送固定的 API 密钥
+             'Authorization': `Bearer ${FIXED_API_KEY}`,
+          },
           body: JSON.stringify({ url: convertedText }),
         });
 
@@ -1314,7 +1324,11 @@
       // 〔中文注释〕：使用 fetch API 向 sublink 服务发送 POST 请求。
       fetch(`${apiBaseUrl}/api/short`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+           'Content-Type': 'application/json',
+            // 【修改点 C】：发送固定的 API 密钥
+           'Authorization': `Bearer ${FIXED_API_KEY}`,
+         },
         body: JSON.stringify({ url: fullLink }),     // 发送长链接
       })
         .then(response => {
