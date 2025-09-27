@@ -857,7 +857,7 @@ ${dateTime}
               backupModal.show();
             },
             exportDatabase() {
-                window.location = basePath + '/panel/api/server/getDb';
+                window.location = basePath.replace(/\/$/, '') + '/panel/api/server/getDb';
             },
             importDatabase() {
                 const fileInput = document.createElement('input');
