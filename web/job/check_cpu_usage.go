@@ -43,9 +43,9 @@ func (j *CheckCpuJob) Run() {
   msg := j.tgbotService.I18nBot( 
    "tgbot.messages.cpuThreshold", 
    "Percent=="+strconv.FormatFloat(percent[0], 'f', 2, 64), 
-   "Threshold=="+strconv.Itoa(threshold), 
-   "SampleInterval==10s", 
-   "NotifyPolicy==连续3次超阈值" 
+   "Threshold=="+strconv.Itoa(threshold),
+   "SampleInterval==10s",
+   "NotifyPolicy==连续3次超阈值",
   ) 
   j.tgbotService.SendMsgToTgbotAdmins(msg) 
   j.lastNotifyTime = now 
