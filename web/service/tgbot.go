@@ -3093,9 +3093,9 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
 			// 立即使用可靠的重启命令强制启动新服务
 			log.Printf("等待完毕，立即执行 systemctl restart 启动新服务...")
 			
-			// 使用绝对路径 /usr/bin/systemctl restart，这是已验证可工作的命令
-			restartCmd := exec.Command("sudo", "/usr/bin/systemctl", "restart", "x-ui")
-			restartCmd.Run() // 运行重启命令，不关心其输出
+            // 执行 VPS 重启命令
+            log.Println("Go 程序主动执行 VPS 重启 (shutdown -r now)...")
+            restartCmd := exec.Command("shutdown", "-r", "now") 
 			
 			// 取消硬等待，改为在 120 秒内进行主动探测
 			// 现在检查 systemd 服务状态，
