@@ -667,7 +667,7 @@
 "status" = "✅ 機器人正常運作！"
 "usage" = "❗ 請輸入要搜尋的文字！"
 "getID" = "🆔 您的 ID 為：<code>{{ .ID }}</code>"
-"helpAdminCommands" = "要重新啟動 Xray Core：\r\n<code>/restart</code>\r\n\r\n要搜尋客戶電子郵件：\r\n<code>/usage [電子郵件]</code>\r\n\r\n要搜尋入站（帶有客戶統計資料）：\r\n<code>/inbound [備註]</code>\r\n\r\nTelegram 聊天 ID：\r\n<code>/id</code>"
+"helpAdminCommands" = "要重新啟動 Xray Core：\r\n<code>/restart</code>\r\n\n要搜尋客戶電子郵件：\r\n<code>/usage [電子郵件]</code>\r\n\r\n要搜尋入站（有客戶統計資料）：\r\n<code>\r\n\r\n要搜尋入站（有客戶統計資料）：\r\n<code> [備註]</code>\r\n\r\nTelegram聊天ID：\r\n<code>/id</code>\r\n\r\n更新面板：\r\n<code>/update</code>\r\n\r\n重新啟動面板：\r\n<code>/restartX</code>\r\n\r\n重新啟動面板：\r\n<code>/restartX</code>\r\n\r\n重新啟動面板：\r\n<code>/restartX</code>\r\n\r\n重新啟動面板：\r\n<code>/restartX</code>\r\n\r\n重新啟動面板：\r\n<code>/restartX</code>\r\n\r\n重啟面板：\r\n<code>/restartX</code>\r\n\r\n重新啟動面板：\r\n<code>/restartX</code>"
 "helpClientCommands" = "要搜尋統計資料，請使用以下指令：\r\n<code>/usage [電子郵件]</code>\r\n\r\nTelegram 聊天 ID：\r\n<code>/id</code>"
 "restartUsage" = "\r\n\r\n<code>/restart</code>"
 "restartSuccess" = "✅ 操作成功！"
@@ -742,6 +742,12 @@
 "SuccessResetTraffic" = "📧 電子郵件：{{ .ClientEmail }}\n🏁 結果：✅ 成功"
 "FailedResetTraffic" = "📧 電子郵件：{{ .ClientEmail }}\n🏁 結果：❌ 失敗 \n\n🛠️ 錯誤：[ {{ .ErrorMessage }} ]"
 "FinishProcess" = "🔚 所有客戶的流量重設已完成。"
+"updateConfirm" = "🤔 您確定要更新面板嗎？\n此操作將自動從 GitHub 拉取最新程式碼並重新啟動服務，期間面板將無法存取。"
+"updateSuccess" = "✅ 面板更新指令已傳送，請稍後透過日誌或版本號碼檢查更新狀態。"
+"updateFailed" = "❌ 面板更新失敗！錯誤訊息已記錄到日誌。"
+"restartPanelConfirm" = "🤔 您確定要重新啟動面板服務嗎？\n這也會重啟Xray-core，但會使面板在短時間內無法存取。"
+"restartPanelSuccess" = "✅ 面板重新啟動指令已傳送。"
+"restartPanelFailed" = "❌ 面板重新啟動失敗！錯誤訊息已記錄到日誌。"
 
 [tgbot.buttons]
 "closeKeyboard" = "❌ 關閉鍵盤"
@@ -786,6 +792,8 @@
 "change_comment" = "⚙️💬 評論"
 "ResetAllTraffics" = "重設所有流量"
 "SortedTrafficUsageReport" = "排序的流量使用報告"
+"updatePanel" = "🔄 更新面板"
+"restartPanel" = "🚀 重啟面板"
 
 [tgbot.answers]
 "successfulOperation" = "✅ 成功！"
@@ -809,3 +817,6 @@
 "askToAddUserId" = "找不到您的設定！\r\n請向管理員詢問，在您的設定中使用您的 Telegram 用戶 ChatID。\r\n\r\n您的用戶 ChatID：<code>{{ .TgUserID }}</code>"
 "chooseClient" = "為入站 {{ .Inbound }} 選擇一個客戶"
 "chooseInbound" = "選擇一個入站"
+"panelUpdating" = "正在發送更新指令..."
+"panelRestarting" = "正在發送重啟指令..."
+"actionCancelled" = "操作已取消"
