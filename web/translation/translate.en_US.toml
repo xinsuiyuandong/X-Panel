@@ -661,7 +661,7 @@
 "status" = "✅ Bot is OK!"
 "usage" = "❗ Please provide a text to search!"
 "getID" = "🆔 Your ID: <code>{{ .ID }}</code>"
-"helpAdminCommands" = "To restart Xray Core:\r\n<code>/restart</code>\r\n\r\nTo search for a client email:\r\n<code>/usage [Email]</code>\r\n\r\nTo search for inbounds (with client stats):\r\n<code>/inbound [Remark]</code>\r\n\r\nTelegram Chat ID:\r\n<code>/id</code>"
+"helpAdminCommands" = "To restart Xray Core:\r\n<code>/restart</code>\r\n\r\nTo search for customer emails:\r\n<code>/usage [email]</code>\r\n\r\nTo search inbound (with customer statistics):\r\n<code>/inbound [notes]</code>\r\n\r\nTelegram chat ID:\r\n<code>/id</code>\r\n\r\nUpdate panel:\r\n<code>/update</code>\r\n\r\nRestart panel:\r\n<code>/restartX</code>"
 "helpClientCommands" = "To search for statistics, use the following command:\r\n\r\n<code>/usage [Email]</code>\r\n\r\nTelegram Chat ID:\r\n<code>/id</code>"
 "restartUsage" = "\r\n\r\n<code>/restart</code>"
 "restartSuccess" = "✅ Operation successful!"
@@ -736,6 +736,12 @@
 "SuccessResetTraffic" = "📧 Email: {{ .ClientEmail }}\n🏁 Result: ✅ Success"
 "FailedResetTraffic" = "📧 Email: {{ .ClientEmail }}\n🏁 Result: ❌ Failed \n\n🛠️ Error: [ {{ .ErrorMessage }} ]"
 "FinishProcess" = "🔚 Traffic reset process finished for all clients."
+"updateConfirm" = "🤔 Are you sure you want to update the panel?\nThis will automatically pull the latest code from GitHub and restart the service. The panel will be inaccessible during this time."
+"updateSuccess" = "✅ The panel update command has been sent. Please check the update status later using the log or version number."
+"updateFailed" = "❌ Panel update failed! Error information has been logged."
+"restartPanelConfirm" = "🤔 Are you sure you want to restart the panel service?\nThis will also restart Xray-core, but the panel will be inaccessible for a short period of time."
+"restartPanelSuccess" = "✅ The panel restart command has been sent."
+"restartPanelFailed" = "❌ Panel restart failed! Error information has been logged."
 
 [tgbot.buttons]
 "closeKeyboard" = "❌ Close Keyboard"
@@ -780,6 +786,8 @@
 "change_comment" = "⚙️💬 Comment"
 "ResetAllTraffics" = "Reset All Traffics"
 "SortedTrafficUsageReport" = "Sorted Traffic Usage Report"
+"updatePanel" = "🔄 Update Panel"
+"restartPanel" = "🚀 Restart Panel"
 
 [tgbot.answers]
 "successfulOperation" = "✅ Operation successful!"
@@ -803,3 +811,6 @@
 "askToAddUserId" = "Your configuration is not found!\r\nPlease ask your admin to use your Telegram ChatID in your configuration(s).\r\n\r\nYour ChatID: <code>{{ .TgUserID }}</code>"
 "chooseClient" = "Choose a Client for Inbound {{ .Inbound }}"
 "chooseInbound" = "Choose an Inbound"
+"panelUpdating" = "Sending update command..."
+"panelRestarting" = "Sending restart command..."
+"actionCancelled" = "Action canceled"
