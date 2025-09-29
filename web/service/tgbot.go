@@ -3081,14 +3081,17 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
 		output, err := cmd.CombinedOutput() // CombinedOutput 会同时获取标准输出和标准错误
 
 		if err != nil {
-            // 〔中文注释〕: 如果执行更新命令失败，记录详细日志并通知用户
 			log.Printf("面板更新命令执行失败: %v\n输出: %s", err, string(output))
 			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateFailed"))
 		} else {
 			log.Printf("面板更新命令执行完毕, 输出: %s", string(output))
-
-			// 【核心修正】：更新脚本成功后，立即使用可靠的重启命令强制启动新服务
-			log.Printf("更新脚本返回成功，立即执行 systemctl restart 启动新服务...")
+			
+			// 【最终修正】：强制等待 8 秒，解决 ARMv6 上的竞态条件
+			log.Printf("更新脚本成功返回，强制等待 5 秒，以确保 systemd 完全停止旧服务。")
+			time.Sleep(8 * time.Second) // <-- 新增的强制等待
+			
+			// 立即使用可靠的重启命令强制启动新服务
+			log.Printf("等待完毕，立即执行 systemctl restart 启动新服务...")
 			
 			// 使用绝对路径 /usr/bin/systemctl restart，这是已验证可工作的命令
 			restartCmd := exec.Command("sudo", "/usr/bin/systemctl", "restart", "x-ui")
