@@ -3103,9 +3103,8 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
 
 	// 〔中文注释〕: 使用 goroutine 在后台执行，防止阻塞机器人
 	go func() {
-		// 〔中文注释〕: 这里的 "x-ui" 命令需要确保在系统的 PATH 环境变量中
-		cmd := exec.Command("/usr/local/x-ui/x-ui", "update")
-		cmd.Dir = "/usr/local/x-ui/" // 设置工作目录，确保 Shell 脚本内部路径正确
+        // 直接执行 /usr/local/x-ui/x-ui update，而是直接执行 shell 脚本中的逻辑
+		cmd := exec.Command("/bin/bash", "-c", "cd /usr/local/x-ui/ && ./x-ui.sh update")
 		output, err := cmd.CombinedOutput() // CombinedOutput 会同时获取标准输出和标准错误
 
 		if err != nil {
@@ -3118,28 +3117,22 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
 			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateRestartWait"))
 			
 			// 取消硬等待，改为在 120 秒内进行主动探测
+			// 现在检查 systemd 服务状态，
 			maxWaitTime := 120 * time.Second 
 			checkInterval := 5 * time.Second 
 			
-			// 计算最大检查次数
-			maxChecks := int(maxWaitTime / checkInterval)
-			
 			success := false
-			for i := 0; i < maxChecks; i++ {
+			for start := time.Now(); time.Since(start) < maxWaitTime; {
 				time.Sleep(checkInterval)
-				// 每次休息 5 秒后，检查面板是否已恢复
-				if t.checkPanelHealth() {
+				if t.checkSystemdHealth() { // <-- 调用新的 systemd 检查
 					success = true
-					break // 成功！跳出检查循环
+					break 
 				}
-				log.Printf("面板更新后重启中，第 %d 次检查失败...", i+1)
 			}
 			
 			if success {
-				// 面板启动成功，发送更新成功的最终提示
 				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateSuccess"))
 			} else {
-				// 超过最大等待时间仍未恢复
 				log.Printf("面板更新后重启失败，超过 %v 时限面板服务仍未响应。", maxWaitTime)
 				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateRestartFailed"))
 			}
@@ -3165,8 +3158,8 @@ func (t *Tgbot) executeRestartPanel(chatId int64, callbackQuery *telego.Callback
 	t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 
 	go func() {
-		cmd := exec.Command("/usr/local/x-ui/x-ui", "restart")
-		cmd.Dir = "/usr/local/x-ui/" // 设置工作目录，确保 Shell 脚本内部路径正确
+		// 直接使用 systemctl 重启服务
+		cmd := exec.Command("sudo", "systemctl", "restart", "x-ui")
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
@@ -3179,19 +3172,17 @@ func (t *Tgbot) executeRestartPanel(chatId int64, callbackQuery *telego.Callback
 			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelWait"))
 
 			// 取消硬等待，改为在 60 秒内进行主动探测
+			// 现在检查 systemd 服务状态，
 			maxWaitTime := 60 * time.Second 
 			checkInterval := 2 * time.Second 
 			
-			maxChecks := int(maxWaitTime / checkInterval)
-			
 			success := false
-			for i := 0; i < maxChecks; i++ {
+			for start := time.Now(); time.Since(start) < maxWaitTime; {
 				time.Sleep(checkInterval)
-				if t.checkPanelHealth() {
+				if t.checkSystemdHealth() { // <-- 调用新的 systemd 检查
 					success = true
-					break // 成功！跳出检查循环
+					break 
 				}
-				log.Printf("面板重启中，第 %d 次检查失败...", i+1)
 			}
 
 			if success {
