@@ -3098,7 +3098,7 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
 	// 〔中文注释〕: 使用 goroutine 在后台执行，防止阻塞机器人
 	go func() {
 		// 〔中文注释〕: 这里的 "x-ui" 命令需要确保在系统的 PATH 环境变量中
-		cmd := exec.Command("x-ui", "update")
+		cmd := exec.Command("/usr/local/x-ui/x-ui", "update")
 		output, err := cmd.CombinedOutput() // CombinedOutput 会同时获取标准输出和标准错误
 
 		if err != nil {
@@ -3144,7 +3144,7 @@ func (t *Tgbot) executeRestartPanel(chatId int64, callbackQuery *telego.Callback
 	t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 
 	go func() {
-		cmd := exec.Command("x-ui", "restart")
+		cmd := exec.Command("/usr/local/x-ui/x-ui", "restart")
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
