@@ -739,7 +739,7 @@
 "updateConfirm" = "🤔 Are you sure you want to update the panel?\nThis will automatically pull the latest code from GitHub and restart the service. The panel will be inaccessible during this time."
 "updateSuccess" = "✅ The panel update command has been sent. Please check the update status later using the log or version number."
 "updateFailed" = "❌ Panel update failed! Error information has been logged."
-"restartPanelConfirm" = "🤔 Are you sure you want to restart the panel service?\nThis will also restart Xray-core, but the panel will be inaccessible for a short period of time."
+"restartPanelConfirm" = "🤔 Are you sure you want to restart the panel service?\nThis will also restart Xray-core, making the panel inaccessible for a short period of time."
 "restartPanelSuccess" = "✅ The panel restart command has been sent."
 "restartPanelFailed" = "❌ Panel restart failed! Error information has been logged."
 
