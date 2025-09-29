@@ -101,7 +101,7 @@ func (t *Tgbot) GetHashStorage() *global.HashStorage {
 // 〔中文注释〕: 新增函数：检查 x-ui systemd 服务状态
 func (t *Tgbot) checkSystemdHealth() bool {
     // 直接检查 x-ui systemd 服务的状态
-    cmd := exec.Command("systemctl", "is-active", "x-ui")
+    cmd := exec.Command("/usr/bin/systemctl", "is-active", "x-ui")
     err := cmd.Run() // cmd.Run() 只有在退出码为 0 时才返回 nil
 
     // 如果 systemctl is-active x-ui 的返回码是 0 (Active)，则 err 为 nil
@@ -3104,9 +3104,9 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
 			// 探测失败后，尝试手动启动服务
 			if !success {
 				log.Printf("面板更新后重启失败，尝试手动 systemctl start x-ui...")
-				startCmd := exec.Command("sudo", "systemctl", "start", "x-ui")
+				startCmd := exec.Command("sudo", "/usr/bin/systemctl", "start", "x-ui")
 				startCmd.Run() 
-				time.Sleep(10 * time.Second) // 留 10 秒给服务启动
+				time.Sleep(20 * time.Second) // 留 20 秒给服务启动
 				if t.checkSystemdHealth() {
 					success = true
 					log.Printf("手动启动服务成功。")
@@ -3144,7 +3144,7 @@ func (t *Tgbot) executeRestartPanel(chatId int64, callbackQuery *telego.Callback
 
 	go func() {
 		// 直接使用 systemctl 重启服务
-		cmd := exec.Command("sudo", "systemctl", "restart", "x-ui")
+		cmd := exec.Command("sudo", "/usr/bin/systemctl", "restart", "x-ui")
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
@@ -3171,9 +3171,9 @@ func (t *Tgbot) executeRestartPanel(chatId int64, callbackQuery *telego.Callback
 			// 探测失败后，尝试手动启动服务
 			if !success {
 				log.Printf("面板重启失败，尝试手动 systemctl start x-ui...")
-				startCmd := exec.Command("sudo", "systemctl", "start", "x-ui")
+				startCmd := exec.Command("sudo", "/usr/bin/systemctl", "start", "x-ui")
 				startCmd.Run()
-				time.Sleep(10 * time.Second) // 留 10 秒给服务启动
+				time.Sleep(20 * time.Second) // 留 20 秒给服务启动
 				if t.checkSystemdHealth() {
 					success = true
 					log.Printf("手动启动服务成功。")
