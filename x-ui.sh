@@ -154,18 +154,33 @@ install() {
 }
 
 update() {
-    confirm "$(echo -e "${green}该功能将强制安装最新版本，并且数据不会丢失。${red}你想继续吗？${plain}---->>请输入")" "y"
-    if [[ $? != 0 ]]; then
-        LOGE "已取消"
-        if [[ $# == 0 ]]; then
-            before_show_menu
+    # 【新增逻辑】判断是否为交互环境
+    if [ -t 0 ]; then
+        # 【交互模式】→ 手动在 VPS 输入，保留原有逻辑
+        confirm "$(echo -e "${green}该功能将强制安装最新版本，并且数据不会丢失。${red}你想继续吗？${plain}---->>请输入")" "y"
+        if [[ $? != 0 ]]; then
+            LOGE "已取消"
+            if [[ $# == 0 ]]; then
+                before_show_menu
+            fi
+            return 0
         fi
-        return 0
-    fi
-    bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/x-panel/main/install.sh)
-    if [[ $? == 0 ]]; then
-        LOGI "更新完成，面板已自动重启"
-        exit 0
+        bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/x-panel/main/install.sh)
+        if [[ $? == 0 ]]; then
+            LOGI "更新完成，面板已自动重启"
+            exit 0
+        fi
+    else
+        # 【非交互模式】→ 机器人触发时，自动跳过交互，直接安装
+        echo -e "${green}检测到为非交互环境，自动开始更新...${plain}"
+        bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/x-panel/main/install.sh) <<<"n"
+        if [[ $? == 0 ]]; then
+            LOGI "自动更新完成，面板已自动重启"
+            exit 0
+        else
+            LOGE "自动更新失败"
+            exit 1
+        fi
     fi
 }
 
