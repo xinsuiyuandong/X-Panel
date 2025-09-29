@@ -98,49 +98,20 @@ func (t *Tgbot) GetHashStorage() *global.HashStorage {
 	return hashStorage
 }
 
-// 〔中文注释〕: 辅助函数：检测面板服务是否已成功启动
-func (t *Tgbot) checkPanelHealth() bool {
-	var setting model.Setting
-	const maxDbRetries = 3 // 尝试从数据库获取端口的最大次数
+// 〔中文注释〕: 新增函数：检查 x-ui systemd 服务状态
+func (t *Tgbot) checkSystemdHealth() bool {
+    // 直接检查 x-ui systemd 服务的状态
+    cmd := exec.Command("systemctl", "is-active", "x-ui")
+    err := cmd.Run() // cmd.Run() 只有在退出码为 0 时才返回 nil
 
-	// 步骤 1：重试读取数据库中的 'webPort'
-	for i := 0; i < maxDbRetries; i++ {
-		db := database.GetDB()
-		
-		err := db.Where("key = ?", "webPort").First(&setting).Error
-
-		if err == nil {
-			goto NetworkCheck 
-		} else {
-			log.Printf("面板健康检查：数据库查询 'webPort' 失败：%v。将在 1 秒后重试（第 %d 次）。", err, i+1)
-			if i == maxDbRetries-1 {
-				log.Printf("面板健康检查失败：多次尝试后仍无法从数据库获取端口。")
-				return false
-			}
-			time.Sleep(1 * time.Second)
-		}
-	}
-	
-NetworkCheck:
-	// 〔中文注释〕: 步骤 2：进行网络连接检查
-	
-	port, err := strconv.Atoi(setting.Value)
-	if err != nil || port == 0 {
-		log.Printf("配置错误：面板端口值 '%s' 转换为数字无效或为零。错误: %v", setting.Value, err)
-		return false
-	}
-	
-	// 尝试连接本地端口，超时设置为 8 秒。
-	address := fmt.Sprintf("127.0.0.1:%d", port)
-	conn, err := net.DialTimeout("tcp", address, 8*time.Second)
-	if err != nil {
-		log.Printf("面板健康检查失败：无法连接到 %s。错误：%v", address, err)
-		return false
-	}
-	defer conn.Close()
-
-	// 成功建立连接
-	return true
+    // 如果 systemctl is-active x-ui 的返回码是 0 (Active)，则 err 为 nil
+    if err == nil {
+        return true
+    }
+    
+    // 如果返回码是非 0 (例如 inactive, failed)，则 err 不为 nil
+    log.Printf("Systemd 服务检查失败: systemctl is-active x-ui 返回错误: %v", err)
+    return false
 }
 
 func (t *Tgbot) Start(i18nFS embed.FS) error {
