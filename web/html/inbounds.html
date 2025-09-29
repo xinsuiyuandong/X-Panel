@@ -295,7 +295,7 @@
                     <a-button type="primary" icon="thunderbolt" @click="openOneClickConfig">
                       <template v-if="!isMobile">{{ i18n "pages.inbounds.oneClickConfig" }}</template>
                     </a-button>
-					<a-button type="primary" icon="link" @click="openSubConversionModal">
+                    <a-button type="primary" icon="link" @click="handleSubscriptionConversion">
                       <template v-if="!isMobile">{{ i18n "pages.inbounds.is_subConversion" }}</template>
                     </a-button>
                   </a-space>
@@ -782,46 +782,6 @@
             </a-tab-pane>
          </a-tabs>
       </a-modal>
-   <a-modal 
-    :title="`{{ i18n "pages.inbounds.subConversion.modalTitle" }}`"
-    :visible="subConvert.visible"
-    :confirm-loading="subConvert.loading"
-    @ok="handleSubConversion"
-    @cancel="() => { subConvert.visible = false }"
-    :class="themeSwitcher.currentTheme"
-    :ok-text="`{{ i18n "pages.inbounds.subConversion.ok" }}`"
-    :cancel-text="`{{ i18n "cancel" }}`"
->
-  <a-form>
-    <a-form-item :label="`{{ i18n "pages.inbounds.subConversion.urlLabel" }}`">
-      <a-input 
-        v-model="subConvert.url" 
-        :placeholder="`{{ i18n "pages.inbounds.subConversion.urlPlaceholder" }}`">
-      </a-input>
-    </a-form-item>
-
-    <a-form-item :label="`{{ i18n "pages.inbounds.subConversion.targetLabel" }}`">
-      <a-select v-model="subConvert.target" style="width: 100%">
-        <a-select-option value="clash">Clash</a-select-option>
-        <a-select-option value="surge">Surge</a-select-option>
-        <a-select-option value="v2ray">V2Ray (Base64)</a-select-option>
-      </a-select>
-    </a-form-item>
-  </a-form>
-
-  <div v-if="subConvert.result.link" style="margin-top: 20px;">
-    <p><strong>{{ i18n "pages.inbounds.subConversion.success" }}</strong></p>
-    <div style="text-align: center; margin-bottom: 15px;">
-      <canvas id="subConvertQrcodeCanvas"></canvas>
-    </div>
-    <a-input-search
-      :value="subConvert.result.link"
-      read-only
-      :enter-button="`{{ i18n "copy" }}`"
-      @search="() => copyLink(subConvert.result.link)"
-    />
-  </div>
-</a-modal>
     </a-layout-content>
   </a-layout>
 </a-layout>
@@ -987,18 +947,6 @@
             ipLimitEnable: false,
             pageSize: 50,
 
-            // 〔中文注释〕: 为“通用订阅转换”模态框添加新的数据模型
-            subConvert: {
-              visible: false,
-              loading: false,
-              url: '',
-              target: 'clash', // 默认选项
-              result: {
-                link: '',
-                qrcode: null
-              }
-            },
-			
 			inboundLink: '', // 新增：用来存储生成的可复制链接
             // 【中文注释】: 新增数据属性，用于控制“一键配置”模态框的显示状态
             oneClickModalVisible: false,
@@ -1239,121 +1187,22 @@
                 }
             },
 
-    // 【订阅转换解决方案】打开模态框
-    openSubConversionModal() {
-      // 重置状态，以便每次打开都是全新的
-      this.subConvert.url = '';
-      this.subConvert.result.link = '';
-      this.subConvert.visible = true;
-    },
-
-    // 【订阅转换解决方案】执行转换
-    async handleSubConversion() {
-      if (!this.subConvert.url) {
-        this.$message.error("{{ i18n "pages.inbounds.subConversion.errorInput" }}");
-        return;
-      }
-      this.subConvert.loading = true;
-      this.subConvert.result.link = '';
-
-      // 【重要】自动根据当前协议拼接 API 地址
-      const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:8000`;
-
-      try {
-        const response = await fetch(`${apiBaseUrl}/api/convert`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: this.subConvert.url,
-            target: this.subConvert.target,
-          }),
-        });
-
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || `转换失败: ${response.status}`);
-        }
-
-        const convertedText = await response.text();
-
-        // 为了能让客户端直接使用，我们需要将转换后的文本内容也通过 sublink 变成一个短链接
-        const shortLinkResponse = await fetch(`${apiBaseUrl}/api/short`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: convertedText }),
-        });
-
-        if (!shortLinkResponse.ok) throw new Error("{{ i18n "pages.inbounds.subConversion.errorShort" }}");
-
-        const finalShortLink = await shortLinkResponse.text();
-        this.subConvert.result.link = finalShortLink;
-
-        // 下面是【生成二维码】逻辑：
-        this.$nextTick(() => {
-          const canvas = document.getElementById('subConvertQrcodeCanvas');
-          if (canvas) {
-            new QRious({ element: canvas, value: finalShortLink, size: 200 });
-          }
-        });
-      } catch (err) {
-        this.$message.error(err.message);
-      } finally {
-        this.subConvert.loading = false;
-      }
-    },
-
-    // 【二维码解决方案】生成一键配置二维码
-    generateOneClickQrCode(fullLink) {
-    // 〔中文注释〕：先把完整的长链接保存到 inboundLink，这样输入框、复制按钮等功能仍然使用原始长链接。
-      this.inboundLink = fullLink;
-
-      const apiBaseUrl = `${window.location.protocol}//${window.location.hostname}:8000`;
-
-      this.$message.loading("{{ i18n "pages.inbounds.oneClick.loading" }}", 0);
-
-      // 〔中文注释〕：使用 fetch API 向 sublink 服务发送 POST 请求。
-      fetch(`${apiBaseUrl}/api/short`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: fullLink }),     // 发送长链接
-      })
-        .then(response => {
-          this.$message.destroy();    // 清除加载提示
-          if (!response.ok) throw new Error(`网络响应失败: ${response.status}`);
-          return response.text();     // 获取返回的短链接文本
-        })
-        .then(shortLink => {
-          this.$message.success("{{ i18n "pages.inbounds.oneClick.success" }}");
-          this.$nextTick(() => {
-            const canvasElement = document.getElementById('oneClickQrcodeCanvas');
-            if (canvasElement) {
-              new QRious({
-                element: canvasElement,
-                value: shortLink,        // 使用 sublink 返回的短链接去作为【生成参数】
-                size: 200,
-                level: 'H',
-              });
-            }
-          });
-        })
-        .catch(err => {
-          this.$message.destroy();
-          console.error("调用 sublink 服务失败:", err);
-          this.$message.warning("{{ i18n "pages.inbounds.oneClick.warning" }}");
-          // 〔中文注释〕：备用方案：仍然用原始长链接生成二维码
-          this.$nextTick(() => {
-            const canvasElement = document.getElementById('oneClickQrcodeCanvas');
-            if (canvasElement) {
-              new QRious({
-                element: canvasElement,
-                value: fullLink,
-                size: 200,
-                level: 'L',
-              });
-            }
-          });
-        });
-    },
+			// 〔中文注释〕: 新增一个专门用于生成“一键配置”二维码的方法
+            generateOneClickQrCode(link) {
+                // 〔中文注释〕: this.$nextTick 是一个 Vue 特有的功能，它会等待 DOM 更新完成后再执行内部的代码。
+                // 这是必需的，因为 <canvas> 元素只有在 inboundLink 被赋值后才会显示出来，我们需要确保它存在才能进行绘制。
+                this.$nextTick(() => {
+                    const canvasElement = document.getElementById('oneClickQrcodeCanvas');
+                    if (canvasElement) {
+                        new QRious({
+                            element: canvasElement, // 〔中文注释〕: 关联到我们刚刚在 HTML 中添加的 canvas 元素
+                            value: link,            // 〔中文注释〕: 二维码的内容就是生成的分享链接
+                            size: 200,              // 〔中文注释〕: 设置二维码的尺寸为 200x200 像素
+                            level: 'M'              // 〔中文注释〕: 设置较高的容错率
+                        });
+                    }
+                });
+            },
 			
     // 【修改后】: 按照固定长度 2,4,6,8,10,12,14,16 来生成 shortIds
     generateShortIds() {
@@ -1726,6 +1575,45 @@
                     // 无论成功与否，最后都移除这个临时输入框
                     document.body.removeChild(textArea);
                 }
+            },
+
+            // 【中文注释】: 处理“订阅转换”按钮的点击事件 (已更新逻辑)
+            handleSubscriptionConversion() {
+                this.$confirm({
+                    title: '{{ i18n "pages.inbounds.subConversion.modalTitle"}}',
+                    content: '{{ i18n "pages.inbounds.subConversion.modalContent"}}',
+                    okText: '{{ i18n "pages.inbounds.subConversion.modalOk"}}',
+                    cancelText: '{{ i18n "cancel" }}',
+                    class: themeSwitcher.currentTheme,
+                    onOk: () => {
+                        const subConverterUrl = `https://${window.location.hostname}:15268`;
+                        const loadingMessage = this.$message.loading('正在检测订阅转换服务...', 0);
+
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+                        fetch(subConverterUrl, {
+                            method: 'GET',
+                            mode: 'no-cors',
+                            signal: controller.signal
+                        })
+                        .then(response => {
+                            clearTimeout(timeoutId);
+                            loadingMessage();
+                            this.$message.success('服务检测成功，正在跳转...', 2);
+                            window.open(subConverterUrl, '_blank');
+                        })
+                        .catch(err => {
+                            clearTimeout(timeoutId);
+                            loadingMessage();
+                            this.$info({
+                                title: '{{ i18n "pages.inbounds.subConversion.notFoundTitle"}}',
+                                content: '{{ i18n "pages.inbounds.subConversion.notFoundContent"}}',
+                                class: themeSwitcher.currentTheme,
+                            });
+                        });
+                    },
+                });
             },
 
             generalActions(action) {
