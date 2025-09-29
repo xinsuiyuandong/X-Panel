@@ -744,11 +744,16 @@
 "FailedResetTraffic" = "📧 邮箱: {{ .ClientEmail }}\n🏁 结果: ❌ 失败 \n\n🛠️ 错误: [ {{ .ErrorMessage }} ]"
 "FinishProcess" = "🔚 所有客户的流量重置已完成。"
 "updateConfirm" = "🤔 您确定要更新面板吗？\n此操作将自动从 GitHub 拉取最新代码并重启服务，期间面板将无法访问。" 
-"updateSuccess" = "✅ 面板更新命令已发送，请稍后通过日志或版本号检查更新状态。" 
-"updateFailed" = "❌ 面板更新失败！错误信息已记录到日志。" 
 "restartPanelConfirm" = "🤔 您确定要重启面板服务吗？\n这也会重启Xray-core，会使面板在短时间内无法访问。" 
-"restartPanelSuccess" = "✅ 面板重启命令已发送。" 
-"restartPanelFailed" = "❌ 面板重启失败！错误信息已记录到日志。" 
+"updateFailed" = "❌ 面板更新命令执行失败！错误信息已记录到日志，请检查命令或权限。"
+"restartPanelFailed" = "❌ 面板重启命令执行失败！错误信息已记录到日志，请检查命令或权限。"
+"updateRestartWait" = "⏳ 更新命令已执行，正在等待面板重启（约50秒），并进行验证检查..."
+"restartPanelWait" = "⏳ 重启命令已执行，正在等待面板恢复（约20秒），并进行验证检查..."
+"updateRestartFailed" = "⚠️ 面板更新命令执行成功，但重启后服务未在预期时间内恢复，请手动检查面板状态。"
+"restartPanelHealthFailed" = "⚠️ 面板重启命令执行成功，但服务未在预期时间内恢复，请手动检查面板状态。"
+"updateSuccess" = "✅ 面板更新成功！服务已成功重启！"
+"restartPanelSuccess" = "🚀 面板重启成功！服务已成功恢复！"
+
 
 [tgbot.buttons]
 "closeKeyboard" = "❌ 关闭键盘"
