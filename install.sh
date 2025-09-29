@@ -383,7 +383,13 @@ ssh_forwarding
     cp -f x-ui.service /etc/systemd/system/
     systemctl daemon-reload
     systemctl enable x-ui
-    systemctl start x-ui
+    # 核心分流逻辑：判断是否为交互式终端环境 (即用户手动执行)
+    if [ -t 0 ]; then
+        echo -e "${green}检测到为交互式终端（手动模式），自动启动 x-ui 服务...${plain}"
+        systemctl start x-ui # <-- 仅在手动模式下执行启动，保障手动用户体验
+    else
+        echo -e "${yellow}检测到为非交互式环境（机器人模式），跳过脚本启动，等待 Go 程序接管重启...${plain}"
+    fi
     systemctl stop warp-go >/dev/null 2>&1
     wg-quick down wgcf >/dev/null 2>&1
     ipv4=$(curl -s4m8 ip.p3terx.com -k | sed -n 1p)
