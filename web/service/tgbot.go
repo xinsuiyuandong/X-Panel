@@ -3071,6 +3071,8 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
 	t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.panelUpdating"))
 	// 〔中文注释〕: 删除带有按钮的确认消息，保持界面整洁
 	t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+	// 立即发送等待提示，让用户知道后台正在处理
+    t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateRestartWait")) 
 
 	// 〔中文注释〕: 使用 goroutine 在后台执行，防止阻塞机器人
 	go func() {
@@ -3079,13 +3081,11 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
 		output, err := cmd.CombinedOutput() // CombinedOutput 会同时获取标准输出和标准错误
 
 		if err != nil {
-			// 〔中文注释〕: 如果执行更新命令失败，记录详细日志并通知用户
+            // 〔中文注释〕: 如果执行更新命令失败，记录详细日志并通知用户
 			log.Printf("面板更新命令执行失败: %v\n输出: %s", err, string(output))
 			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateFailed"))
 		} else {
-			// 〔中文注释〕: 更新命令执行完毕，**【新增】发送等待重启提示**
 			log.Printf("面板更新命令执行完毕, 输出: %s", string(output))
-			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateRestartWait"))
 			
 			// 取消硬等待，改为在 120 秒内进行主动探测
 			// 现在检查 systemd 服务状态，
@@ -3098,6 +3098,18 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
 				if t.checkSystemdHealth() { // <-- 调用新的 systemd 检查
 					success = true
 					break 
+				}
+			}
+
+			// 探测失败后，尝试手动启动服务
+			if !success {
+				log.Printf("面板更新后重启失败，尝试手动 systemctl start x-ui...")
+				startCmd := exec.Command("sudo", "systemctl", "start", "x-ui")
+				startCmd.Run() 
+				time.Sleep(10 * time.Second) // 留 10 秒给服务启动
+				if t.checkSystemdHealth() {
+					success = true
+					log.Printf("手动启动服务成功。")
 				}
 			}
 			
@@ -3127,6 +3139,8 @@ func (t *Tgbot) sendRestartPanelConfirmation(chatId int64) {
 func (t *Tgbot) executeRestartPanel(chatId int64, callbackQuery *telego.CallbackQuery) {
 	t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.panelRestarting"))
 	t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+	// 立即发送等待提示
+	t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelWait"))
 
 	go func() {
 		// 直接使用 systemctl 重启服务
@@ -3134,13 +3148,11 @@ func (t *Tgbot) executeRestartPanel(chatId int64, callbackQuery *telego.Callback
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
-			// 〔中文注释〕: 如果执行重启命令失败
+            // 〔中文注释〕: 如果执行更新命令失败，记录详细日志并通知用户
 			log.Printf("面板重启命令执行失败: %v\n输出: %s", err, string(output))
 			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelFailed"))
 		} else {
-			// 〔中文注释〕: 重启命令执行完毕，**【新增】发送等待重启提示**
 			log.Printf("面板重启命令执行完毕, 输出: %s", string(output))
-			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelWait"))
 
 			// 取消硬等待，改为在 60 秒内进行主动探测
 			// 现在检查 systemd 服务状态，
@@ -3153,6 +3165,18 @@ func (t *Tgbot) executeRestartPanel(chatId int64, callbackQuery *telego.Callback
 				if t.checkSystemdHealth() { // <-- 调用新的 systemd 检查
 					success = true
 					break 
+				}
+			}
+
+			// 探测失败后，尝试手动启动服务
+			if !success {
+				log.Printf("面板重启失败，尝试手动 systemctl start x-ui...")
+				startCmd := exec.Command("sudo", "systemctl", "start", "x-ui")
+				startCmd.Run()
+				time.Sleep(10 * time.Second) // 留 10 秒给服务启动
+				if t.checkSystemdHealth() {
+					success = true
+					log.Printf("手动启动服务成功。")
 				}
 			}
 
