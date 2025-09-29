@@ -11,6 +11,8 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"log"
+    "os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -499,6 +501,24 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 		} else {
 			handleUnknownCommand()
 		}
+	// 〔中文注释〕: 在此处新增“更新面板”和“重启面板”的命令处理
+    case "update":
+        onlyMessage = true
+        if isAdmin {
+            t.sendUpdateConfirmation(chatId)
+        } else {
+            handleUnknownCommand()
+        }
+    case "restartX":
+        onlyMessage = true
+        if isAdmin {
+            t.sendRestartPanelConfirmation(chatId)
+        } else {
+            handleUnknownCommand()
+        }
+	default:
+		handleUnknownCommand()
+	}
 	default:
 		handleUnknownCommand()
 	}
@@ -1659,6 +1679,28 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			msg := fmt.Sprintf("📧 %s\n%s", extra_emails, t.I18nBot("tgbot.noResult"))
 			t.SendMsgToTgbot(chatId, msg, tu.ReplyKeyboardRemove())
 
+		// 〔中文注释〕: 在这里新增所有与更新和重启相关的回调处理
+    case "update_panel_confirm":
+        t.sendUpdateConfirmation(chatId)
+        return
+
+    case "update_panel_execute":
+        t.executeUpdate(chatId, callbackQuery)
+        return
+
+    case "restart_panel_confirm":
+        t.sendRestartPanelConfirmation(chatId)
+        return
+
+    case "restart_panel_execute":
+        t.executeRestartPanel(chatId, callbackQuery)
+        return
+
+    case "action_cancel":
+        t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+        t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.actionCancelled"))
+        return
+
 		}
 	}
 }
@@ -1846,6 +1888,11 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.allClients")).WithCallbackData(t.encodeQuery("get_inbounds")),
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.addClient")).WithCallbackData(t.encodeQuery("add_client")),
 		),
+		// 〔中文注释〕: 在这里新增“更新面板”和“重启面板”两个按钮
+        tu.InlineKeyboardRow(
+            tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.updatePanel")).WithCallbackData(t.encodeQuery("update_panel_confirm")),
+            tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.restartPanel")).WithCallbackData(t.encodeQuery("restart_panel_confirm")),
+        ),
 		// TODOOOOOOOOOOOOOO: Add restart button here.
 	)
 	numericKeyboardClient := tu.InlineKeyboard(
@@ -2992,4 +3039,72 @@ func (t *Tgbot) SendMessage(msg string) error {
     // 〔中文注释〕: 调用现有方法将消息发送给所有已配置的管理员。
     t.SendMsgToTgbotAdmins(msg)
     return nil
+}
+
+// 〔中文注释〕: 新增函数：发送更新面板的确认消息
+func (t *Tgbot) sendUpdateConfirmation(chatId int64) {
+    msg := t.I18nBot("tgbot.messages.updateConfirm")
+    inlineKeyboard := tu.InlineKeyboard(
+        tu.InlineKeyboardRow(
+            tu.InlineKeyboardButton("✅ "+t.I18nBot("confirm")).WithCallbackData("update_panel_execute"),
+            tu.InlineKeyboardButton("❌ "+t.I18nBot("cancel")).WithCallbackData("action_cancel"),
+        ),
+    )
+    t.SendMsgToTgbot(chatId, msg, inlineKeyboard)
+}
+
+// 〔中文注释〕: 新增函数：执行面板更新命令
+func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery) {
+    // 〔中文注释〕: 回复回调，让按钮不再转圈，并提示用户
+    t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.panelUpdating"))
+    // 〔中文注释〕: 删除带有按钮的确认消息，保持界面整洁
+    t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+
+    // 〔中文注释〕: 使用 goroutine 在后台执行，防止阻塞机器人
+    go func() {
+        // 〔中文注释〕: 这里的 "x-ui" 命令需要确保在系统的 PATH 环境变量中，或者使用绝对路径如 /usr/local/x-ui/x-ui
+        cmd := exec.Command("x-ui", "update")
+        output, err := cmd.CombinedOutput() // CombinedOutput 会同时获取标准输出和标准错误
+
+        if err != nil {
+            // 〔中文注释〕: 如果执行失败，记录详细日志并通知用户
+            log.Printf("面板更新失败: %v\n输出: %s", err, string(output))
+            t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateFailed"))
+        } else {
+            // 〔中文注释〕: 如果执行成功，记录日志并通知用户
+            log.Printf("面板更新命令执行完毕, 输出: %s", string(output))
+            t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateSuccess"))
+        }
+    }()
+}
+
+// 〔中文注释〕: 新增函数：发送重启面板的确认消息
+func (t *Tgbot) sendRestartPanelConfirmation(chatId int64) {
+    msg := t.I18nBot("tgbot.messages.restartPanelConfirm")
+    inlineKeyboard := tu.InlineKeyboard(
+        tu.InlineKeyboardRow(
+            tu.InlineKeyboardButton("✅ "+t.I18nBot("confirm")).WithCallbackData("restart_panel_execute"),
+            tu.InlineKeyboardButton("❌ "+t.I18nBot("cancel")).WithCallbackData("action_cancel"),
+        ),
+    )
+    t.SendMsgToTgbot(chatId, msg, inlineKeyboard)
+}
+
+// 〔中文注释〕: 新增函数：执行面板重启命令
+func (t *Tgbot) executeRestartPanel(chatId int64, callbackQuery *telego.CallbackQuery) {
+    t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.panelRestarting"))
+    t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+
+    go func() {
+        cmd := exec.Command("x-ui", "restart")
+        output, err := cmd.CombinedOutput()
+
+        if err != nil {
+            log.Printf("面板重启失败: %v\n输出: %s", err, string(output))
+            t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelFailed"))
+        } else {
+            log.Printf("面板重启命令执行完毕, 输出: %s", string(output))
+            t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelSuccess"))
+        }
+    }()
 }
