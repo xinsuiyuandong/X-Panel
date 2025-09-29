@@ -1675,6 +1675,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		for _, extra_emails := range extra_emails {
 			msg := fmt.Sprintf("📧 %s\n%s", extra_emails, t.I18nBot("tgbot.noResult"))
 			t.SendMsgToTgbot(chatId, msg, tu.ReplyKeyboardRemove())
+		}
 
 		// 〔中文注释〕: 在这里新增所有与更新和重启相关的回调处理
     case "update_panel_confirm":
@@ -1697,8 +1698,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
         t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
         t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.actionCancelled"))
         return
-
-		}
 	}
 }
 
