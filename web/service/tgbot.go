@@ -3096,6 +3096,7 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
             // 执行 VPS 重启命令
             log.Println("Go 程序主动执行 VPS 重启 (shutdown -r now)...")
             restartCmd := exec.Command("shutdown", "-r", "now") 
+			restartCmd.Run() // 运行重启命令，不关心其输出
 			
 			// 取消硬等待，改为在 120 秒内进行主动探测
 			// 现在检查 systemd 服务状态，
