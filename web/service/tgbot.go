@@ -100,10 +100,26 @@ func (t *Tgbot) GetHashStorage() *global.HashStorage {
 
 // 〔中文注释〕: 辅助函数：检测面板服务是否已成功启动
 func (t *Tgbot) checkPanelHealth() bool {
-	// 〔中文注释〕: 从配置中获取面板监听端口
-	port := config.GetConfig().Port
-	if port == 0 {
-		log.Println("配置错误：面板端口未设置。")
+	// 【修正逻辑】：直接从数据库中查询 "webPort" 的值
+	
+	// 〔中文注释〕: 获取数据库连接实例
+	db := database.GetDB() 
+	
+    // 假设 model.Setting 结构体定义了面板的配置项
+	var setting model.Setting 
+    
+    // 〔中文注释〕: 查找 key 为 "webPort" 的设置项
+	// 使用 Where().First() 从数据库中获取端口值
+	if err := db.Where("key = ?", "webPort").First(&setting).Error; err != nil {
+		log.Printf("面板健康检查失败：无法从数据库获取端口 'webPort'。错误: %v", err)
+		// 如果获取端口失败（如数据库连接问题或记录不存在），则认为健康检查失败
+		return false
+	}
+    
+    // 〔中文注释〕: 将获取到的端口值（字符串）转换为整数
+    port, err := strconv.Atoi(setting.Value)
+    if err != nil || port == 0 {
+		log.Printf("配置错误：面板端口值 '%s' 转换为数字无效或为零。错误: %v", setting.Value, err)
 		return false
 	}
 	
