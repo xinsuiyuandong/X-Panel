@@ -389,6 +389,8 @@ ssh_forwarding
         systemctl start x-ui # <-- 仅在手动模式下执行启动，保障手动用户体验
     else
         echo -e "${yellow}检测到为非交互式环境（机器人模式），跳过脚本启动，等待 Go 程序接管重启...${plain}"
+        # 强制停止，防止 systemctl enable 导致意外启动
+        systemctl stop x-ui >/dev/null 2>&1 
     fi
     systemctl stop warp-go >/dev/null 2>&1
     wg-quick down wgcf >/dev/null 2>&1
