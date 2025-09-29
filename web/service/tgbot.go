@@ -3086,37 +3086,31 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
 			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateFailed"))
 		} else {
 			log.Printf("面板更新命令执行完毕, 输出: %s", string(output))
+
+			// 【核心修正】：更新脚本返回成功后，立即强制启动服务
+			log.Printf("更新脚本返回成功，立即强制启动 x-ui 服务...")
+			// 使用绝对路径 /usr/bin/systemctl 和 sudo 确保权限
+			startCmd := exec.Command("sudo", "/usr/bin/systemctl", "start", "x-ui")
+			startCmd.Run() // 运行启动命令，不关心其输出
 			
 			// 取消硬等待，改为在 120 秒内进行主动探测
 			// 现在检查 systemd 服务状态，
 			maxWaitTime := 120 * time.Second 
 			checkInterval := 5 * time.Second 
-			
 			success := false
 			for start := time.Now(); time.Since(start) < maxWaitTime; {
 				time.Sleep(checkInterval)
-				if t.checkSystemdHealth() { // <-- 调用新的 systemd 检查
+				if t.checkSystemdHealth() { // 检查服务是否已激活
 					success = true
 					break 
 				}
+				log.Printf("面板更新后重启中，已等待 %v，仍在检查...", time.Since(start).Round(time.Second))
 			}
 
-			// 探测失败后，尝试手动启动服务
-			if !success {
-				log.Printf("面板更新后重启失败，尝试手动 systemctl start x-ui...")
-				startCmd := exec.Command("sudo", "/usr/bin/systemctl", "start", "x-ui")
-				startCmd.Run() 
-				time.Sleep(20 * time.Second) // 留 20 秒给服务启动
-				if t.checkSystemdHealth() {
-					success = true
-					log.Printf("手动启动服务成功。")
-				}
-			}
-			
 			if success {
 				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateSuccess"))
 			} else {
-				log.Printf("面板更新后重启失败，超过 %v 时限面板服务仍未响应。", maxWaitTime)
+				log.Printf("面板更新后启动失败，超过 %v 时限面板服务仍未响应。", maxWaitTime)
 				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateRestartFailed"))
 			}
 		}
