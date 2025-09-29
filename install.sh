@@ -175,7 +175,17 @@ gen_random_string() {
 config_after_install() {
     echo -e "${yellow}安装/更新完成！ 为了您的面板安全，建议修改面板设置 ${plain}"
     echo ""
-    read -p "$(echo -e "${green}想继续修改吗？${red}选择“n”以保留旧设置${plain} [y/n]？--->>请输入：")" config_confirm
+
+    # 【新增逻辑】判断是否为交互环境
+    # -t 0 表示当前脚本是否连接到终端（手动执行时为 true，机器人/非交互环境为 false）
+    if [ -t 0 ]; then
+        # 【交互模式】→ 手动在 VPS 输入，保留原流程
+        read -p "$(echo -e "${green}想继续修改吗？${red}选择“n”以保留旧设置${plain} [y/n]？--->>请输入：")" config_confirm
+    else
+        # 【非交互模式】→ 机器人触发时，自动选择 n，避免卡住
+        config_confirm="n"
+    fi
+
     if [[ "${config_confirm}" == "y" || "${config_confirm}" == "Y" ]]; then
         read -p "请设置您的用户名: " config_account
         echo -e "${yellow}您的用户名将是: ${config_account}${plain}"
@@ -224,6 +234,7 @@ config_after_install() {
     echo ""
     /usr/local/x-ui/x-ui migrate
 }
+
 
 echo ""
 install_x-ui() {
