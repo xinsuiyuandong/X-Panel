@@ -3087,11 +3087,12 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
 		} else {
 			log.Printf("面板更新命令执行完毕, 输出: %s", string(output))
 
-			// 【核心修正】：更新脚本返回成功后，立即强制启动服务
-			log.Printf("更新脚本返回成功，立即强制启动 x-ui 服务...")
-			// 使用绝对路径 /usr/bin/systemctl 和 sudo 确保权限
-			startCmd := exec.Command("sudo", "/usr/bin/systemctl", "start", "x-ui")
-			startCmd.Run() // 运行启动命令，不关心其输出
+			// 【核心修正】：更新脚本成功后，立即使用可靠的重启命令强制启动新服务
+			log.Printf("更新脚本返回成功，立即执行 systemctl restart 启动新服务...")
+			
+			// 使用绝对路径 /usr/bin/systemctl restart，这是已验证可工作的命令
+			restartCmd := exec.Command("sudo", "/usr/bin/systemctl", "restart", "x-ui")
+			restartCmd.Run() // 运行重启命令，不关心其输出
 			
 			// 取消硬等待，改为在 120 秒内进行主动探测
 			// 现在检查 systemd 服务状态，
