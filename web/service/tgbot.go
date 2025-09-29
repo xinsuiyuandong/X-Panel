@@ -519,9 +519,6 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 	default:
 		handleUnknownCommand()
 	}
-	default:
-		handleUnknownCommand()
-	}
 
 	if msg != "" {
 		t.sendResponse(chatId, msg, onlyMessage, isAdmin)
