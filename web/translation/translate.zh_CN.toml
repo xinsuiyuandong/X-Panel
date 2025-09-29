@@ -668,7 +668,7 @@
 "status" = "✅ 机器人正常运行！"
 "usage" = "❗ 请输入要搜索的文本！"
 "getID" = "🆔 您的 ID 为：<code>{{ .ID }}</code>"
-"helpAdminCommands" = "要重新启动 Xray Core：\r\n<code>/restart</code>\r\n\r\n要搜索客户电子邮件：\r\n<code>/usage [电子邮件]</code>\r\n\r\n要搜索入站（带有客户统计数据）：\r\n<code>/inbound [备注]</code>\r\n\r\nTelegram聊天ID：\r\n<code>/id</code>"
+"helpAdminCommands" = "要重新启动 Xray Core：\r\n<code>/restart</code>\r\n\r\n要搜索客户电子邮件：\r\n<code>/usage [电子邮件]</code>\r\n\r\n要搜索入站（带有客户统计数据）：\r\n<code>/inbound [备注]</code>\r\n\r\nTelegram聊天ID：\r\n<code>/id</code>\r\n\r\n更新面板：\r\n<code>/update</code>\r\n\r\n重启面板：\r\n<code>/restartX</code>"
 "helpClientCommands" = "要搜索统计数据，请使用以下命令：\r\n<code>/usage [电子邮件]</code>\r\n\r\nTelegram聊天ID：\r\n<code>/id</code>"
 "restartUsage" = "\r\n\r\n<code>/restart</code>"
 "restartSuccess" = "✅ 操作成功!"
@@ -743,6 +743,12 @@
 "SuccessResetTraffic" = "📧 邮箱: {{ .ClientEmail }}\n🏁 结果: ✅ 成功"
 "FailedResetTraffic" = "📧 邮箱: {{ .ClientEmail }}\n🏁 结果: ❌ 失败 \n\n🛠️ 错误: [ {{ .ErrorMessage }} ]"
 "FinishProcess" = "🔚 所有客户的流量重置已完成。"
+"updateConfirm" = "🤔 您确定要更新面板吗？\n此操作将自动从 GitHub 拉取最新代码并重启服务，期间面板将无法访问。" 
+"updateSuccess" = "✅ 面板更新命令已发送，请稍后通过日志或版本号检查更新状态。" 
+"updateFailed" = "❌ 面板更新失败！错误信息已记录到日志。" 
+"restartPanelConfirm" = "🤔 您确定要重启面板服务吗？\n这不会重启Xray-core，但会使面板在短时间内无法访问。" 
+"restartPanelSuccess" = "✅ 面板重启命令已发送。" 
+"restartPanelFailed" = "❌ 面板重启失败！错误信息已记录到日志。" 
 
 [tgbot.buttons]
 "closeKeyboard" = "❌ 关闭键盘"
@@ -787,6 +793,8 @@
 "change_comment" = "⚙️💬 评论"
 "ResetAllTraffics" = "重置所有流量"
 "SortedTrafficUsageReport" = "排序的流量使用报告"
+"updatePanel" = "🔄 更新面板" 
+"restartPanel" = "🚀 重启面板" 
 
 [tgbot.answers]
 "successfulOperation" = "✅ 成功！"
@@ -810,3 +818,6 @@
 "askToAddUserId" = "未找到您的配置！\r\n请向管理员询问，在您的配置中使用您的 Telegram 用户 ChatID。\r\n\r\n您的用户 ChatID：<code>{{ .TgUserID }}</code>"
 "chooseClient" = "为入站 {{ .Inbound }} 选择一个客户"
 "chooseInbound" = "选择一个入站"
+"panelUpdating" = "正在发送更新命令..." 
+"panelRestarting" = "正在发送重启命令..." 
+"actionCancelled" = "操作已取消" 
