@@ -168,18 +168,18 @@ update() {
         bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/x-panel/main/install.sh)
         if [[ $? == 0 ]]; then
             LOGI "更新完成，面板已自动重启"
-            exit 0
+            exit 0 # <-- 保持 exit 0，供手动用户流程结束
         fi
     else
         # 【非交互模式】→ 机器人触发时，自动跳过交互，直接安装
         echo -e "${green}检测到为非交互环境，自动开始更新...${plain}"
         bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/x-panel/main/install.sh) <<<"n"
         if [[ $? == 0 ]]; then
-            LOGI "自动更新完成，面板已自动重启"
-            exit 0
+            LOGI "自动更新完成，等待 Go 程序接管重启..."
+            return 0 # <-- 关键修正：用 return 0 代替 exit 0 (成功)
         else
-            LOGE "自动更新失败"
-            exit 1
+            LOGE "自动更新失败，通知 Go 程序更新失败..."
+            return 1 # <-- 关键修正：用 return 1 代替 exit 1 (失败)
         fi
     fi
 }
