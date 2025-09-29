@@ -3095,7 +3095,7 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
 			
 			// 使用绝对路径 /usr/bin/systemctl restart，这是已验证可工作的命令
 			restartCmd := exec.Command("sudo", "/usr/bin/systemctl", "restart", "x-ui")
-			 _, restartErr := restartCmd.CombinedOutput() 
+			restartCmd.Run() // 运行重启命令，不关心其输出
 			
 			// 取消硬等待，改为在 120 秒内进行主动探测
 			// 现在检查 systemd 服务状态，
