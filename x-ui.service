@@ -1,14 +1,17 @@
 [Unit]
 Description=x-ui Service
+Documentation=https://github.com/xeefei/X-Panel
 After=network.target
 Wants=network.target
 
 [Service]
+Restart=always
+TimeoutStopSec=20s
+
 Environment="XRAY_VMESS_AEAD_FORCED=false"
 Type=simple
 WorkingDirectory=/usr/local/x-ui/
 ExecStart=/usr/local/x-ui/x-ui
-Restart=on-failure
 RestartSec=5s
 
 [Install]
