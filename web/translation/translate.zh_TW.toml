@@ -745,7 +745,7 @@
 "updateConfirm" = "🤔 您確定要更新面板嗎？\n此操作將自動從 GitHub 拉取最新程式碼並重新啟動服務，期間面板將無法存取。"
 "updateSuccess" = "✅ 面板更新指令已傳送，請稍後透過日誌或版本號碼檢查更新狀態。"
 "updateFailed" = "❌ 面板更新失敗！錯誤訊息已記錄到日誌。"
-"restartPanelConfirm" = "🤔 您確定要重新啟動面板服務嗎？\n這也會重啟Xray-core，但會使面板在短時間內無法存取。"
+"restartPanelConfirm" = "🤔 您確定要重新啟動面板服務嗎？\n這也會重啟Xray-core，會使面板在短時間內無法存取。"
 "restartPanelSuccess" = "✅ 面板重新啟動指令已傳送。"
 "restartPanelFailed" = "❌ 面板重新啟動失敗！錯誤訊息已記錄到日誌。"
 
