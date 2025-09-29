@@ -100,31 +100,37 @@ func (t *Tgbot) GetHashStorage() *global.HashStorage {
 
 // 〔中文注释〕: 辅助函数：检测面板服务是否已成功启动
 func (t *Tgbot) checkPanelHealth() bool {
-	// 【修正逻辑】：直接从数据库中查询 "webPort" 的值
-	
-	// 〔中文注释〕: 获取数据库连接实例
-	db := database.GetDB() 
-	
-    // 假设 model.Setting 结构体定义了面板的配置项
-	var setting model.Setting 
-    
-    // 〔中文注释〕: 查找 key 为 "webPort" 的设置项
-	// 使用 Where().First() 从数据库中获取端口值
-	if err := db.Where("key = ?", "webPort").First(&setting).Error; err != nil {
-		log.Printf("面板健康检查失败：无法从数据库获取端口 'webPort'。错误: %v", err)
-		// 如果获取端口失败（如数据库连接问题或记录不存在），则认为健康检查失败
-		return false
+	var setting model.Setting
+	const maxDbRetries = 3 // 尝试从数据库获取端口的最大次数
+
+	// 步骤 1：重试读取数据库中的 'webPort'
+	for i := 0; i < maxDbRetries; i++ {
+		db := database.GetDB()
+		
+		err := db.Where("key = ?", "webPort").First(&setting).Error
+
+		if err == nil {
+			goto NetworkCheck 
+		} else {
+			log.Printf("面板健康检查：数据库查询 'webPort' 失败：%v。将在 1 秒后重试（第 %d 次）。", err, i+1)
+			if i == maxDbRetries-1 {
+				log.Printf("面板健康检查失败：多次尝试后仍无法从数据库获取端口。")
+				return false
+			}
+			time.Sleep(1 * time.Second)
+		}
 	}
-    
-    // 〔中文注释〕: 将获取到的端口值（字符串）转换为整数
-    port, err := strconv.Atoi(setting.Value)
-    if err != nil || port == 0 {
+	
+NetworkCheck:
+	// 〔中文注释〕: 步骤 2：进行网络连接检查
+	
+	port, err := strconv.Atoi(setting.Value)
+	if err != nil || port == 0 {
 		log.Printf("配置错误：面板端口值 '%s' 转换为数字无效或为零。错误: %v", setting.Value, err)
 		return false
 	}
 	
-	// 〔中文注释〕: 尝试连接本地端口，确认服务在运行
-	// 使用 net.DialTimeout 检查 TCP 连接。超时设置为 8 秒。
+	// 尝试连接本地端口，超时设置为 8 秒。
 	address := fmt.Sprintf("127.0.0.1:%d", port)
 	conn, err := net.DialTimeout("tcp", address, 8*time.Second)
 	if err != nil {
@@ -133,7 +139,7 @@ func (t *Tgbot) checkPanelHealth() bool {
 	}
 	defer conn.Close()
 
-	// 〔中文注释〕: 成功建立连接，认为面板服务已恢复
+	// 成功建立连接
 	return true
 }
 
@@ -3099,6 +3105,7 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
 	go func() {
 		// 〔中文注释〕: 这里的 "x-ui" 命令需要确保在系统的 PATH 环境变量中
 		cmd := exec.Command("/usr/local/x-ui/x-ui", "update")
+		cmd.Dir = "/usr/local/x-ui/" // 设置工作目录，确保 Shell 脚本内部路径正确
 		output, err := cmd.CombinedOutput() // CombinedOutput 会同时获取标准输出和标准错误
 
 		if err != nil {
@@ -3110,16 +3117,30 @@ func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery)
 			log.Printf("面板更新命令执行完毕, 输出: %s", string(output))
 			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateRestartWait"))
 			
-			// 〔中文注释〕: **【新增】等待面板重启**，留出 50 秒时间给面板进行重启操作
-			time.Sleep(50 * time.Second) 
+			// 取消硬等待，改为在 120 秒内进行主动探测
+			maxWaitTime := 120 * time.Second 
+			checkInterval := 5 * time.Second 
 			
-			// 〔中文注释〕: **【新增】检查面板是否成功启动**
-			if t.checkPanelHealth() {
-				// 〔中文注释〕: 面板启动成功，发送更新成功的最终提示
+			// 计算最大检查次数
+			maxChecks := int(maxWaitTime / checkInterval)
+			
+			success := false
+			for i := 0; i < maxChecks; i++ {
+				time.Sleep(checkInterval)
+				// 每次休息 5 秒后，检查面板是否已恢复
+				if t.checkPanelHealth() {
+					success = true
+					break // 成功！跳出检查循环
+				}
+				log.Printf("面板更新后重启中，第 %d 次检查失败...", i+1)
+			}
+			
+			if success {
+				// 面板启动成功，发送更新成功的最终提示
 				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateSuccess"))
 			} else {
-				// 〔中文注释〕: 面板未成功启动，发送更新后重启失败的提示
-				log.Printf("面板更新后重启失败，面板服务未响应。")
+				// 超过最大等待时间仍未恢复
+				log.Printf("面板更新后重启失败，超过 %v 时限面板服务仍未响应。", maxWaitTime)
 				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateRestartFailed"))
 			}
 		}
@@ -3145,6 +3166,7 @@ func (t *Tgbot) executeRestartPanel(chatId int64, callbackQuery *telego.Callback
 
 	go func() {
 		cmd := exec.Command("/usr/local/x-ui/x-ui", "restart")
+		cmd.Dir = "/usr/local/x-ui/" // 设置工作目录，确保 Shell 脚本内部路径正确
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
@@ -3156,16 +3178,26 @@ func (t *Tgbot) executeRestartPanel(chatId int64, callbackQuery *telego.Callback
 			log.Printf("面板重启命令执行完毕, 输出: %s", string(output))
 			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelWait"))
 
-			// 〔中文注释〕: **【新增】等待面板重启**，留出 20 秒时间
-			time.Sleep(20 * time.Second) 
+			// 取消硬等待，改为在 60 秒内进行主动探测
+			maxWaitTime := 60 * time.Second 
+			checkInterval := 2 * time.Second 
+			
+			maxChecks := int(maxWaitTime / checkInterval)
+			
+			success := false
+			for i := 0; i < maxChecks; i++ {
+				time.Sleep(checkInterval)
+				if t.checkPanelHealth() {
+					success = true
+					break // 成功！跳出检查循环
+				}
+				log.Printf("面板重启中，第 %d 次检查失败...", i+1)
+			}
 
-			// 〔中文注释〕: **【新增】检查面板是否成功启动**
-			if t.checkPanelHealth() {
-				// 〔中文注释〕: 面板启动成功，发送重启成功的最终提示
+			if success {
 				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelSuccess"))
 			} else {
-				// 〔中文注释〕: 面板未成功启动，发送重启失败的提示
-				log.Printf("面板重启后未成功启动，面板服务未响应。")
+				log.Printf("面板重启后未成功启动，超过 %v 时限面板服务仍未响应。", maxWaitTime)
 				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelHealthFailed"))
 			}
 		}
