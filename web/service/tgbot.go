@@ -98,6 +98,29 @@ func (t *Tgbot) GetHashStorage() *global.HashStorage {
 	return hashStorage
 }
 
+// 〔中文注释〕: 辅助函数：检测面板服务是否已成功启动
+func (t *Tgbot) checkPanelHealth() bool {
+	// 〔中文注释〕: 从配置中获取面板监听端口
+	port := config.GetConfig().Port
+	if port == 0 {
+		log.Println("配置错误：面板端口未设置。")
+		return false
+	}
+	
+	// 〔中文注释〕: 尝试连接本地端口，确认服务在运行
+	// 使用 net.DialTimeout 检查 TCP 连接。超时设置为 8 秒。
+	address := fmt.Sprintf("127.0.0.1:%d", port)
+	conn, err := net.DialTimeout("tcp", address, 8*time.Second)
+	if err != nil {
+		log.Printf("面板健康检查失败：无法连接到 %s。错误：%v", address, err)
+		return false
+	}
+	defer conn.Close()
+
+	// 〔中文注释〕: 成功建立连接，认为面板服务已恢复
+	return true
+}
+
 func (t *Tgbot) Start(i18nFS embed.FS) error {
 	// Initialize localizer
 	err := locale.InitLocalizer(i18nFS, &t.settingService)
@@ -3051,27 +3074,40 @@ func (t *Tgbot) sendUpdateConfirmation(chatId int64) {
 
 // 〔中文注释〕: 新增函数：执行面板更新命令
 func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery) {
-    // 〔中文注释〕: 回复回调，让按钮不再转圈，并提示用户
-    t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.panelUpdating"))
-    // 〔中文注释〕: 删除带有按钮的确认消息，保持界面整洁
-    t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+	// 〔中文注释〕: 回复回调，让按钮不再转圈，并提示用户
+	t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.panelUpdating"))
+	// 〔中文注释〕: 删除带有按钮的确认消息，保持界面整洁
+	t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 
-    // 〔中文注释〕: 使用 goroutine 在后台执行，防止阻塞机器人
-    go func() {
-        // 〔中文注释〕: 这里的 "x-ui" 命令需要确保在系统的 PATH 环境变量中，或者使用绝对路径如 /usr/local/x-ui/x-ui
-        cmd := exec.Command("x-ui", "update")
-        output, err := cmd.CombinedOutput() // CombinedOutput 会同时获取标准输出和标准错误
+	// 〔中文注释〕: 使用 goroutine 在后台执行，防止阻塞机器人
+	go func() {
+		// 〔中文注释〕: 这里的 "x-ui" 命令需要确保在系统的 PATH 环境变量中
+		cmd := exec.Command("x-ui", "update")
+		output, err := cmd.CombinedOutput() // CombinedOutput 会同时获取标准输出和标准错误
 
-        if err != nil {
-            // 〔中文注释〕: 如果执行失败，记录详细日志并通知用户
-            log.Printf("面板更新失败: %v\n输出: %s", err, string(output))
-            t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateFailed"))
-        } else {
-            // 〔中文注释〕: 如果执行成功，记录日志并通知用户
-            log.Printf("面板更新命令执行完毕, 输出: %s", string(output))
-            t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateSuccess"))
-        }
-    }()
+		if err != nil {
+			// 〔中文注释〕: 如果执行更新命令失败，记录详细日志并通知用户
+			log.Printf("面板更新命令执行失败: %v\n输出: %s", err, string(output))
+			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateFailed"))
+		} else {
+			// 〔中文注释〕: 更新命令执行完毕，**【新增】发送等待重启提示**
+			log.Printf("面板更新命令执行完毕, 输出: %s", string(output))
+			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateRestartWait"))
+			
+			// 〔中文注释〕: **【新增】等待面板重启**，留出 50 秒时间给面板进行重启操作
+			time.Sleep(50 * time.Second) 
+			
+			// 〔中文注释〕: **【新增】检查面板是否成功启动**
+			if t.checkPanelHealth() {
+				// 〔中文注释〕: 面板启动成功，发送更新成功的最终提示
+				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateSuccess"))
+			} else {
+				// 〔中文注释〕: 面板未成功启动，发送更新后重启失败的提示
+				log.Printf("面板更新后重启失败，面板服务未响应。")
+				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateRestartFailed"))
+			}
+		}
+	}()
 }
 
 // 〔中文注释〕: 新增函数：发送重启面板的确认消息
@@ -3088,19 +3124,34 @@ func (t *Tgbot) sendRestartPanelConfirmation(chatId int64) {
 
 // 〔中文注释〕: 新增函数：执行面板重启命令
 func (t *Tgbot) executeRestartPanel(chatId int64, callbackQuery *telego.CallbackQuery) {
-    t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.panelRestarting"))
-    t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+	t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.panelRestarting"))
+	t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 
-    go func() {
-        cmd := exec.Command("x-ui", "restart")
-        output, err := cmd.CombinedOutput()
+	go func() {
+		cmd := exec.Command("x-ui", "restart")
+		output, err := cmd.CombinedOutput()
 
-        if err != nil {
-            log.Printf("面板重启失败: %v\n输出: %s", err, string(output))
-            t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelFailed"))
-        } else {
-            log.Printf("面板重启命令执行完毕, 输出: %s", string(output))
-            t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelSuccess"))
-        }
-    }()
+		if err != nil {
+			// 〔中文注释〕: 如果执行重启命令失败
+			log.Printf("面板重启命令执行失败: %v\n输出: %s", err, string(output))
+			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelFailed"))
+		} else {
+			// 〔中文注释〕: 重启命令执行完毕，**【新增】发送等待重启提示**
+			log.Printf("面板重启命令执行完毕, 输出: %s", string(output))
+			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelWait"))
+
+			// 〔中文注释〕: **【新增】等待面板重启**，留出 20 秒时间
+			time.Sleep(20 * time.Second) 
+
+			// 〔中文注释〕: **【新增】检查面板是否成功启动**
+			if t.checkPanelHealth() {
+				// 〔中文注释〕: 面板启动成功，发送重启成功的最终提示
+				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelSuccess"))
+			} else {
+				// 〔中文注释〕: 面板未成功启动，发送重启失败的提示
+				log.Printf("面板重启后未成功启动，面板服务未响应。")
+				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelHealthFailed"))
+			}
+		}
+	}()
 }
