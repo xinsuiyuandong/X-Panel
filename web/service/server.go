@@ -994,21 +994,32 @@ func (s *ServerService) LoadLinkHistory() ([]*database.LinkHistory, error) {
 }
 
 // 〔新增方法〕: 安装 Subconverter
-// 〔中文注释〕: 此方法用于接收前端请求，并执行 "x-ui subconverter" shell 命令
+// 〔中文注释〕: 此方法用于接收前端请求，并执行 x-ui.sh 脚本中的 subconverter 函数
 func (s *ServerService) InstallSubconverter() error {
-    // 〔中文注释〕: 使用 Go 的 os/exec 库来执行外部命令。
-    // 〔安全提示〕: 这里的命令是固定的，没有拼接任何用户输入，可以防止命令注入风险。
-    cmd := exec.Command("x-ui", "subconverter")
+    // 〔中文注释〕: 您项目的核心安装脚本路径，我们直接调用它
+    scriptPath := "/usr/local/x-ui/x-ui.sh"
 
-    // 〔中文注释〕: 执行命令并获取其合并的输出（标准输出 + 标准错误），方便排查问题。
-    output, err := cmd.CombinedOutput()
-    if err != nil {
-        // 〔中文注释〕: 如果命令执行失败，记录详细日志并返回一个包含输出信息的错误。
-        logger.Errorf("executing 'x-ui subconverter' failed: %v, output: %s", err, string(output))
-        return fmt.Errorf("命令执行失败: %s", string(output))
+    // 〔中文注释〕: 检查脚本文件是否存在
+    if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+        errMsg := fmt.Sprintf("关键脚本文件未找到: %s", scriptPath)
+        logger.Error(errMsg)
+        return fmt.Errorf(errMsg)
     }
 
-    // 〔中文注释〕: 如果命令执行成功，记录成功信息并返回 nil (代表没有错误)。
-    logger.Info("'x-ui subconverter' command executed successfully.")
+    // 【核心修改】: 这里的命令不再是 "x-ui"，而是直接执行您的 shell 脚本 "x-ui.sh"，并传递 "subconverter" 作为参数。
+    // 〔中文注释〕: 这会触发您在 x-ui.sh 中定义的 subconverter() 函数，从而执行安装Nginx、配置证书等一系列操作。
+    cmd := exec.Command(scriptPath, "subconverter")
+
+    // 〔中文注释〕: 执行命令并获取其合并的输出（标准输出 + 标准错误），方便排查问题。
+    // 〔重要〕: 这个命令可能需要几分钟才能执行完毕，Go程序会在此等待直到脚本执行完成。
+    output, err := cmd.CombinedOutput()
+    if err != nil {
+        // 〔中文注释〕: 如果脚本执行失败，记录详细日志并返回一个包含输出信息的错误。
+        logger.Errorf("执行脚本 '%s subconverter' 失败: %v, 输出: %s", scriptPath, err, string(output))
+        return fmt.Errorf("脚本执行失败: %s", string(output))
+    }
+
+    // 〔中文注释〕: 如果脚本执行成功，记录成功信息并返回 nil (代表没有错误)。
+    logger.Infof("脚本 '%s subconverter' 执行成功。", scriptPath)
     return nil
 }
