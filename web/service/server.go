@@ -994,20 +994,22 @@ func (s *ServerService) LoadLinkHistory() ([]*database.LinkHistory, error) {
 }
 
 // 〔新增方法〕: 安装 Subconverter
-// 〔中文注释〕: 此方法用于接收前端请求，并执行 x-ui.sh 脚本中的 subconverter 函数
+// 〔中文注释〕: 此方法用于接收前端请求，并执行 x-ui 脚本中的 subconverter 函数
 func (s *ServerService) InstallSubconverter() error {
-    // 〔中文注释〕: 您项目的核心安装脚本路径，我们直接调用它
-    scriptPath := "/usr/local/x-ui/x-ui.sh"
+    // 将脚本路径为 /usr/bin/x-ui
+    // 〔中文注释〕: 通常，安装脚本会将主命令软链接或复制到 /usr/bin/ 目录下，使其成为一个系统命令。
+    // 直接调用这个命令比调用源文件路径更规范，也能确保执行的是用户在命令行中使用的同一个脚本。
+    scriptPath := "/usr/bin/x-ui"
 
     // 〔中文注释〕: 检查脚本文件是否存在
     if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-        errMsg := fmt.Sprintf("关键脚本文件未找到: %s", scriptPath)
+        errMsg := fmt.Sprintf("关键脚本文件未找到: %s，请确认面板是否正确安装。", scriptPath)
         logger.Error(errMsg)
         return fmt.Errorf(errMsg)
     }
 
-    // 【核心修改】: 这里的命令不再是 "x-ui"，而是直接执行您的 shell 脚本 "x-ui.sh"，并传递 "subconverter" 作为参数。
-    // 〔中文注释〕: 这会触发您在 x-ui.sh 中定义的 subconverter() 函数，从而执行安装Nginx、配置证书等一系列操作。
+    // 〔中文注释〕: 正确的调用方式是：命令是 "x-ui"，参数是 "subconverter"。
+    // exec.Command 的第一个参数是可执行文件，后续参数是传递给该文件的参数列表。
     cmd := exec.Command(scriptPath, "subconverter")
 
     // 〔中文注释〕: 执行命令并获取其合并的输出（标准输出 + 标准错误），方便排查问题。
@@ -1015,11 +1017,11 @@ func (s *ServerService) InstallSubconverter() error {
     output, err := cmd.CombinedOutput()
     if err != nil {
         // 〔中文注释〕: 如果脚本执行失败，记录详细日志并返回一个包含输出信息的错误。
-        logger.Errorf("执行脚本 '%s subconverter' 失败: %v, 输出: %s", scriptPath, err, string(output))
+        logger.Errorf("从后端API执行安装 Subconverter 失败: %v, 输出: %s", err, string(output))
         return fmt.Errorf("脚本执行失败: %s", string(output))
     }
 
     // 〔中文注释〕: 如果脚本执行成功，记录成功信息并返回 nil (代表没有错误)。
-    logger.Infof("脚本 '%s subconverter' 执行成功。", scriptPath)
+    logger.Infof("后端API已成功触发 Subconverter 安装脚本。")
     return nil
 }
