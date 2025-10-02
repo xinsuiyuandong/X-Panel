@@ -58,6 +58,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.POST("/getNewEchCert", a.getNewEchCert)
 	g.POST("/history/save", a.saveHistory)
 	g.GET("/history/load", a.loadHistory)
+	g.POST("/install/subconverter", a.installSubconverter)
 }
 
 func (a *ServerController) refreshStatus() {
@@ -332,4 +333,19 @@ func (a *ServerController) loadHistory(c *gin.Context) {
 		return
 	}
 	jsonObj(c, history, nil)
+}
+
+
+// 〔新增接口〕: 安装 Subconverter
+// 〔中文注释〕: 这个函数是暴露给前端的 API 接口，用于处理安装 Subconverter 的请求。
+func (a *ServerController) installSubconverter(c *gin.Context) {
+    // 〔中文注释〕: 调用服务层中我们刚刚创建的 InstallSubconverter 方法。
+    err := a.serverService.InstallSubconverter()
+    if err != nil {
+        // 〔中文注释〕: 如果 service 层返回了错误，则向前台返回失败的 JSON 消息。
+        jsonMsg(c, "Subconverter 安装指令执行失败", err)
+        return
+    }
+    // 〔中文注释〕: 如果没有错误，则向前台返回成功的 JSON 消息。
+    jsonMsg(c, "Subconverter 安装指令已成功发送", nil)
 }
