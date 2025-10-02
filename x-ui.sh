@@ -1314,7 +1314,7 @@ fi
 
 # --------- 安装/部署sublink服务 ----------
 
-bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/sublink/main/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xeefei/sublink/main/install.sh)
 
 
 # --------- 安装 Nginx ----------
