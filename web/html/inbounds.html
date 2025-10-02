@@ -728,7 +728,7 @@
                     </a-form-item>
 
                     <p><b>{{ i18n "pages.inbounds.oneClick.descriptionTitle" }}</b></p>
-                    <p>{{ i18n "pages.inbounds.oneClick.descriptionContent" }}</p>
+				    <p style="white-space: pre-wrap;">{{ i18n "pages.inbounds.oneClick.descriptionContent" }}</p>
                 </div>
                 
                 <div v-else style="padding: 24px;">
@@ -1577,8 +1577,20 @@
                 }
             },
 
-            // 【中文注释】: 处理“订阅转换”按钮的点击事件 (已更新逻辑)
+
+            // 〔中文注释〕: 处理“订阅转换”按钮的点击事件 (已更新为完整逻辑)
             handleSubscriptionConversion() {
+                // 【第一步】: 检查当前协议是否为 HTTPS
+                if (window.location.protocol !== "https:") {
+                    this.$warning({
+                        title: '必须使用 HTTPS 访问',
+                        content: '【订阅转换】功能需要一个安全的 HTTPS 环境才能运行。请先为您的面板域名正确配置 SSL 证书，然后再使用此功能。',
+                        class: themeSwitcher.currentTheme,
+                    });
+                    return; // 如果是 http，则终止后续所有操作
+                }
+
+                // 【第二步】: (此部分保留) 弹出确认框，询问用户是否继续
                 this.$confirm({
                     title: '{{ i18n "pages.inbounds.subConversion.modalTitle"}}',
                     content: '{{ i18n "pages.inbounds.subConversion.modalContent"}}',
@@ -1587,29 +1599,69 @@
                     class: themeSwitcher.currentTheme,
                     onOk: () => {
                         const subConverterUrl = `https://${window.location.hostname}:15268`;
-                        const loadingMessage = this.$message.loading('正在检测订阅转换服务...', 0);
+                        const loadingMessage = this.$message.loading('正在检测订阅转换服务 (端口15268)...', 0);
 
                         const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 3000);
+                        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3秒超时检测
 
+                        // 【第三步】: 尝试通过 fetch API 访问订阅转换服务端口
                         fetch(subConverterUrl, {
                             method: 'GET',
-                            mode: 'no-cors',
+                            mode: 'no-cors', // 〔中文注释〕: 使用 no-cors 模式进行简单的网络连通性检查
                             signal: controller.signal
                         })
                         .then(response => {
+                            // 【情况 A】: 访问成功，服务正在运行
                             clearTimeout(timeoutId);
-                            loadingMessage();
-                            this.$message.success('服务检测成功，正在跳转...', 2);
-                            window.open(subConverterUrl, '_blank');
+                            loadingMessage(); // 关闭加载提示
+                            this.$message.success('服务检测成功，正在为您跳转...', 2);
+                            window.open(subConverterUrl, '_blank'); // 在新标签页中打开
                         })
                         .catch(err => {
+                            // 【情况 B】: 访问失败 (例如超时或连接被拒绝)
                             clearTimeout(timeoutId);
-                            loadingMessage();
-                            this.$info({
+                            loadingMessage(); // 关闭加载提示
+                            
+                            // 〔中文注释〕: 弹出新的确认框，提供“一键安装”选项
+                            this.$confirm({
                                 title: '{{ i18n "pages.inbounds.subConversion.notFoundTitle"}}',
-                                content: '{{ i18n "pages.inbounds.subConversion.notFoundContent"}}',
+                                content: `无法连接到订阅转换服务。这可能意味着它尚未安装或未在运行。您想现在远程执行安装指令吗？
+
+                                         【重要提示】: 执行前，请确保您服务器的防火墙已放行 8000 和 15268 这两个端口。`,
+                                okText: '立即安装',
+                                cancelText: '稍后再说',
                                 class: themeSwitcher.currentTheme,
+                                onOk: async () => {
+                                    // 【第四步】: 用户点击“立即安装”，调用后端的 API 接口
+                                    const installLoading = this.$message.loading('正在向后端发送安装指令...', 0);
+                                    try {
+                                        // 〔重要提示〕: 此处假设后端提供了一个用于安装的 API 接口。
+                                        // 您需要在后端代码中添加一个例如 `/panel/api/server/install/subconverter` 的接口，
+                                        // 该接口的功能是执行 "x-ui subconverter" 这个 shell 命令。
+                                        const msg = await HttpUtil.post('/panel/api/server/install/subconverter');
+                                        installLoading(); // 关闭安装加载提示
+                                        if (msg.success) {
+                                            this.$success({
+                                                title: '指令已成功发送',
+                                                content: '后端已开始执行安装任务。请等待约1分钟后再次尝试访问，或通过服务器日志查看详细安装进度。',
+                                                class: themeSwitcher.currentTheme,
+                                            });
+                                        } else {
+                                            this.$error({
+                                                title: '指令发送失败',
+                                                content: msg.msg || '发生未知错误，请检查后端日志或尝试手动安装。',
+                                                class: themeSwitcher.currentTheme,
+                                            });
+                                        }
+                                    } catch (error) {
+                                        installLoading();
+                                        this.$error({
+                                            title: '前端请求失败',
+                                            content: '无法连接到后端API接口，请检查您的网络连接或后端服务是否正常运行。',
+                                            class: themeSwitcher.currentTheme,
+                                        });
+                                    }
+                                },
                             });
                         });
                     },
