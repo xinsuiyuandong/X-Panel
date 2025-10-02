@@ -1944,6 +1944,9 @@ if [[ $# > 0 ]]; then
     "uninstall")
         check_install 0 && uninstall 0
         ;;
+    "subconverter")
+        check_install 0 && subconverter 0
+        ;;
     *) show_usage ;;
     esac
 else
