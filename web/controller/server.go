@@ -58,10 +58,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.POST("/getNewEchCert", a.getNewEchCert)
 	g.POST("/history/save", a.saveHistory)
 	g.GET("/history/load", a.loadHistory)
-	// 用于前端请求创建短链接
-	g.POST("/shortlink/save", a.saveShortLink)
-	// 用于处理短链接的跳转
-	g.GET("/s/:code", a.redirectShortLink)
+	
 }
 
 func (a *ServerController) refreshStatus() {
@@ -338,37 +335,28 @@ func (a *ServerController) loadHistory(c *gin.Context) {
 	jsonObj(c, history, nil)
 }
 
-// saveShortLink 处理保存长链接并返回短代码的请求
-func (a *ServerController) saveShortLink(c *gin.Context) {
-	fullLink := c.PostForm("link")
-	if fullLink == "" {
-		jsonMsg(c, "link is required", fmt.Errorf("missing link parameter"))
-		return
-	}
+// 〔新增方法〕: 安装 Subconverter
+// 〔中文注释〕: 此方法用于接收前端请求，并执行 "x-ui subconverter" shell 命令
+func (c *ServerController) InstallSubconverter(ctx *gin.Context) {
+    // 〔中文注释〕: 使用 Go 的 os/exec 库来执行外部命令
+    // 〔安全提示〕: 这里的命令是固定的，没有拼接任何用户输入，可以防止命令注入风险。
+    cmd := exec.Command("x-ui", "subconverter")
 
-	shortCode, err := a.serverService.SaveShortLink(fullLink)
-	if err != nil {
-		jsonMsg(c, "Failed to save short link", err)
-		return
-	}
+    // 〔中文注释〕: 执行命令并获取其合并的输出（stdout + stderr）
+    output, err := cmd.CombinedOutput()
+    if err != nil {
+        // 〔中文注释〕: 如果命令执行失败，向前端返回失败信息，并附带命令的输出日志
+        c.JSON(http.StatusOK, gin.H{
+            "success": false,
+            "msg":     "Subconverter 安装命令执行失败",
+            "obj":     string(output), // 将命令的输出作为 obj 返回，方便排查问题
+        })
+        return
+    }
 
-	jsonObj(c, gin.H{
-		"shortCode": shortCode,
-	}, nil)
-}
-
-// redirectShortLink 处理短链接的重定向
-func (a *ServerController) redirectShortLink(c *gin.Context) {
-	code := c.Param("code")
-	fullLink, err := a.serverService.GetFullLinkByCode(code)
-	if err != nil {
-		c.String(http.StatusInternalServerError, "Error finding link")
-		return
-	}
-	if fullLink == "" {
-		c.String(http.StatusNotFound, "Link not found")
-		return
-	}
-	// 〔中文注释〕：使用 302 Found 进行重定向，这是短链接服务的标准做法
-	c.Redirect(http.StatusFound, fullLink)
+    // 〔中文注释〕: 如果命令执行成功，向前端返回成功信息
+    c.JSON(http.StatusOK, gin.H{
+        "success": true,
+        "msg":     "Subconverter 安装指令已成功执行",
+    })
 }
