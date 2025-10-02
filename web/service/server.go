@@ -992,3 +992,23 @@ func (s *ServerService) SaveLinkHistory(historyType, link string) error {
 func (s *ServerService) LoadLinkHistory() ([]*database.LinkHistory, error) {
 	return database.GetLinkHistory()
 }
+
+// 〔新增方法〕: 安装 Subconverter
+// 〔中文注释〕: 此方法用于接收前端请求，并执行 "x-ui subconverter" shell 命令
+func (s *ServerService) InstallSubconverter() error {
+    // 〔中文注释〕: 使用 Go 的 os/exec 库来执行外部命令。
+    // 〔安全提示〕: 这里的命令是固定的，没有拼接任何用户输入，可以防止命令注入风险。
+    cmd := exec.Command("x-ui", "subconverter")
+
+    // 〔中文注释〕: 执行命令并获取其合并的输出（标准输出 + 标准错误），方便排查问题。
+    output, err := cmd.CombinedOutput()
+    if err != nil {
+        // 〔中文注释〕: 如果命令执行失败，记录详细日志并返回一个包含输出信息的错误。
+        logger.Errorf("executing 'x-ui subconverter' failed: %v, output: %s", err, string(output))
+        return fmt.Errorf("命令执行失败: %s", string(output))
+    }
+
+    // 〔中文注释〕: 如果命令执行成功，记录成功信息并返回 nil (代表没有错误)。
+    logger.Info("'x-ui subconverter' command executed successfully.")
+    return nil
+}
