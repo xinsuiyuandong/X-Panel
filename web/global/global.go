@@ -4,11 +4,20 @@ import (
 	"context"
 	_ "unsafe"
 
+	"x-ui/database/model"
+	
 	"github.com/robfig/cron/v3"
 )
 
+type TelegramService interface {
+	SendMessage(msg string) error
+	SendSubconverterSuccess()
+	IsRunning() bool
+    // 【中文注释】: 这个方法是在 inbound.go 中被调用的，所以也必须包含在接口定义里。
+	SendOneClickConfig(ib *model.Inbound, inFromPanel bool) error
+}
+
 type TgBotInterface interface {
-	// 这些方法需与 service 包中 TelegramService / Tgbot 的方法集合保持兼容
 	SendMessage(msg string) error
 	SendSubconverterSuccess()
 	IsRunning() bool
@@ -17,9 +26,10 @@ type TgBotInterface interface {
 var (
 	webServer WebServer
 	subServer SubServer
-	// 新增：全局的 Telegram Bot 引用（接口类型）
+	// 定义全局变量  TelegramService / Tgbot 的接口方法
 	TgBot TelegramService
 )
+
 
 type WebServer interface {
 	GetCron() *cron.Cron
