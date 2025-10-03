@@ -111,123 +111,124 @@ func (t *Tgbot) GetHashStorage() *global.HashStorage {
 }
 
 func (t *Tgbot) Start(i18nFS embed.FS) error {
-	// Initialize localizer
-	err := locale.InitLocalizer(i18nFS, &t.settingService)
-	if err != nil {
-		return err
-	}
-	
-	// Initialize hash storage to store callback queries
-	hashStorage = global.NewHashStorage(20 * time.Minute)
+    // -----------------------------
+    // 初始化本地化
+    // -----------------------------
+    if err := locale.InitLocalizer(i18nFS, &t.settingService); err != nil {
+        return err
+    }
 
-	t.SetHostname()
+    // -----------------------------
+    // 初始化哈希存储
+    // -----------------------------
+    hashStorage = global.NewHashStorage(20 * time.Minute)
 
-	// Get Telegram bot token
-	tgBotToken, err := t.settingService.GetTgBotToken()
-	if err != nil || tgBotToken == "" {
-		logger.Warning("Failed to get Telegram bot token:", err)
-		return err
-	}
+    t.SetHostname()
 
-	// Get Telegram bot chat ID(s)
-	tgBotID, err := t.settingService.GetTgBotChatId()
-	if err != nil {
-		logger.Warning("Failed to get Telegram bot chat ID:", err)
-		return err
-	}
+    // -----------------------------
+    // 获取 Telegram Bot token
+    // -----------------------------
+    tgBotToken, err := t.settingService.GetTgBotToken()
+    if err != nil || tgBotToken == "" {
+        logger.Warning("Failed to get Telegram bot token:", err)
+        return err
+    }
 
-	// Parse admin IDs from comma-separated string
-	if tgBotID != "" {
-		for _, adminID := range strings.Split(tgBotID, ",") {
-			id, err := strconv.Atoi(adminID)
-			if err != nil {
-				logger.Warning("Failed to parse admin ID from Telegram bot chat ID:", err)
-				return err
-			}
-			adminIds = append(adminIds, int64(id))
-		}
-	}
+    // -----------------------------
+    // 获取 Telegram Bot chat ID(s)
+    // -----------------------------
+    tgBotID, err := t.settingService.GetTgBotChatId()
+    if err != nil {
+        logger.Warning("Failed to get Telegram bot chat ID:", err)
+        return err
+    }
 
-	// Get Telegram bot proxy URL
-	tgBotProxy, err := t.settingService.GetTgBotProxy()
-	if err != nil {
-		logger.Warning("Failed to get Telegram bot proxy URL:", err)
-	}
+    adminIds = []int64{}
+    if tgBotID != "" {
+        for _, adminID := range strings.Split(tgBotID, ",") {
+            id, err := strconv.Atoi(adminID)
+            if err != nil {
+                logger.Warning("Failed to parse admin ID from Telegram bot chat ID:", err)
+                return err
+            }
+            adminIds = append(adminIds, int64(id))
+        }
+    }
 
-	// Get Telegram bot API server URL
-	tgBotAPIServer, err := t.settingService.GetTgBotAPIServer()
-	if err != nil {
-		logger.Warning("Failed to get Telegram bot API server URL:", err)
-	}
+    // -----------------------------
+    // 获取代理和 API server
+    // -----------------------------
+    tgBotProxy, _ := t.settingService.GetTgBotProxy()
+    tgBotAPIServer, _ := t.settingService.GetTgBotAPIServer()
 
-	// Create new Telegram bot instance
-	bot, err = t.NewBot(tgBotToken, tgBotProxy, tgBotAPIServer)
-	if err != nil {
-		logger.Error("Failed to initialize Telegram bot API:", err)
-		return err
-	}
-
-		updates, err := bot.UpdatesViaLongPolling(context.Background(), nil)
-	if err != nil {
-		return err
-	}
-
-	// 监听所有回调查询，并交给 handleCallbackQuery 处理
-	// === 初始化 handler ===
-    // 在 Start(...) 中，确保在调用 handler 之前已经创建好 bot
+    // -----------------------------
+    // 创建 Telegram Bot
+    // -----------------------------
     bot, err = t.NewBot(tgBotToken, tgBotProxy, tgBotAPIServer)
     if err != nil {
         logger.Error("Failed to initialize Telegram bot API:", err)
-    return err
+        return err
     }
 
-    // 获取 updates（长轮询示例）
-    updates, err = bot.UpdatesViaLongPolling(context.Background(), nil)
+    ctx := context.Background()
+
+    // -----------------------------
+    // 获取 updates
+    // -----------------------------
+    updates, err := bot.UpdatesViaLongPolling(ctx, nil)
     if err != nil {
-       logger.Error("Failed to start updates via long polling:", err)
-    return err
+        logger.Error("Failed to start updates via long polling:", err)
+        return err
     }
 
-    // 创建 BotHandler，注意返回两个值
+    // -----------------------------
+    // 创建 BotHandler
+    // -----------------------------
     botHandler, err = th.NewBotHandler(bot, updates)
     if err != nil {
         logger.Error("Failed to create BotHandler:", err)
-    return err
+        return err
     }
 
-    // 注册回调处理函数（直接传方法）
+    // -----------------------------
+    // 注册回调处理函数
+    // -----------------------------
     botHandler.HandleCallbackQuery(
-        t.handleCallbackQuery,        // 方法签名必须是 func(ctx *th.Context, cq telego.CallbackQuery) error
+        t.handleCallbackQuery,
         th.AnyCallbackQueryWithMessage(),
     )
 
-    // 启动 handler（协程）
+    // -----------------------------
+    // 启动 handler 协程
+    // -----------------------------
     go botHandler.Start()
 
-	
-	// After bot initialization, set up bot commands with localized descriptions
-	err = bot.SetMyCommands(context.Background(), &telego.SetMyCommandsParams{
-		Commands: []telego.BotCommand{
-			{Command: "start", Description: t.I18nBot("tgbot.commands.startDesc")},
-			{Command: "help", Description: t.I18nBot("tgbot.commands.helpDesc")},
-			{Command: "status", Description: t.I18nBot("tgbot.commands.statusDesc")},
-			{Command: "id", Description: t.I18nBot("tgbot.commands.idDesc")},
-			{Command: "oneclick", Description: "🚀 一键配置节点 (提供选项)"},
-			{Command: "subconverter", Description: "🔄 检测或安装订阅转换"},
-		},
-	})
-	if err != nil {
-		logger.Warning("Failed to set bot commands:", err)
-	}
+    // -----------------------------
+    // 设置 bot commands
+    // -----------------------------
+    if err := bot.SetMyCommands(ctx, &telego.SetMyCommandsParams{
+        Commands: []telego.BotCommand{
+            {Command: "start", Description: t.I18nBot("tgbot.commands.startDesc")},
+            {Command: "help", Description: t.I18nBot("tgbot.commands.helpDesc")},
+            {Command: "status", Description: t.I18nBot("tgbot.commands.statusDesc")},
+            {Command: "id", Description: t.I18nBot("tgbot.commands.idDesc")},
+            {Command: "oneclick", Description: "🚀 一键配置节点 (提供选项)"},
+            {Command: "subconverter", Description: "🔄 检测或安装订阅转换"},
+        },
+    }); err != nil {
+        logger.Warning("Failed to set bot commands:", err)
+    }
 
-	// Start receiving Telegram bot messages
-	if !isRunning {
-		logger.Info("Telegram bot receiver started")
-		go t.OnReceive()
-		isRunning = true
-	}
+    // -----------------------------
+    // 启动消息接收协程
+    // -----------------------------
+    if !isRunning {
+        logger.Info("Telegram bot receiver started")
+        go t.OnReceive()
+        isRunning = true
+    }
 
-	return nil
+    return nil
 }
 
 func (t *Tgbot) NewBot(token string, proxyUrl string, apiServerUrl string) (*telego.Bot, error) {
