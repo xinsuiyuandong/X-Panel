@@ -11,8 +11,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"log"
-    "os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -96,22 +94,6 @@ func (t *Tgbot) I18nBot(name string, params ...string) string {
 
 func (t *Tgbot) GetHashStorage() *global.HashStorage {
 	return hashStorage
-}
-
-// 〔中文注释〕: 新增函数：检查 x-ui systemd 服务状态
-func (t *Tgbot) checkSystemdHealth() bool {
-    // 直接检查 x-ui systemd 服务的状态
-    cmd := exec.Command("/usr/bin/systemctl", "is-active", "x-ui")
-    err := cmd.Run() // cmd.Run() 只有在退出码为 0 时才返回 nil
-
-    // 如果 systemctl is-active x-ui 的返回码是 0 (Active)，则 err 为 nil
-    if err == nil {
-        return true
-    }
-    
-    // 如果返回码是非 0 (例如 inactive, failed)，则 err 不为 nil
-    log.Printf("Systemd 服务检查失败: systemctl is-active x-ui 返回错误: %v", err)
-    return false
 }
 
 func (t *Tgbot) Start(i18nFS embed.FS) error {
@@ -517,21 +499,6 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 		} else {
 			handleUnknownCommand()
 		}
-	// 〔中文注释〕: 在此处新增“更新面板”和“重启面板”的命令处理
-    case "update":
-        onlyMessage = true
-        if isAdmin {
-            t.sendUpdateConfirmation(chatId)
-        } else {
-            handleUnknownCommand()
-        }
-    case "restartX":
-        onlyMessage = true
-        if isAdmin {
-            t.sendRestartPanelConfirmation(chatId)
-        } else {
-            handleUnknownCommand()
-        }
 	default:
 		handleUnknownCommand()
 	}
@@ -1691,29 +1658,8 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		for _, extra_emails := range extra_emails {
 			msg := fmt.Sprintf("📧 %s\n%s", extra_emails, t.I18nBot("tgbot.noResult"))
 			t.SendMsgToTgbot(chatId, msg, tu.ReplyKeyboardRemove())
+
 		}
-
-		// 〔中文注释〕: 在这里新增所有与更新和重启相关的回调处理
-    case "update_panel_confirm":
-        t.sendUpdateConfirmation(chatId)
-        return
-
-    case "update_panel_execute":
-        t.executeUpdate(chatId, callbackQuery)
-        return
-
-    case "restart_panel_confirm":
-        t.sendRestartPanelConfirmation(chatId)
-        return
-
-    case "restart_panel_execute":
-        t.executeRestartPanel(chatId, callbackQuery)
-        return
-
-    case "action_cancel":
-        t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-        t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.actionCancelled"))
-        return
 	}
 }
 
@@ -1900,11 +1846,6 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.allClients")).WithCallbackData(t.encodeQuery("get_inbounds")),
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.addClient")).WithCallbackData(t.encodeQuery("add_client")),
 		),
-		// 〔中文注释〕: 在这里新增“更新面板”和“重启面板”两个按钮
-        tu.InlineKeyboardRow(
-            tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.updatePanel")).WithCallbackData(t.encodeQuery("update_panel_confirm")),
-            tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.restartPanel")).WithCallbackData(t.encodeQuery("restart_panel_confirm")),
-        ),
 		// TODOOOOOOOOOOOOOO: Add restart button here.
 	)
 	numericKeyboardClient := tu.InlineKeyboard(
@@ -3051,140 +2992,4 @@ func (t *Tgbot) SendMessage(msg string) error {
     // 〔中文注释〕: 调用现有方法将消息发送给所有已配置的管理员。
     t.SendMsgToTgbotAdmins(msg)
     return nil
-}
-
-// 〔中文注释〕: 新增函数：发送更新面板的确认消息
-func (t *Tgbot) sendUpdateConfirmation(chatId int64) {
-    msg := t.I18nBot("tgbot.messages.updateConfirm")
-    inlineKeyboard := tu.InlineKeyboard(
-        tu.InlineKeyboardRow(
-            tu.InlineKeyboardButton("✅ "+t.I18nBot("confirm")).WithCallbackData("update_panel_execute"),
-            tu.InlineKeyboardButton("❌ "+t.I18nBot("cancel")).WithCallbackData("action_cancel"),
-        ),
-    )
-    t.SendMsgToTgbot(chatId, msg, inlineKeyboard)
-}
-
-// 〔中文注释〕: 新增函数：执行面板更新命令
-func (t *Tgbot) executeUpdate(chatId int64, callbackQuery *telego.CallbackQuery) {
-	// 〔中文注释〕: 回复回调，让按钮不再转圈，并提示用户
-	t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.panelUpdating"))
-	// 〔中文注释〕: 删除带有按钮的确认消息，保持界面整洁
-	t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-	// 立即发送等待提示，让用户知道后台正在处理
-    t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateRestartWait")) 
-
-	// 〔中文注释〕: 使用 goroutine 在后台执行，防止阻塞机器人
-	go func() {
-        // 直接执行 /usr/local/x-ui/x-ui update，而是直接执行 shell 脚本中的逻辑
-		cmd := exec.Command("/bin/bash", "-c", "cd /usr/local/x-ui/ && ./x-ui.sh update")
-		output, err := cmd.CombinedOutput() // CombinedOutput 会同时获取标准输出和标准错误
-
-		if err != nil {
-			log.Printf("面板更新命令执行失败: %v\n输出: %s", err, string(output))
-			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateFailed"))
-		} else {
-			log.Printf("面板更新命令执行完毕, 输出: %s", string(output))
-			
-			// 【最终修正】：强制等待 8 秒，解决 ARMv6 上的竞态条件
-			log.Printf("更新脚本成功返回，强制等待 5 秒，以确保 systemd 完全停止旧服务。")
-			time.Sleep(8 * time.Second) // <-- 新增的强制等待
-			
-			// 立即使用可靠的重启命令强制启动新服务
-			log.Printf("等待完毕，立即执行 systemctl restart 启动新服务...")
-			
-            // 执行 VPS 重启命令
-            log.Println("Go 程序主动执行 VPS 重启 (shutdown -r now)...")
-            restartCmd := exec.Command("shutdown", "-r", "now") 
-			restartCmd.Run() // 运行重启命令，不关心其输出
-			
-			// 取消硬等待，改为在 120 秒内进行主动探测
-			// 现在检查 systemd 服务状态，
-			maxWaitTime := 120 * time.Second 
-			checkInterval := 5 * time.Second 
-			success := false
-			for start := time.Now(); time.Since(start) < maxWaitTime; {
-				time.Sleep(checkInterval)
-				if t.checkSystemdHealth() { // 检查服务是否已激活
-					success = true
-					break 
-				}
-				log.Printf("面板更新后重启中，已等待 %v，仍在检查...", time.Since(start).Round(time.Second))
-			}
-
-			if success {
-				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateSuccess"))
-			} else {
-				log.Printf("面板更新后启动失败，超过 %v 时限面板服务仍未响应。", maxWaitTime)
-				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.updateRestartFailed"))
-			}
-		}
-	}()
-}
-
-// 〔中文注释〕: 新增函数：发送重启面板的确认消息
-func (t *Tgbot) sendRestartPanelConfirmation(chatId int64) {
-    msg := t.I18nBot("tgbot.messages.restartPanelConfirm")
-    inlineKeyboard := tu.InlineKeyboard(
-        tu.InlineKeyboardRow(
-            tu.InlineKeyboardButton("✅ "+t.I18nBot("confirm")).WithCallbackData("restart_panel_execute"),
-            tu.InlineKeyboardButton("❌ "+t.I18nBot("cancel")).WithCallbackData("action_cancel"),
-        ),
-    )
-    t.SendMsgToTgbot(chatId, msg, inlineKeyboard)
-}
-
-// 〔中文注释〕: 新增函数：执行面板重启命令
-func (t *Tgbot) executeRestartPanel(chatId int64, callbackQuery *telego.CallbackQuery) {
-	t.sendCallbackAnswerTgBot(callbackQuery.ID, t.I18nBot("tgbot.answers.panelRestarting"))
-	t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-	// 立即发送等待提示
-	t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelWait"))
-
-	go func() {
-		// 直接使用 systemctl 重启服务
-		cmd := exec.Command("sudo", "/usr/bin/systemctl", "restart", "x-ui")
-		output, err := cmd.CombinedOutput()
-
-		if err != nil {
-            // 〔中文注释〕: 如果执行更新命令失败，记录详细日志并通知用户
-			log.Printf("面板重启命令执行失败: %v\n输出: %s", err, string(output))
-			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelFailed"))
-		} else {
-			log.Printf("面板重启命令执行完毕, 输出: %s", string(output))
-
-			// 取消硬等待，改为在 60 秒内进行主动探测
-			// 现在检查 systemd 服务状态，
-			maxWaitTime := 60 * time.Second 
-			checkInterval := 2 * time.Second 
-			
-			success := false
-			for start := time.Now(); time.Since(start) < maxWaitTime; {
-				time.Sleep(checkInterval)
-				if t.checkSystemdHealth() { // <-- 调用新的 systemd 检查
-					success = true
-					break 
-				}
-			}
-
-			// 探测失败后，尝试手动启动服务
-			if !success {
-				log.Printf("面板重启失败，尝试手动 systemctl start x-ui...")
-				startCmd := exec.Command("sudo", "/usr/bin/systemctl", "start", "x-ui")
-				startCmd.Run()
-				time.Sleep(20 * time.Second) // 留 20 秒给服务启动
-				if t.checkSystemdHealth() {
-					success = true
-					log.Printf("手动启动服务成功。")
-				}
-			}
-
-			if success {
-				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelSuccess"))
-			} else {
-				log.Printf("面板重启后未成功启动，超过 %v 时限面板服务仍未响应。", maxWaitTime)
-				t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.messages.restartPanelHealthFailed"))
-			}
-		}
-	}()
 }
