@@ -13,6 +13,7 @@ import (
 	"x-ui/logger"
 	"x-ui/util/common"
 	"x-ui/xray"
+	"x-ui/web/global"
 
 	"gorm.io/gorm"
 )
