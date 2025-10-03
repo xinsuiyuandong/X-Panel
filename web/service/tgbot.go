@@ -182,7 +182,7 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
     }
 
     // 获取 updates（长轮询示例）
-    updates, err := bot.UpdatesViaLongPolling(context.Background(), nil)
+    updates, err = bot.UpdatesViaLongPolling(context.Background(), nil)
     if err != nil {
        logger.Error("Failed to start updates via long polling:", err)
     return err
