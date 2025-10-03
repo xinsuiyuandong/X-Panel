@@ -440,15 +440,6 @@ ssh_forwarding
 # 设置VPS中的时区/时间为【上海时间】
 sudo timedatectl set-timezone Asia/Shanghai
 
-# --------- 安装/部署sublink服务 ----------
-bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/sublink/main/install.sh)
-
-# --------- 使用 sed 替换 ExecStart 行，添加启动参数 ----------
-sudo sed -i "/^ExecStart=/ s|$| run --port 8000|" "/etc/systemd/system/sublink.service"
-# 重新加载 systemd 守护进程
-sudo systemctl daemon-reload
-# 重启 sublink 服务
-sudo systemctl restart sublink
 
 install_base
 install_x-ui $1
