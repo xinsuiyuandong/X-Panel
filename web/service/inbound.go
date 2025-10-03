@@ -19,6 +19,7 @@ import (
 
 type InboundService struct {
 	xrayApi xray.XrayAPI
+	tgService TelegramService
 }
 
 func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
@@ -271,14 +272,16 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 				isOneClick = true
 			}
 
-			if isOneClick && global.TgBot != nil && global.TgBot.IsRunning() {
+			if isOneClick && s.tgService != nil && s.tgService.IsRunning() {
 				// 〔中文注释〕: 使用 goroutine 异步发送通知，避免阻塞正常的 API 返回
 				go func(ib *model.Inbound) {
 					// 等待5秒，确保事务已经完全提交
 					time.Sleep(5 * time.Second)
 					logger.Infof("检测到一键配置创建成功 (备注: %s)，准备发送 TG 通知...", ib.Remark)
-					// 调用 tgbot.go 中我们将要新增的函数
-					err := global.TgBot.SendOneClickConfig(ib, true)
+
+					// 【修改位置】: 将 global.TgBot 替换为 s.tgService
+					// 〔中文注释〕: 调用注入的服务实例的方法来发送消息。
+					err := s.tgService.SendOneClickConfig(ib, true)
 					if err != nil {
 						logger.Warningf("发送【一键配置】TG 通知失败: %v", err)
 					}
