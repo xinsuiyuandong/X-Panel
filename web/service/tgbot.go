@@ -120,9 +120,9 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 	}
 
     // 监听所有回调查询，并交给 handleCallbackQuery 处理
-    botHandler.HandleCallbackQuery(func(b *telego.Bot, up telego.Update) {
-    // 闭包内部，t.handleCallbackQuery，将 bot 实例传递进去。
-    t.handleCallbackQuery(b, up) 
+    botHandler.HandleCallbackQuery(func(up telego.Update) {
+    // 调用修正后的方法，只传递 update 参数。
+    t.handleCallbackQuery(up) 
     })
 	
 	// Initialize hash storage to store callback queries
@@ -3585,25 +3585,35 @@ func (n namedReader) Name() string {
 	return n.name
 }
 
-// 【最终修正后的函数】: 处理用户点击内联键盘按钮的回调查询
-func (t *Tgbot) handleCallbackQuery(bot *telego.Bot, update telego.Update) {
+// 修正后的函数签名，只接收 update，以兼容 telegohandler
+func (t *Tgbot) handleCallbackQuery(update telego.Update) {
+	// 确保是回调查询
 	if update.CallbackQuery == nil {
 		return
 	}
+    
+    ctx := context.Background()
 
 	// 强制获取消息对象和 ID。
+    // 如果 msg 仍是 MaybeInaccessibleMessage，则需要强制转换或直接从 update.CallbackQuery 访问。
 	msg := update.CallbackQuery.Message
 	if msg == nil {
 		logger.Error("TG Bot: CallbackQuery 消息对象为空，无法编辑或获取 ChatID。")
+		// AnswerCallbackQuery 必须以 context.Context 开头，且不使用 With* 函数。
 		bot.AnswerCallbackQuery(
-			update.CallbackQuery.ID,                            // 1. callbackQueryID (required)
-			telego.WithText("操作失败，请重试或联系管理员"),     // 2. option 1: text
-			telego.WithShowAlert(true),                         // 3. option 2: show_alert
+            ctx,
+			update.CallbackQuery.ID,                            // callbackQueryID
+            // v1.3.0 中 AnswerCallbackQuery 的可选参数签名是 func(ctx, id string, text string, showAlert bool, ...)
+			telego.WithText("操作失败，请重试或联系管理员").String(), // 必须调用 String() 获得文本
+            telego.WithShowAlert(true).Bool(),                    // 必须调用 Bool() 获得布尔值
 		)
 		return
 	}
 
-	// 这些字段在回调消息中是直接可访问的
+	// 假设这些字段在回调消息中是直接可访问的
+	// 如果 v1.3.0 仍报错 msg.Chat/MessageID undefined，请将下一行改为：
+    // chatID := update.CallbackQuery.Message.Chat.ID
+    // messageID := update.CallbackQuery.Message.MessageID
 	chatID := msg.Chat.ID
 	messageID := msg.MessageID
 
@@ -3611,16 +3621,16 @@ func (t *Tgbot) handleCallbackQuery(bot *telego.Bot, update telego.Update) {
 	data, err := t.decodeQuery(update.CallbackQuery.Data)
     if err != nil {
         logger.Errorf("TG Bot: decodeQuery 失败: %v", err)
-        // 使用位置参数 AnswerCallbackQuery 
-        bot.AnswerCallbackQuery(update.CallbackQuery.ID, telego.WithText("数据解析失败"))
+        bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID, telego.WithText("数据解析失败").String())
         return
     }
 
-	// 移除键盘（将 ReplyMarkup 设为 nil 即可）。
+	// 移除键盘。EditMessageReplyMarkup 必须以 context.Context 开头。
 	_, err = bot.EditMessageReplyMarkup(
-		tu.ID(chatID),
+		ctx,
+        tu.ID(chatID),
 		messageID,
-		telego.WithReplyMarkup(nil), // 设置 ReplyMarkup 为 nil 来移除键盘
+		telego.WithReplyMarkup(nil).Interface(), // 必须调用 Interface() 并传入 nil
 	)
 	if err != nil {
 		logger.Warningf("TG Bot: 移除内联键盘失败: %v", err)
@@ -3635,10 +3645,11 @@ func (t *Tgbot) handleCallbackQuery(bot *telego.Bot, update telego.Update) {
 		t.SendMsgToTgbot(chatID, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", strings.ToUpper(configType)))
 		t.remoteCreateOneClickInbound(configType, chatID)
 		
-		// 使用位置参数 AnswerCallbackQuery
+
 		bot.AnswerCallbackQuery(
+            ctx,
 			update.CallbackQuery.ID,
-			telego.WithText("配置已创建，二维码/配置已发送至管理员私信。"),
+			telego.WithText("配置已创建，二维码/配置已发送至管理员私信。").String(),
 		)
 		return
 	}
@@ -3649,8 +3660,7 @@ func (t *Tgbot) handleCallbackQuery(bot *telego.Bot, update telego.Update) {
 	if data == "confirm_sub_install" {
 		t.SendMsgToTgbot(chatID, "🛠️ **已接收到订阅转换安装指令，** 后台正在异步执行...")
 
-		// 调用 web/service/server.go 中的 InstallSubconverter() 方法。
-		// 该方法内部自带 go func() 异步执行和通知逻辑。
+		// 调用 ServerService 的 InstallSubconverter() 方法。
 		err := t.serverService.InstallSubconverter() 
 		
         if err != nil {
@@ -3659,11 +3669,11 @@ func (t *Tgbot) handleCallbackQuery(bot *telego.Bot, update telego.Update) {
             t.SendMsgToTgbot(chatID, "✅ **安装指令已成功发送到后台。**\n\n请等待安装完成的管理员通知。")
         }
         
-		// 无论启动是否成功，都回答回调查询 
-        bot.AnswerCallbackQuery(update.CallbackQuery.ID) // 最简形式，只传 ID
+		// 无论启动是否成功，都回答回调查询
+        bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID)
 		return
 	}
 	
-	// 默认回答，避免用户界面卡住 
-    bot.AnswerCallbackQuery(update.CallbackQuery.ID, telego.WithText("操作已完成"))
+	// 默认回答，避免用户界面卡住
+    bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID, telego.WithText("操作已完成").String())
 }
