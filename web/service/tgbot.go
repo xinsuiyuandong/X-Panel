@@ -121,8 +121,8 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 
     // 监听所有回调查询，并交给 handleCallbackQuery 处理
     botHandler.HandleCallbackQuery(func(up telego.Update) {
-    // 调用方法时，传入全局的 bot 变量
-    t.handleCallbackQuery(bot, up) 
+    // 调用修正后的方法，只传递 update 参数。
+    t.handleCallbackQuery(up) 
     })
 	
 	// Initialize hash storage to store callback queries
@@ -3585,26 +3585,25 @@ func (n namedReader) Name() string {
 	return n.name
 }
 
-// 【最终修正后的函数签名】: 包含 bot 和 update 参数，以兼容 telegohandler
-func (t *Tgbot) handleCallbackQuery(bot *telego.Bot, update telego.Update) {
+// 签名修正为 func(update telego.Update)，以兼容 telegohandler 
+func (t *Tgbot) handleCallbackQuery(update telego.Update) {
 	if update.CallbackQuery == nil {
 		return
 	}
     
-	// 尝试安全地获取消息对象和 ID 
+    ctx := context.Background()
+
+	// 强制获取消息对象和 ID
 	msg := update.CallbackQuery.Message 
 	if msg == nil {
 		logger.Error("TG Bot: CallbackQuery 消息对象为空，无法编辑或获取 ChatID。")
-        // 使用结构体参数 AnswerCallbackQueryParams
-		bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{
-			CallbackQueryID: update.CallbackQuery.ID,
-			Text:            "操作失败，请重试或联系管理员",
-            ShowAlert:       true,
-		})
+        // 使用 v1.3.0 的位置参数 AnswerCallbackQuery(ctx, id)
+		// AnswerCallbackQuery 的最简形式是 AnswerCallbackQuery(ctx, id)
+		bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID) 
 		return
 	}
 
-	// 假设这些字段可以被访问
+	// 假设这些字段可以被访问 
 	chatID := msg.Chat.ID
 	messageID := msg.MessageID
 
@@ -3612,20 +3611,19 @@ func (t *Tgbot) handleCallbackQuery(bot *telego.Bot, update telego.Update) {
 	data, err := t.decodeQuery(update.CallbackQuery.Data)
     if err != nil {
         logger.Errorf("TG Bot: decodeQuery 失败: %v", err)
-        bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{
-            CallbackQueryID: update.CallbackQuery.ID,
-            Text: "数据解析失败。",
-        })
+        // 最简形式 AnswerCallbackQuery(ctx, id)
+        bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID)
         return
     }
 
-	// 移除键盘
-	// EditMessageReplyMarkup 必须使用结构体指针参数
-	_, err = bot.EditMessageReplyMarkup(&telego.EditMessageReplyMarkupParams{
-		ChatID:      tu.ID(chatID),
-		MessageID:   messageID,
-		ReplyMarkup: nil, // 关键：传入 nil 移除键盘
-	})
+	// 【v1.3.0 修正】：移除键盘。
+	// EditMessageReplyMarkup 的签名是 func(ctx, chatID, messageID, inlineKeyboardMarkup)
+	_, err = bot.EditMessageReplyMarkup(
+		ctx,
+        tu.ID(chatID),
+		messageID,
+		nil, // 直接传入 nil 移除键盘
+	)
 	if err != nil {
 		logger.Warningf("TG Bot: 移除内联键盘失败: %v", err)
 	}
@@ -3639,11 +3637,12 @@ func (t *Tgbot) handleCallbackQuery(bot *telego.Bot, update telego.Update) {
 		t.SendMsgToTgbot(chatID, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", strings.ToUpper(configType)))
 		t.remoteCreateOneClickInbound(configType, chatID)
 		
-		// 标记回调已处理
-		bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{
-			CallbackQueryID: update.CallbackQuery.ID,
-			Text:            "配置已创建，请查收管理员私信。",
-		})
+		// 解决 L3643 报错：AnswerCallbackQuery(ctx, id, text)
+		bot.AnswerCallbackQuery(
+            ctx,
+			update.CallbackQuery.ID,
+            "配置已创建，请查收管理员私信。",
+		)
 		return
 	}
 
@@ -3662,16 +3661,11 @@ func (t *Tgbot) handleCallbackQuery(bot *telego.Bot, update telego.Update) {
             t.SendMsgToTgbot(chatID, "✅ **安装指令已成功发送到后台。**\n\n请等待安装完成的管理员通知。")
         }
         
-		// 无论启动是否成功，都回答回调查询
-        bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{
-            CallbackQueryID: update.CallbackQuery.ID,
-        })
+		// AnswerCallbackQuery(ctx, id)
+        bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID)
 		return
 	}
 	
-	// 默认回答，避免用户界面卡住
-    bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{
-        CallbackQueryID: update.CallbackQuery.ID,
-        Text:            "操作已完成。",
-    })
+	// 默认回答，避免用户界面卡住 
+    bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID, "操作已完成。")
 }
