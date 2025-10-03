@@ -21,6 +21,7 @@ import (
     "os/exec"          // 新增：用于 exec.Command（getDomain 等）
     "path/filepath"    // 新增：用于 filepath.Base / Dir（getDomain 用到）
 	"bytes"            // 新增 bytes 包，用于处理内存中的二进制数据（二维码图片）
+	"io"
 
 	"x-ui/config"
 	"x-ui/database"
@@ -3394,12 +3395,14 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool) err
 	for _, adminId := range adminIds {
 		photo := tu.Photo(
 			tu.ID(adminId),
-			telego.InputFile{ 
-                // File 字段接受 io.Reader (二维码数据流)
-                File: bytes.NewReader(qrCodeBytes), 
-                // Name 字段接受文件名
-                Name: "qrcode.png", 
-            },
+			telego.InputFile{
+            // 在 v1.3.0 中，File 字段是唯一用来承载文件的字段，
+            // 且它要求值实现 Name() 方法（我们使用 namedReader 实现了它）。
+                File: namedReader{
+                    Reader: bytes.NewReader(qrCodeBytes),
+                    name:   "qrcode.png",
+                },
+             },
         ).WithCaption(caption).WithParseMode(telego.ModeMarkdown)
 
 		_, err := bot.SendPhoto(context.Background(), photo)
@@ -3550,4 +3553,16 @@ func (t *Tgbot) saveLinkToHistory(linkType string, link string) {
 		logger.Warningf("保存链接历史到数据库失败: %v", err)
 	}
 	database.Checkpoint()
+}
+
+// ----------------------------------------------------------------------
+// 兼容 telego v1.3.0 版本的 InputFile 要求，手动实现 NamedReader 接口。
+// ----------------------------------------------------------------------
+type namedReader struct {
+	io.Reader
+	name string
+}
+
+func (n namedReader) Name() string {
+	return n.name
 }
