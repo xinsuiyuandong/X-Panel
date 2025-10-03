@@ -87,7 +87,7 @@ func runWebServer() {
 
 		// 〔中文注释〕: 步骤一：在循环外部，只声明一次 tgBotService 变量。
 		// 我们将其声明为接口类型，初始值为 nil。
-		var tgBotService global.TelegramService
+		var tgBotService service.TelegramService
 
 		// 〔中文注释〕: 步骤二：检查 Telegram Bot 是否在面板设置中启用。
 		settingService := service.SettingService{}
@@ -95,16 +95,12 @@ func runWebServer() {
 		if err != nil {
 			logger.Warningf("无法获取 Telegram Bot 设置: %v, 设备限制通知功能可能无法使用", err)
 		}
-        
-		if tgEnable {
-               tgBot := new(service.Tgbot)
-               // 【中文注释】: 此处赋值是正确的，因为 *service.Tgbot 实现了 global.TelegramService 接口
-               tgBotService = tgBot
-               global.TgBot = tgBot
-        } else {
-            global.TgBot = nil
-        }
 
+		// 〔中文注释〕: 步骤三：如果 Bot 已启用，则初始化实例并赋值给上面声明的变量。
+		// 注意这里使用的是 `=` 而不是 `:=`，因为我们是给已存在的变量赋值。
+		if tgEnable {
+			tgBotService = new(service.Tgbot)
+		}
 		
 		// 〔中文注释〕：步骤四：创建任务实例时，将 xrayService 和 可能为 nil 的 tgBotService 一同传入。
 		// 这样做是安全的，因为 check_client_ip_job.go 内部的 SendMessage 调用前，会先判断服务实例是否可用。
