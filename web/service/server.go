@@ -993,35 +993,58 @@ func (s *ServerService) LoadLinkHistory() ([]*database.LinkHistory, error) {
 	return database.GetLinkHistory()
 }
 
-// 〔新增方法〕: 安装 Subconverter
-// 〔中文注释〕: 此方法用于接收前端请求，并执行 x-ui 脚本中的 subconverter 函数
+// 〔新增方法〕: 安装 Subconverter (异步执行)
+// 〔中文注释〕: 此方法用于接收前端或 TG 的请求，并执行 x-ui.sh 脚本中的 subconverter 函数
 func (s *ServerService) InstallSubconverter() error {
-    // 将脚本路径为 /usr/bin/x-ui
-    // 〔中文注释〕: 通常，安装脚本会将主命令软链接或复制到 /usr/bin/ 目录下，使其成为一个系统命令。
-    // 直接调用这个命令比调用源文件路径更规范，也能确保执行的是用户在命令行中使用的同一个脚本。
-    scriptPath := "/usr/bin/x-ui"
+	// 〔中文注释〕: 使用一个新的 goroutine 来执行耗时的安装任务，这样 API 可以立即返回
+	go func() {
+		// 〔中文注释〕: 检查全局的 TgBot 实例是否存在并且正在运行
+		if global.TgBot == nil || !global.TgBot.IsRunning() {
+			logger.Warning("TgBot 未运行，无法发送【订阅转换】状态通知。")
+			// 即使机器人未运行，安装流程也应继续，只是不发通知
+		}
 
-    // 〔中文注释〕: 检查脚本文件是否存在
-    if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-        errMsg := fmt.Sprintf("关键脚本文件未找到: %s，请确认面板是否正确安装。", scriptPath)
-        logger.Error(errMsg)
-        return fmt.Errorf(errMsg)
-    }
+                                  // 将脚本路径为 /usr/bin/x-ui
+                                  // 〔中文注释〕: 通常，安装脚本会将主命令软链接或复制到 /usr/bin/ 目录下，使其成为一个系统命令。
+                                  // 直接调用这个命令比调用源文件路径更规范，也能确保执行的是用户在命令行中使用的同一个脚本。
+		scriptPath := "/usr/bin/x-ui"
 
-    // 〔中文注释〕: 正确的调用方式是：命令是 "x-ui"，参数是 "subconverter"。
-    // exec.Command 的第一个参数是可执行文件，后续参数是传递给该文件的参数列表。
-    cmd := exec.Command(scriptPath, "subconverter")
+                                  // 〔中文注释〕: 检查脚本文件是否存在
+		if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+			errMsg := fmt.Sprintf("订阅转换安装失败：关键脚本文件 `%s` 未找到。", scriptPath)
+			logger.Error(errMsg)
+			if global.TgBot != nil && global.TgBot.IsRunning() {
+				// 〔中文注释〕: 使用 Markdown 格式发送错误消息
+				global.TgBot.SendMessage("❌ " + errMsg)
+			}
+			return
+		}
 
-    // 〔中文注释〕: 执行命令并获取其合并的输出（标准输出 + 标准错误），方便排查问题。
-    // 〔重要〕: 这个命令可能需要几分钟才能执行完毕，Go程序会在此等待直到脚本执行完成。
-    output, err := cmd.CombinedOutput()
-    if err != nil {
-        // 〔中文注释〕: 如果脚本执行失败，记录详细日志并返回一个包含输出信息的错误。
-        logger.Errorf("从后端API执行安装 Subconverter 失败: %v, 输出: %s", err, string(output))
-        return fmt.Errorf("脚本执行失败: %s", string(output))
-    }
+                                  // 〔中文注释〕: 正确的调用方式是：命令是 "x-ui"，参数是 "subconverter"。
+		cmd := exec.Command(scriptPath, "subconverter")
 
-    // 〔中文注释〕: 如果脚本执行成功，记录成功信息并返回 nil (代表没有错误)。
-    logger.Infof("后端API已成功触发 Subconverter 安装脚本。")
-    return nil
+                                  // 〔中文注释〕: 执行命令并获取其合并的输出（标准输出 + 标准错误），方便排查问题。
+                                  // 〔重要〕: 这个命令可能需要几分钟才能执行完毕，Go程序会在此等待直到脚本执行完成。
+		output, err := cmd.CombinedOutput()
+
+		if err != nil {
+			errorMsg := fmt.Sprintf("❌ **订阅转换安装失败！**\n\n**错误详情**:\n`%s`", string(output))
+			logger.Errorf("执行脚本 '%s subconverter' 失败: %v, 输出: %s", scriptPath, err, string(output))
+			if global.TgBot != nil && global.TgBot.IsRunning() {
+				global.TgBot.SendMessage(errorMsg)
+			}
+			return
+		}
+
+		logger.Infof("脚本 '%s subconverter' 执行成功。", scriptPath)
+
+		// 〔中文注释〕: 安装成功后，调用 TG 服务发送成功通知
+		if global.TgBot != nil && global.TgBot.IsRunning() {
+			// 〔中文注释〕: 直接调用 tgbot.go 中新增的 SendSubconverterSuccess 方法
+			// 该方法内部会自己获取域名并发送格式化好的消息
+			global.TgBot.SendSubconverterSuccess()
+		}
+	}()
+
+	return nil // 立即返回，表示指令已接收
 }
