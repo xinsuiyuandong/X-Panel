@@ -46,6 +46,9 @@ type TelegramService interface {
 	SendSubconverterSuccess()
 	IsRunning() bool
 	// 您可以根据 server.go 的需要，在这里继续扩展接口
+	// 〔中文注释〕: 将 SendOneClickConfig 方法添加到接口中，这样其他服务可以通过接口来调用它，
+	// 实现了与具体实现 Tgbot 的解耦。
+	SendOneClickConfig(inbound *model.Inbound, inFromPanel bool) error
 }
 
 var (
@@ -3153,10 +3156,10 @@ func (t *Tgbot) buildRealityInbound() (*model.Inbound, error) {
 	privateKey, publicKey := keyPair["privateKey"].(string), keyPair["publicKey"].(string)
 	uuid := uuidMsg["uuid"]
 	remark := t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
-	port := int(common.RandomInt(10000, 55535))
+	port := 10000 + common.RandomInt(55535 - 10000 + 1)
 
 	realityDests := []string{"tesla.com:443", "sega.com:443", "apple.com:443", "icloud.com:443", "lovelive-anime.jp:443", "meta.com:443"}
-	randomDest := realityDests[int(common.RandomInt(0, int64(len(realityDests))))]
+	randomDest := realityDests[common.RandomInt(len(realityDests))]
 	randomSni := strings.Split(randomDest, ":")[0]
 	shortIds := t.generateShortIds()
 
@@ -3269,7 +3272,7 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
 	uuid := uuidMsg["uuid"]
 	remark := t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 	allowedPorts := []int{2053, 2083, 2087, 2096, 8443}
-	port := allowedPorts[int(common.RandomInt(0, int64(len(allowedPorts))))]
+	port := allowedPorts[common.RandomInt(len(allowedPorts))]
 	path := "/" + t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 	certPath := fmt.Sprintf("/root/cert/%s/fullchain.pem", domain)
 	keyPath := fmt.Sprintf("/root/cert/%s/privkey.pem", domain)
@@ -3422,8 +3425,8 @@ func (t *Tgbot) generateRealityLink(inbound *model.Inbound) (string, error) {
 	sni := serverNames[0].(string)
 	publicKey := realitySettings["publicKey"].(string)
 
-	shortIds := realitySettings["shortIds"].([]interface{})
-	sid := shortIds[int(common.RandomInt(0, int64(len(shortIds))))].(string)
+	shortIdsInterface := realitySettings["shortIds"].([]interface{})
+	sid := shortIdsInterface[common.RandomInt(len(shortIdsInterface))].(string)
 
 	domain, err := t.getDomain()
 	if err != nil {
