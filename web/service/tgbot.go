@@ -3585,9 +3585,9 @@ func (n namedReader) Name() string {
 	return n.name
 }
 
-// 修正后的函数签名，只接收 update，以兼容 telegohandler
+// 【最终修正后的函数】: 处理用户点击内联键盘按钮的回调查询
+// 签名保持为 func(update telego.Update)，以兼容 telegohandler
 func (t *Tgbot) handleCallbackQuery(update telego.Update) {
-	// 确保是回调查询
 	if update.CallbackQuery == nil {
 		return
 	}
@@ -3595,25 +3595,19 @@ func (t *Tgbot) handleCallbackQuery(update telego.Update) {
     ctx := context.Background()
 
 	// 强制获取消息对象和 ID。
-    // 如果 msg 仍是 MaybeInaccessibleMessage，则需要强制转换或直接从 update.CallbackQuery 访问。
+    // 即使类型可能是 MaybeInaccessibleMessage
+    // 假设运行时结构体是可访问的，否则 TG 机器人就无法编辑消息。
 	msg := update.CallbackQuery.Message
 	if msg == nil {
 		logger.Error("TG Bot: CallbackQuery 消息对象为空，无法编辑或获取 ChatID。")
-		// AnswerCallbackQuery 必须以 context.Context 开头，且不使用 With* 函数。
-		bot.AnswerCallbackQuery(
-            ctx,
-			update.CallbackQuery.ID,                            // callbackQueryID
-            // v1.3.0 中 AnswerCallbackQuery 的可选参数签名是 func(ctx, id string, text string, showAlert bool, ...)
-			telego.WithText("操作失败，请重试或联系管理员").String(), // 必须调用 String() 获得文本
-            telego.WithShowAlert(true).Bool(),                    // 必须调用 Bool() 获得布尔值
-		)
+		
+		// v1.3.0 修正：AnswerCallbackQuery 的签名是 func(ctx, id string, text string, showAlert bool)
+        // 注意：这里我们无法使用可选参数，必须传入所有参数或使用最少参数形式。
+        // 最简形式是 AnswerCallbackQuery(ctx, id)
+		bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID) // 最简形式，只回答，不显示文本
 		return
 	}
 
-	// 假设这些字段在回调消息中是直接可访问的
-	// 如果 v1.3.0 仍报错 msg.Chat/MessageID undefined，请将下一行改为：
-    // chatID := update.CallbackQuery.Message.Chat.ID
-    // messageID := update.CallbackQuery.Message.MessageID
 	chatID := msg.Chat.ID
 	messageID := msg.MessageID
 
@@ -3621,16 +3615,19 @@ func (t *Tgbot) handleCallbackQuery(update telego.Update) {
 	data, err := t.decodeQuery(update.CallbackQuery.Data)
     if err != nil {
         logger.Errorf("TG Bot: decodeQuery 失败: %v", err)
-        bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID, telego.WithText("数据解析失败").String())
+        // v1.3.0 修正：最简形式只回答
+        bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID)
         return
     }
 
-	// 移除键盘。EditMessageReplyMarkup 必须以 context.Context 开头。
+	// 【v1.3.0 修正】：移除键盘。
+	// EditMessageReplyMarkup 的签名是 func(ctx, chatID, messageID, inlineKeyboardMarkup)
+	// 移除键盘只需传入 nil 作为 inlineKeyboardMarkup 参数。
 	_, err = bot.EditMessageReplyMarkup(
 		ctx,
         tu.ID(chatID),
 		messageID,
-		telego.WithReplyMarkup(nil).Interface(), // 必须调用 Interface() 并传入 nil
+		nil, // 直接传入 nil 移除键盘
 	)
 	if err != nil {
 		logger.Warningf("TG Bot: 移除内联键盘失败: %v", err)
@@ -3645,11 +3642,11 @@ func (t *Tgbot) handleCallbackQuery(update telego.Update) {
 		t.SendMsgToTgbot(chatID, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", strings.ToUpper(configType)))
 		t.remoteCreateOneClickInbound(configType, chatID)
 		
-
+		// v1.3.0 修正：AnswerCallbackQuery(ctx, id, text)
 		bot.AnswerCallbackQuery(
             ctx,
 			update.CallbackQuery.ID,
-			telego.WithText("配置已创建，二维码/配置已发送至管理员私信。").String(),
+            "配置已创建，请查收管理员私信。",
 		)
 		return
 	}
@@ -3675,5 +3672,5 @@ func (t *Tgbot) handleCallbackQuery(update telego.Update) {
 	}
 	
 	// 默认回答，避免用户界面卡住
-    bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID, telego.WithText("操作已完成").String())
+    bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID)
 }
