@@ -2,7 +2,6 @@ package controller
 
 import (
 	"x-ui/web/service"
-	"x-ui/web/global"
 
 	"github.com/gin-gonic/gin"
 )
