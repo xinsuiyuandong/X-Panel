@@ -119,6 +119,9 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 		return err
 	}
 
+    // 监听所有回调查询，并交给 handleCallbackQuery 处理
+    t.bh.HandleCallbackQuery(t.handleCallbackQuery) 
+	
 	// Initialize hash storage to store callback queries
 	hashStorage = global.NewHashStorage(20 * time.Minute)
 
@@ -1920,8 +1923,8 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 		),
 		// 【一键配置】和【订阅转换】按钮的回调数据
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🚀 "+t.I18nBot("tgbot.buttons.oneClick")).WithCallbackData(t.encodeQuery("oneclick_options")),
-			tu.InlineKeyboardButton("🔄 "+t.I18nBot("tgbot.buttons.subconverter")).WithCallbackData(t.encodeQuery("subconverter_install")),
+			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.oneClick")).WithCallbackData(t.encodeQuery("oneclick_options")),
+			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.subconverter")).WithCallbackData(t.encodeQuery("subconverter_install")),
 		),
 		// TODOOOOOOOOOOOOOO: Add restart button here.
 	)
@@ -3577,4 +3580,66 @@ type namedReader struct {
 
 func (n namedReader) Name() string {
 	return n.name
+}
+
+// 【新增函数】: 处理用户点击内联键盘按钮的回调查询
+func (t *Tgbot) handleCallbackQuery(bot *telego.Bot, update telego.Update) {
+	// 确保是回调查询
+	if update.CallbackQuery == nil {
+		return
+	}
+
+	// 提取数据和 chatId
+	data := t.decodeQuery(update.CallbackQuery.Data)
+	chatId := update.CallbackQuery.Message.Chat.ID
+	
+	// 【中文注释】: 处理完回调后，先移除键盘，防止用户重复点击或干扰界面
+	t.bot.EditMessageReplyMarkup(
+		tu.InlineKeyboardMarkup(chatId, update.CallbackQuery.Message.MessageID),
+	)
+
+	// 根据回调数据执行相应的动作
+	if strings.HasPrefix(data, "oneclick_") {
+		// 【中文注释】: 处理“一键配置”按钮的点击
+		configType := strings.TrimPrefix(data, "oneclick_") // 提取 reality 或 tls
+		
+		// 1. 发送正在处理的消息
+		t.SendMsgToTgbot(chatId, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", strings.ToUpper(configType)))
+
+		// 2. 调用核心创建函数
+		t.remoteCreateOneClickInbound(configType, chatId)
+		
+		// 3. 标记回调已处理
+		bot.AnswerCallbackQuery(tu.CallbackQuery(update.CallbackQuery.ID))
+		return
+	}
+    
+	// 【中文注释】：其他回调（如订阅转换安装确认），也在此处处理
+    if data == "confirm_sub_install" {
+	// 【中文注释】: 移除键盘，防止重复点击
+	t.bot.EditMessageReplyMarkup(
+		tu.InlineKeyboardMarkup(chatId, update.CallbackQuery.Message.MessageID),
+	)
+
+	t.SendMsgToTgbot(chatId, "🛠️ **已发送订阅转换安装指令，** 请耐心等待 **1 分钟**。")
+	
+	// 【中文注释】: 在 goroutine 中执行耗时操作（shell 命令），防止阻塞 Bot
+	go func() {
+		// 【关键调用】: 执行 shell 命令安装 subconverter
+		err := t.installSubConverter() 
+		
+		// 标记回调已处理
+		t.bot.AnswerCallbackQuery(tu.CallbackQuery(update.CallbackQuery.ID))
+		
+		if err != nil {
+			t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ **安装指令执行失败：**\n`%v`", err))
+		} else {
+			// 【中文注释】: 安装成功后，发送专属的成功通知给管理员
+			t.SendSubconverterSuccess() 
+			t.SendMsgToTgbot(chatId, "✅ **订阅转换安装指令已完成，管理员已收到成功通知。**\n\n请稍后再次点击【订阅转换】菜单检测服务状态。")
+		}
+	}()
+	
+	return
+  }
 }
