@@ -87,7 +87,7 @@ func runWebServer() {
 
 		// 〔中文注释〕: 步骤一：在循环外部，只声明一次 tgBotService 变量。
 		// 我们将其声明为接口类型，初始值为 nil。
-		var tgBotService service.TelegramService
+		var tgBotService global.TelegramService
 
 		// 〔中文注释〕: 步骤二：检查 Telegram Bot 是否在面板设置中启用。
 		settingService := service.SettingService{}
@@ -95,20 +95,13 @@ func runWebServer() {
 		if err != nil {
 			logger.Warningf("无法获取 Telegram Bot 设置: %v, 设备限制通知功能可能无法使用", err)
 		}
-
-		// 〔中文注释〕: 步骤三：如果 Bot 已启用，则初始化实例并赋值给上面声明的变量。
-		// 注意这里使用的是 `=` 而不是 `:=`，因为我们是给已存在的变量赋值。
-        if tgEnable {
-               // 中文注释：当设置中启用了 Telegram Bot 时，我们初始化一个 Tgbot 实例
+        
+		if tgEnable {
                tgBot := new(service.Tgbot)
-
-              // 中文注释：赋值给局部变量（保持原逻辑，tgBotService 依旧可用）
+               // 【中文注释】: 此处赋值是正确的，因为 *service.Tgbot 实现了 global.TelegramService 接口
                tgBotService = tgBot
-
-              // 中文注释：把它注册到全局变量 global.TgBot（接口赋值，避免循环依赖）
                global.TgBot = tgBot
         } else {
-            // 中文注释：如果未启用，则确保全局变量为空，避免误用
             global.TgBot = nil
         }
 
