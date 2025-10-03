@@ -174,6 +174,8 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 			{Command: "help", Description: t.I18nBot("tgbot.commands.helpDesc")},
 			{Command: "status", Description: t.I18nBot("tgbot.commands.statusDesc")},
 			{Command: "id", Description: t.I18nBot("tgbot.commands.idDesc")},
+			{Command: "oneclick", Description: "🚀 一键配置节点 (有可选项)"},
+			{Command: "subconverter", Description: "🔄 检测或安装订阅转换"},
 		},
 	})
 	if err != nil {
