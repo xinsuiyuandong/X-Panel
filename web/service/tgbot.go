@@ -191,10 +191,29 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
     }
 
     // -----------------------------
-    // 注册回调处理函数
+    // 注册普通消息处理函数（处理 /start, /help 等）
+    // -----------------------------
+    botHandler.HandleMessage(func(ctx *th.Context, msg *telego.Message) error {
+        if msg == nil || msg.Chat == nil || msg.Text == "" {
+            return nil
+        }
+
+        switch msg.Text {
+        case "/start":
+            t.SendMsgToTgbot(msg.Chat.ID, "欢迎使用机器人！")
+        case "/help":
+            t.SendMsgToTgbot(msg.Chat.ID, "可用命令：/start /help /status /id /oneclick /subconverter")
+        default:
+            t.SendMsgToTgbot(msg.Chat.ID, "收到消息：" + msg.Text)
+        }
+        return nil
+    })
+
+    // -----------------------------
+    // 注册回调处理函数（按钮点击）
     // -----------------------------
     botHandler.HandleCallbackQuery(
-        t.handleCallbackQuery,
+        t.handleCallbackQuery, // func(ctx *th.Context, cq telego.CallbackQuery) error
         th.AnyCallbackQueryWithMessage(),
     )
 
