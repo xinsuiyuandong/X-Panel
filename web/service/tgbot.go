@@ -3394,7 +3394,10 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool) err
 	for _, adminId := range adminIds {
 		photo := tu.Photo(
 			tu.ID(adminId),
-			tu.FileWithReader(bytes.NewReader(qrCodeBytes), "qrcode.png"), 
+			tu.InputFile(
+              "qrcode.png", // 文件名
+               bytes.NewReader(qrCodeBytes), // 文件内容的 io.Reader
+           ),
         ).WithCaption(caption).WithParseMode(telego.ModeMarkdown)
 
 		_, err := bot.SendPhoto(context.Background(), photo)
