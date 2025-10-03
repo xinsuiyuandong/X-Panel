@@ -17,9 +17,8 @@ type TgBotInterface interface {
 var (
 	webServer WebServer
 	subServer SubServer
-	// 中文注释：在这里新增一个全局变量，用于存放 Telegram Bot 实例
-	// 这样其他文件（server.go、inbound.go 等）就能通过 global.TgBot 调用它
-	TgBot TgBotInterface
+	// 新增：全局的 Telegram Bot 引用（接口类型）
+	TgBot TelegramService
 )
 
 type WebServer interface {
@@ -45,4 +44,9 @@ func SetSubServer(s SubServer) {
 
 func GetSubServer() SubServer {
 	return subServer
+}
+
+// 〔中文注释〕: 设置 / 获取全局 TgBot 引用（由 main 或 service 在启动时注入）。
+func SetTgBot(t TelegramService) {
+	TgBot = t
 }
