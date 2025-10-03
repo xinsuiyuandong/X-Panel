@@ -38,15 +38,6 @@ import (
 	"github.com/valyala/fasthttp/fasthttpproxy"
 )
 
-// 〔中文注释〕: 新增 TelegramService 接口，用于解耦 Job 和 Telegram Bot 的直接依赖。
-// 任何实现了 SendMessage(msg string) error 方法的结构体，都可以被认为是 TelegramService。
-type TelegramService interface {
-	SendMessage(msg string) error
-	SendSubconverterSuccess()
-	IsRunning() bool
-	// 您可以根据 server.go 的需要，在这里继续扩展接口
-}
-
 var (
 	bot         *telego.Bot
 	botHandler  *th.BotHandler
