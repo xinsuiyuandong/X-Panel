@@ -20,6 +20,7 @@ import (
     "crypto/tls"       // 新增：用于 tls.Config
     "os/exec"          // 新增：用于 exec.Command（getDomain 等）
     "path/filepath"    // 新增：用于 filepath.Base / Dir（getDomain 用到）
+	"bytes"            // 新增 bytes 包，用于处理内存中的二进制数据（二维码图片）
 
 	"x-ui/config"
 	"x-ui/database"
@@ -36,6 +37,8 @@ import (
 	tu "github.com/mymmrac/telego/telegoutil"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpproxy"
+	// 新增 qrcode 包，用于生成二维码
+	"github.com/skip2/go-qrcode"
 )
 
 
@@ -3391,7 +3394,7 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool) err
 	for _, adminId := range adminIds {
 		photo := tu.Photo(
 			tu.ID(adminId),
-			tu.File(bytes.NewReader(qrCodeBytes), "qrcode.png"),
+			tu.NamedReader(bytes.NewReader(qrCodeBytes), "qrcode.png"),
 		).WithCaption(caption).WithParseMode(telego.ModeMarkdown)
 
 		_, err := bot.SendPhoto(context.Background(), photo)
