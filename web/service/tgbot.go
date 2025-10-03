@@ -120,10 +120,9 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 	}
 
     // 监听所有回调查询，并交给 handleCallbackQuery 处理
-    botHandler.HandleCallbackQuery(func(bot *telego.Bot, update telego.Update) {
-    // 在这里调用带接收者的方法 t.handleCallbackQuery
-    // 这样 t 就可以被正确引用了
-    t.handleCallbackQuery(bot, update)
+    botHandler.HandleCallbackQuery(func(up telego.Update) {
+    // 闭包内部，方法 t.handleCallbackQuery，只传递 update 参数。
+       t.handleCallbackQuery(up) 
     })
 	
 	// Initialize hash storage to store callback queries
@@ -3587,17 +3586,17 @@ func (n namedReader) Name() string {
 }
 
 // 【完整修正后的函数】: 处理用户点击内联键盘按钮的回调查询
-func (t *Tgbot) handleCallbackQuery(bot *telego.Bot, update telego.Update) {
+func (t *Tgbot) handleCallbackQuery(update telego.Update) {
 	// 确保是回调查询
 	if update.CallbackQuery == nil {
 		return
 	}
 
-	// 【中文注释】: 尝试安全地获取消息对象和 ID
+	// 尝试安全地获取消息对象和 ID
 	msg := update.CallbackQuery.Message
 	if msg == nil {
 		logger.Error("TG Bot: CallbackQuery 消息对象为空，无法编辑或获取 ChatID。")
-		// 【修正 1】: 立即回答回调，防止用户界面转圈
+		// 解决 AnswerCallbackQuery 参数不足的报错
 		bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{
 			CallbackQueryID: update.CallbackQuery.ID,
 			Text:            "操作失败，请重试或联系管理员",
@@ -3605,16 +3604,23 @@ func (t *Tgbot) handleCallbackQuery(bot *telego.Bot, update telego.Update) {
 		return
 	}
 
-	// 【修正 2】: 从 Message 对象中安全获取 ID
+	// 从 Message 对象中安全获取 ID
 	chatID := msg.Chat.ID
 	messageID := msg.MessageID
 	
-	// 提取回调数据
-	data := t.decodeQuery(update.CallbackQuery.Data)
+	// 提取回调数据，必须捕获错误
+	data, err := t.decodeQuery(update.CallbackQuery.Data)
+    if err != nil {
+        logger.Errorf("TG Bot: decodeQuery 失败: %v", err)
+        bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{
+			CallbackQueryID: update.CallbackQuery.ID,
+			Text:            "数据解析失败。",
+		})
+        return
+    }
 
-	// 【修正 3】: 处理完回调后，先移除键盘（将 ReplyMarkup 设为 nil 即可），防止用户重复点击。
-	// 使用传入的 bot 参数进行 API 调用。
-	_, err := bot.EditMessageReplyMarkup(&telego.EditMessageReplyMarkupParams{
+	// 移除键盘
+	_, err = bot.EditMessageReplyMarkup(&telego.EditMessageReplyMarkupParams{
 		ChatID:      tu.ID(chatID),
 		MessageID:   messageID,
 		ReplyMarkup: nil, // 关键：将 ReplyMarkup 置为 nil 即可移除键盘
@@ -3627,16 +3633,14 @@ func (t *Tgbot) handleCallbackQuery(bot *telego.Bot, update telego.Update) {
 	// 1. 处理【一键配置】按钮的点击
 	// ------------------------------------
 	if strings.HasPrefix(data, "oneclick_") {
-		// 【中文注释】: 处理“一键配置”按钮的点击
-		configType := strings.TrimPrefix(data, "oneclick_") // 提取 reality 或 tls
+		configType := strings.TrimPrefix(data, "oneclick_")
 		
-		// 1. 发送正在处理的消息
 		t.SendMsgToTgbot(chatID, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", strings.ToUpper(configType)))
 
-		// 2. 调用核心创建函数（该函数内部应包含 SendOneClickConfig 通知逻辑）
+		// 通知逻辑已包含在 remoteCreateOneClickInbound 内部
 		t.remoteCreateOneClickInbound(configType, chatID)
 		
-		// 3. 【修正 4】: 标记回调已处理，给用户一个提示。
+		// 标记回调已处理
 		bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{
 			CallbackQueryID: update.CallbackQuery.ID,
 			Text:            "配置已创建，请查收管理员私信。",
@@ -3647,32 +3651,28 @@ func (t *Tgbot) handleCallbackQuery(bot *telego.Bot, update telego.Update) {
 	// ------------------------------------
 	// 2. 处理【订阅转换安装确认】
 	// ------------------------------------
-	// 【中文注释】：其他回调（如订阅转换安装确认），也在此处处理
 	if data == "confirm_sub_install" {
-		t.SendMsgToTgbot(chatID, "🛠️ **已发送订阅转换安装指令，** 请耐心等待 **1 分钟**。")
+		t.SendMsgToTgbot(chatID, "🛠️ **已接收到订阅转换安装指令，** 后台正在异步执行...")
 		
-		// 【中文注释】: 在 goroutine 中执行耗时操作（shell 命令），防止阻塞 Bot
-		go func() {
-			// 【关键调用】: 执行 shell 命令安装 subconverter
-			err := t.installSubConverter() 
-			
-			// 【修正 5】: 在 goroutine 内部回答回调，确保 UI 响应
-			bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{
-				CallbackQueryID: update.CallbackQuery.ID,
-			})
-			
-			if err != nil {
-				t.SendMsgToTgbot(chatID, fmt.Sprintf("❌ **安装指令执行失败：**\n`%v`", err))
-			} else {
-				// 【中文注释】: 安装成功后，发送专属的成功通知给管理员
-				t.SendSubconverterSuccess() 
-				t.SendMsgToTgbot(chatID, "✅ **订阅转换安装指令已完成，管理员已收到成功通知。**\n\n请稍后再次点击【订阅转换】菜单检测服务状态。")
-			}
-		}()
+		// 直接调用 ServerService 的 InstallSubconverter() 方法。
+		err := t.serverService.InstallSubconverter() 
+		
+        if err != nil {
+            // 理论上只有启动 goroutine 失败才会到这里
+            t.SendMsgToTgbot(chatID, fmt.Sprintf("❌ **安装指令启动失败：**\n`%v`", err))
+        } else {
+            // 异步执行已启动，通知用户成功
+            t.SendMsgToTgbot(chatID, "✅ **安装指令已成功发送到后台。**\n\n请等待安装完成的管理员通知。")
+        }
+        
+		// 无论启动是否成功，都回答回调查询
+        bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{
+            CallbackQueryID: update.CallbackQuery.ID,
+        })
 		return
 	}
 	
-	// 【中文注释】: 默认回答，避免用户界面卡住
+	// 默认回答，避免用户界面卡住
     bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{
         CallbackQueryID: update.CallbackQuery.ID,
         Text:            "操作已完成。",
