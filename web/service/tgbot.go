@@ -3142,7 +3142,19 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 	}
 
 	logger.Infof("TG 机器人远程创建入站 %s 成功！", createdInbound.Remark)
-	// AddInbound 函数会自动触发通知，这里无需再次发送
+
+	// 【调用 TG Bot 专属的通知方法】
+    // inFromPanel 设置为 false，表示这是来自 TG 机器人的操作
+    // 之前 SendOneClickConfig 的 inbound 参数是 *model.Inbound，所以我们传入 createdInbound
+    err = t.SendOneClickConfig(createdInbound, false)
+    if err != nil {
+        // 如果发送通知失败，给用户一个提示，但不要中断流程
+        t.SendMsgToTgbot(chatId, fmt.Sprintf("⚠️ 入站创建成功，但通知消息发送失败: %v", err))
+        logger.Errorf("TG Bot: 远程创建入站成功，但发送通知失败: %v", err)
+    } else {
+        // 成功发送二维码/配置消息后，再给用户一个确认提示
+        t.SendMsgToTgbot(chatId, "✅ **入站已创建，二维码/配置已发送至管理员私信。**")
+    }
 }
 
 // 【新增函数】: 构建 Reality 配置对象 (1:1 复刻自 inbounds.html)
