@@ -23,6 +23,7 @@ import (
 	"x-ui/web/middleware"
 	"x-ui/web/network"
 	"x-ui/web/service"
+	"x-ui/web/global"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-contrib/sessions"
