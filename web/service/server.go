@@ -24,8 +24,7 @@ import (
 	"x-ui/util/common"
 	"x-ui/util/sys"
 	"x-ui/xray"
-	"x-ui/web/global"
-
+	
 	"github.com/google/uuid"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
