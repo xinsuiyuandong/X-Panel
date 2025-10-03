@@ -98,9 +98,17 @@ func runWebServer() {
 
 		// 〔中文注释〕: 步骤三：如果 Bot 已启用，则初始化实例并赋值给上面声明的变量。
 		// 注意这里使用的是 `=` 而不是 `:=`，因为我们是给已存在的变量赋值。
-		if tgEnable {
-			tgBotService = new(service.Tgbot)
-		}
+        if tgEnable {
+            // 中文注释：当设置中启用了 Telegram Bot 时，我们初始化一个 Tgbot 实例
+            tgBotService = new(service.Tgbot)
+
+            // 中文注释：同时把它赋值给全局变量 global.TgBot，供其他地方调用
+            global.TgBot = tgBotService.(*service.Tgbot)
+        } else {
+            // 中文注释：如果未启用，则确保全局变量为空，避免误用
+            global.TgBot = nil
+        }
+
 		
 		// 〔中文注释〕：步骤四：创建任务实例时，将 xrayService 和 可能为 nil 的 tgBotService 一同传入。
 		// 这样做是安全的，因为 check_client_ip_job.go 内部的 SendMessage 调用前，会先判断服务实例是否可用。
