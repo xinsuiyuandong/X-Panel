@@ -3394,11 +3394,13 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool) err
 	for _, adminId := range adminIds {
 		photo := tu.Photo(
 			tu.ID(adminId),
-			tu.InputFile(
-              "qrcode.png", // 文件名
-               bytes.NewReader(qrCodeBytes), // 文件内容的 io.Reader
-           ),
-        ).WithCaption(caption).WithParseMode(telego.ModeMarkdown)
+			telego.InputFile{ // 直接使用 telego 库中的 InputFile 结构体
+                // Filename 字段是可选的，但建议设置
+                Filename: "qrcode.png", 
+                // FileData 字段接受 io.Reader，即您的二维码数据流
+                Data:     bytes.NewReader(qrCodeBytes), 
+             },
+         ).WithCaption(caption).WithParseMode(telego.ModeMarkdown)
 
 		_, err := bot.SendPhoto(context.Background(), photo)
 		if err != nil {
