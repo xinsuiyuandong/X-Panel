@@ -1659,7 +1659,31 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			t.SendMsgToTgbot(chatId, t.I18nBot("tgbot.answers.errorOperation"), tu.ReplyKeyboardRemove())
 			return
 		}
-	 // 【新增代码】: 在这里处理新按钮的回调
+		
+		for _, valid_emails := range valid_emails {
+			traffic, err := t.inboundService.GetClientTrafficByEmail(valid_emails)
+			if err != nil {
+				logger.Warning(err)
+				msg := t.I18nBot("tgbot.wentWrong")
+				t.SendMsgToTgbot(chatId, msg)
+				continue
+			}
+			if traffic == nil {
+				msg := t.I18nBot("tgbot.noResult")
+				t.SendMsgToTgbot(chatId, msg)
+				continue
+			}
+
+			output := t.clientInfoMsg(traffic, false, false, false, false, true, false)
+			t.SendMsgToTgbot(chatId, output, tu.ReplyKeyboardRemove())
+		}
+		for _, extra_emails := range extra_emails {
+			msg := fmt.Sprintf("📧 %s\n%s", extra_emails, t.I18nBot("tgbot.noResult"))
+			t.SendMsgToTgbot(chatId, msg, tu.ReplyKeyboardRemove())
+
+		}
+
+		 // 【新增代码】: 在这里处理新按钮的回调
 	 case "oneclick_options":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "请选择配置类型...")
@@ -1694,30 +1718,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	 case "cancel_sub_install":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
-		 t.SendMsgToTgbot(chatId, "已取消【订阅转换】安装操作。")	
-
-		for _, valid_emails := range valid_emails {
-			traffic, err := t.inboundService.GetClientTrafficByEmail(valid_emails)
-			if err != nil {
-				logger.Warning(err)
-				msg := t.I18nBot("tgbot.wentWrong")
-				t.SendMsgToTgbot(chatId, msg)
-				continue
-			}
-			if traffic == nil {
-				msg := t.I18nBot("tgbot.noResult")
-				t.SendMsgToTgbot(chatId, msg)
-				continue
-			}
-
-			output := t.clientInfoMsg(traffic, false, false, false, false, true, false)
-			t.SendMsgToTgbot(chatId, output, tu.ReplyKeyboardRemove())
-		}
-		for _, extra_emails := range extra_emails {
-			msg := fmt.Sprintf("📧 %s\n%s", extra_emails, t.I18nBot("tgbot.noResult"))
-			t.SendMsgToTgbot(chatId, msg, tu.ReplyKeyboardRemove())
-
-		}
+		 t.SendMsgToTgbot(chatId, "已取消【订阅转换】安装操作。")		
 	}
 }
 
