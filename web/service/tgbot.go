@@ -175,18 +175,36 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 
 	// 监听所有回调查询，并交给 handleCallbackQuery 处理
 	// === 初始化 handler ===
-	botHandler = th.NewBotHandler(bot, updates)
+    // 在 Start(...) 中，确保在调用 handler 之前已经创建好 bot
+    bot, err = t.NewBot(tgBotToken, tgBotProxy, tgBotAPIServer)
+    if err != nil {
+        logger.Error("Failed to initialize Telegram bot API:", err)
+    return err
+    }
 
-	// === 注册回调处理 ===
-	botHandler.HandleCallbackQuery(
-		func(ctx *th.Context, cq telego.CallbackQuery) error {
-			return t.handleCallbackQuery(ctx, cq)
-		},
-		th.AnyCallbackQueryWithMessage(),
-	)
+    // 获取 updates（长轮询示例）
+    updates, err := bot.UpdatesViaLongPolling(context.Background(), nil)
+    if err != nil {
+       logger.Error("Failed to start updates via long polling:", err)
+    return err
+    }
 
-	// 启动 handler
-	go botHandler.Start()
+    // 创建 BotHandler，注意返回两个值
+    botHandler, err = th.NewBotHandler(bot, updates)
+    if err != nil {
+        logger.Error("Failed to create BotHandler:", err)
+    return err
+    }
+
+    // 注册回调处理函数（直接传方法）
+    botHandler.HandleCallbackQuery(
+        t.handleCallbackQuery,        // 方法签名必须是 func(ctx *th.Context, cq telego.CallbackQuery) error
+        th.AnyCallbackQueryWithMessage(),
+    )
+
+    // 启动 handler（协程）
+    go botHandler.Start()
+
 	
 	// After bot initialization, set up bot commands with localized descriptions
 	err = bot.SetMyCommands(context.Background(), &telego.SetMyCommandsParams{
@@ -3426,16 +3444,18 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool) err
     ctx := context.Background()
 
     for _, adminId := range adminIds {
-       params := tu.Photo(
+        photoParams := tu.Photo(
            tu.ID(adminId),
-           tu.FileFromBytes(qrCodeBytes, "qrcode.png"), 
-       ).WithCaption(caption).WithParseMode(telego.ModeMarkdown)
+           tu.FileFromBytes(qrCodeBytes, "qrcode.png"), // 推荐写法：内部会构造 InputFileUpload
+        ).WithCaption(caption).WithParseMode(telego.ModeMarkdown)
 
-    if _, err := bot.SendPhoto(ctx, params); err != nil {
-        logger.Warningf("发送带二维码的 TG 消息给 %d 失败: %v", adminId, err)
-        t.SendMsgToTgbot(adminId, caption)
+        if _, err := bot.SendPhoto(context.Background(), photoParams); err != nil {
+            logger.Warningf("发送带二维码的 TG 消息给 %d 失败: %v", adminId, err)
+            // fallback：别把此无返回值函数当作表达式
+            t.SendMsgToTgbot(adminId, caption)
+        }
      }
-    }
+
 
 
 	linkType := "vless_reality"
@@ -3582,73 +3602,61 @@ func (t *Tgbot) saveLinkToHistory(linkType string, link string) {
 }
 
 
-func (t *Tgbot) handleCallbackQuery(ctx *th.Context, query telego.CallbackQuery) error {
-    // 保证最终至少回答一次 callback query 避免界面卡住（会在各分支分别回答）
-    // 先处理 message 为空的情况
-    if query.Message == nil {
-        // 没有 message 可操作，返回前做一个最小回答
-        _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
+func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) error {
+    // 先确保有 Message 可用（MaybeInaccessibleMessage -> .Message）
+    if cq.Message == nil || cq.Message.Message == nil {
+        // 最小化答复，避免 UI 卡住
+        _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("消息对象不存在"))
         return nil
     }
 
-    // 从 MaybeInaccessibleMessage 安全取 chat 与 message id（v1.3.0 要用 GetChat / GetMessageID）
-    msgMaybe := query.Message
-    chat := msgMaybe.GetChat()       // telego.Chat
-    messageID := msgMaybe.GetMessageID() // int
+    // 取得 chat 与 messageID（v1.3.0 常用 cq.Message.Message）
+    msg := cq.Message.Message
+    chatIDInt64 := msg.Chat.ID      // int64
+    messageID := msg.MessageID      // int
 
-    // chat.ID 是 int64
-    chatID := tu.ID(chat.ID)
-
-    // 尝试解码回调数据（沿用你现有 decodeQuery）
-    data, err := t.decodeQuery(query.Data)
+    // 解码回调数据（你已有的 t.decodeQuery）
+    data, err := t.decodeQuery(cq.Data)
     if err != nil {
-        // 回答并退出
-        _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID).WithText("回调数据解析失败"))
+        _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("回调数据解析失败"))
         return nil
     }
 
-    // 【v1.3.0】移除内联键盘：用 telegoutil 的构造函数生成 params，然后传给 EditMessageReplyMarkup
-    _, err = ctx.Bot().EditMessageReplyMarkup(ctx, tu.EditMessageReplyMarkup(chatID, messageID, nil))
-    if err != nil {
-        // 仅记录，不返回错误（不要阻断后续逻辑）
-        log.Printf("TG Bot: 移除内联键盘失败: %v", err)
+    // 移除内联键盘（使用 telegoutil 构造 params）
+    if _, err := ctx.Bot().EditMessageReplyMarkup(ctx, tu.EditMessageReplyMarkup(tu.ID(chatIDInt64), messageID, nil)); err != nil {
+        logger.Warningf("TG Bot: 移除内联键盘失败: %v", err)
+        // 不阻塞后续逻辑
     }
 
-    // ---------- 分支 1：oneclick_xxx ----------
+    // ----- oneclick_ 开头的处理 -----
     if strings.HasPrefix(data, "oneclick_") {
         configType := strings.TrimPrefix(data, "oneclick_")
 
-        // 给用户提示（使用你原先的发送函数，如果存在）
-        // 这里假设 t.SendMsgToTgbot(chatIDInt64, text) 的签名：第一个参数为 int64（chat.ID）
-        // 若你的 SendMsgToTgbot 签名不同，请调整为你的实现。
-        _ = t.SendMsgToTgbot(chat.ID, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", strings.ToUpper(configType)))
+        // 别把无返回值函数当表达式（不要写 `_ = t.SendMsgToTgbot(...)`）
+        t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", strings.ToUpper(configType)))
+        // 保持你原来的业务函数调用方式（不改变签名）
+        t.remoteCreateOneClickInbound(configType, chatIDInt64)
 
-        // 调用远程创建逻辑（沿用你的方法）
-        t.remoteCreateOneClickInbound(configType, chat.ID)
-
-        // 回答 callback query，并带提示文本
-        _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID).WithText("配置已创建，请查收管理员私信。"))
+        _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("配置已创建，请查收管理员私信。"))
         return nil
     }
 
-    // ---------- 分支 2：confirm_sub_install ----------
+    // ----- confirm_sub_install 的处理 -----
     if data == "confirm_sub_install" {
-        // 给用户发送开始提示
-        _ = t.SendMsgToTgbot(chat.ID, "🛠️ **已接收到订阅转换安装指令，** 后台正在异步执行...")
+        t.SendMsgToTgbot(chatIDInt64, "🛠️ **已接收到订阅转换安装指令，** 后台正在异步执行...")
 
-        // 调用你的服务方法
         if err := t.serverService.InstallSubconverter(); err != nil {
-            _ = t.SendMsgToTgbot(chat.ID, fmt.Sprintf("❌ **安装指令启动失败：**\n`%v`", err))
+            // 这里也是调用无返回值函数，直接用即可
+            t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("❌ **安装指令启动失败：**\n`%v`", err))
         } else {
-            _ = t.SendMsgToTgbot(chat.ID, "✅ **安装指令已成功发送到后台。**\n\n请等待安装完成的管理员通知。")
+            t.SendMsgToTgbot(chatIDInt64, "✅ **安装指令已成功发送到后台。**\n\n请等待安装完成的管理员通知。")
         }
 
-        // 简单回答 callback query（不带文本即可）
-        _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
+        _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID))
         return nil
     }
 
-    // 默认回答，避免用户界面卡住
-    _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID).WithText("操作已完成。"))
+    // 默认回答，避免界面卡住
+    _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("操作已完成。"))
     return nil
 }
