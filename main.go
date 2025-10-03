@@ -103,7 +103,8 @@ func runWebServer() {
             tgBotService = new(service.Tgbot)
 
             // 中文注释：同时把它赋值给全局变量 global.TgBot，供其他地方调用
-            global.TgBot = tgBotService.(*service.Tgbot)
+            // 中文注释：把接口值赋给 global.TgBot（global 中定义的 TgBotInterface）；
+            global.TgBot = tgBotService
         } else {
             // 中文注释：如果未启用，则确保全局变量为空，避免误用
             global.TgBot = nil
