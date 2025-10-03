@@ -275,8 +275,8 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 			if isOneClick && global.TgBot != nil && global.TgBot.IsRunning() {
 				// 〔中文注释〕: 使用 goroutine 异步发送通知，避免阻塞正常的 API 返回
 				go func(ib *model.Inbound) {
-					// 等待1秒，确保事务已经完全提交
-					time.Sleep(1 * time.Second)
+					// 等待5秒，确保事务已经完全提交
+					time.Sleep(5 * time.Second)
 					logger.Infof("检测到一键配置创建成功 (备注: %s)，准备发送 TG 通知...", ib.Remark)
 					// 调用 tgbot.go 中我们将要新增的函数
 					err := global.TgBot.SendOneClickConfig(ib, true)
