@@ -120,10 +120,17 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 	}
 
     // 监听所有回调查询，并交给 handleCallbackQuery 处理
-    botHandler.HandleCallbackQuery(func(up telego.Update) {
-    // 调用修正后的方法，只传递 update 参数。
-    t.handleCallbackQuery(up) 
-    })
+    // 初始化 handler
+    botHandler, err := th.NewBotHandler(t.bot, updates)
+        if err != nil {
+        // 处理错误
+      }
+
+    // 注册 callback query 处理函数
+    botHandler.HandleCallbackQuery(
+         t.handleCallbackQuery,        // 直接传你的方法
+         th.AnyCallbackQueryWithMessage(), // 可选过滤器，这里表示只处理带 message 的回调
+     )
 	
 	// Initialize hash storage to store callback queries
 	hashStorage = global.NewHashStorage(20 * time.Minute)
@@ -3585,87 +3592,68 @@ func (n namedReader) Name() string {
 	return n.name
 }
 
-// 签名修正为 func(update telego.Update)，以兼容 telegohandler 
-func (t *Tgbot) handleCallbackQuery(update telego.Update) {
-	if update.CallbackQuery == nil {
-		return
-	}
-    
-    ctx := context.Background()
+// 处理用户点击内联键盘按钮的回调查询
+func (t *Tgbot) handleCallbackQuery(ctx *th.Context, query telego.CallbackQuery) error {
+    // 先给一个基础的答复（即便不展示也解除 Telegram UI 卡住状态）
+    _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
 
-	// 强制获取消息对象和 ID
-	msg := update.CallbackQuery.Message 
-	if msg == nil {
-		logger.Error("TG Bot: CallbackQuery 消息对象为空，无法编辑或获取 ChatID。")
-        // 使用 v1.3.0 的位置参数 AnswerCallbackQuery(ctx, id)
-		// AnswerCallbackQuery 的最简形式是 AnswerCallbackQuery(ctx, id)
-		bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID) 
-		return
-	}
+    // 获取消息
+    msgMaybe := query.Message
+    if msgMaybe == nil {
+        // 没有消息可操作，直接结束
+        return nil
+    }
+    chatObj := msgMaybe.Chat()
+    msgID, ok := msgMaybe.MessageID()
+    if chatObj == nil || !ok {
+        // 无法获取 chat 或 message ID
+        return nil
+    }
+    chatID := tu.ID(chatObj.ID)
 
-	// 假设这些字段可以被访问 
-	chatID := msg.Chat.ID
-	messageID := msg.MessageID
-
-	// 提取回调数据，必须捕获错误
-	data, err := t.decodeQuery(update.CallbackQuery.Data)
+    // 解码数据
+    data, err := t.decodeQuery(query.Data)
     if err != nil {
-        logger.Errorf("TG Bot: decodeQuery 失败: %v", err)
-        // 最简形式 AnswerCallbackQuery(ctx, id)
-        bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID)
-        return
+        // 解码失败，给用户一个提示
+        ans := tu.CallbackQuery(query.ID).WithText("回调数据解析失败")
+        _ = ctx.Bot().AnswerCallbackQuery(ctx, ans)
+        return nil
     }
 
-	// 【v1.3.0 修正】：移除键盘。
-	// EditMessageReplyMarkup 的签名是 func(ctx, chatID, messageID, inlineKeyboardMarkup)
-	_, err = bot.EditMessageReplyMarkup(
-		ctx,
-        tu.ID(chatID),
-		messageID,
-		nil, // 直接传入 nil 移除键盘
-	)
-	if err != nil {
-		logger.Warningf("TG Bot: 移除内联键盘失败: %v", err)
-	}
+    // 移除内联键盘
+    editParams := tu.EditMessageReplyMarkup(chatID, msgID, nil)
+    if _, err2 := ctx.Bot().EditMessageReplyMarkup(ctx, editParams); err2 != nil {
+        // 可以记录警告但不返回错误
+        // log warning
+    }
 
-	// ------------------------------------
-	// 1. 处理【一键配置】按钮的点击
-	// ------------------------------------
-	if strings.HasPrefix(data, "oneclick_") {
-		configType := strings.TrimPrefix(data, "oneclick_")
-		
-		t.SendMsgToTgbot(chatID, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", strings.ToUpper(configType)))
-		t.remoteCreateOneClickInbound(configType, chatID)
-		
-		// 解决 L3643 报错：AnswerCallbackQuery(ctx, id, text)
-		bot.AnswerCallbackQuery(
-            ctx,
-			update.CallbackQuery.ID,
-            "配置已创建，请查收管理员私信。",
-		)
-		return
-	}
+    // 按 data 类型分支处理
+    if strings.HasPrefix(data, "oneclick_") {
+        configType := strings.TrimPrefix(data, "oneclick_")
+        _, _ = ctx.Bot().SendMessage(ctx, tu.Message(chatID, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", strings.ToUpper(configType))))
+        t.remoteCreateOneClickInbound(configType, chatObj.ID)  // 原你的逻辑
 
-	// ------------------------------------
-	// 2. 处理【订阅转换安装确认】
-	// ------------------------------------
-	if data == "confirm_sub_install" {
-		t.SendMsgToTgbot(chatID, "🛠️ **已接收到订阅转换安装指令，** 后台正在异步执行...")
+        ans := tu.CallbackQuery(query.ID).WithText("配置已创建，请查收管理员私信。")
+        _ = ctx.Bot().AnswerCallbackQuery(ctx, ans)
+        return nil
+    }
 
-		// 调用 ServerService 的 InstallSubconverter() 方法。
-		err := t.serverService.InstallSubconverter() 
-		
-        if err != nil {
-            t.SendMsgToTgbot(chatID, fmt.Sprintf("❌ **安装指令启动失败：**\n`%v`", err))
+    if data == "confirm_sub_install" {
+        _, _ = ctx.Bot().SendMessage(ctx, tu.Message(chatID, "🛠️ **已接收到订阅转换安装指令，** 后台正在异步执行..."))
+
+        if err3 := t.serverService.InstallSubconverter(); err3 != nil {
+            _, _ = ctx.Bot().SendMessage(ctx, tu.Message(chatID, fmt.Sprintf("❌ **安装指令启动失败：**\n`%v`", err3)))
         } else {
-            t.SendMsgToTgbot(chatID, "✅ **安装指令已成功发送到后台。**\n\n请等待安装完成的管理员通知。")
+            _, _ = ctx.Bot().SendMessage(ctx, tu.Message(chatID, "✅ **安装指令已成功发送到后台。**\n\n请等待安装完成的管理员通知。"))
         }
-        
-		// AnswerCallbackQuery(ctx, id)
-        bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID)
-		return
-	}
-	
-	// 默认回答，避免用户界面卡住 
-    bot.AnswerCallbackQuery(ctx, update.CallbackQuery.ID, "操作已完成。")
+
+        // 回答 callback query
+        _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
+        return nil
+    }
+
+    // 默认分支
+    defaultAns := tu.CallbackQuery(query.ID).WithText("操作已完成。")
+    _ = ctx.Bot().AnswerCallbackQuery(ctx, defaultAns)
+    return nil
 }
