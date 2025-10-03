@@ -20,7 +20,6 @@ import (
     "crypto/tls"       // 新增：用于 tls.Config
     "os/exec"          // 新增：用于 exec.Command（getDomain 等）
     "path/filepath"    // 新增：用于 filepath.Base / Dir（getDomain 用到）
-	"bytes"            // 新增 bytes 包，用于处理内存中的二进制数据（二维码图片）
 
 	"x-ui/config"
 	"x-ui/database"
@@ -3441,8 +3440,6 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool) err
 		caption = fmt.Sprintf("✅ **TG 远程【一键配置】创建成功！**\n\n备注: `%s`\n\n👇 **点击下方链接可直接导入**\n`%s`", inbound.Remark, link)
 	}
 
-    ctx := context.Background()
-
     for _, adminId := range adminIds {
         photoParams := tu.Photo(
            tu.ID(adminId),
@@ -3601,52 +3598,56 @@ func (t *Tgbot) saveLinkToHistory(linkType string, link string) {
 	database.Checkpoint()
 }
 
+// 需要的 imports（合并到文件顶部）：
+// "fmt"
+// "strings"
+// th "github.com/mymmrac/telego/telegohandler"
+// tu "github.com/mymmrac/telego/telegoutil"
+// "github.com/mymmrac/telego"
 
 func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) error {
-    // 先确保有 Message 可用（MaybeInaccessibleMessage -> .Message）
+    // 1) 确保 Message 可访问 —— 注意必须调用 cq.Message.Message() 而不是直接访问 .Message
     if cq.Message == nil || cq.Message.Message == nil {
-        // 最小化答复，避免 UI 卡住
         _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("消息对象不存在"))
         return nil
     }
 
-    // 取得 chat 与 messageID（v1.3.0 常用 cq.Message.Message）
-    msg := cq.Message.Message
-    chatIDInt64 := msg.Chat.ID      // int64
-    messageID := msg.MessageID      // int
+    // 关键修正：这里要调用方法 Message()
+    msg := cq.Message.Message()   // <- 调用方法，返回 *telego.Message
+    // 现在 msg 是 *telego.Message，可以访问 Chat / MessageID
+    chatIDInt64 := msg.Chat.ID
+    messageID := msg.MessageID
 
-    // 解码回调数据（你已有的 t.decodeQuery）
+    // 解码回调数据（沿用你已有函数）
     data, err := t.decodeQuery(cq.Data)
     if err != nil {
         _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("回调数据解析失败"))
         return nil
     }
 
-    // 移除内联键盘（使用 telegoutil 构造 params）
+    // 移除内联键盘（telegoutil 构造 params）
     if _, err := ctx.Bot().EditMessageReplyMarkup(ctx, tu.EditMessageReplyMarkup(tu.ID(chatIDInt64), messageID, nil)); err != nil {
         logger.Warningf("TG Bot: 移除内联键盘失败: %v", err)
-        // 不阻塞后续逻辑
     }
 
-    // ----- oneclick_ 开头的处理 -----
+    // ---------- oneclick_ 分支 ----------
     if strings.HasPrefix(data, "oneclick_") {
         configType := strings.TrimPrefix(data, "oneclick_")
 
-        // 别把无返回值函数当表达式（不要写 `_ = t.SendMsgToTgbot(...)`）
+        // 注意：不要把无返回值函数当作表达式使用，直接调用即可
         t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", strings.ToUpper(configType)))
-        // 保持你原来的业务函数调用方式（不改变签名）
         t.remoteCreateOneClickInbound(configType, chatIDInt64)
 
         _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("配置已创建，请查收管理员私信。"))
         return nil
     }
 
-    // ----- confirm_sub_install 的处理 -----
+    // ---------- confirm_sub_install 分支 ----------
     if data == "confirm_sub_install" {
         t.SendMsgToTgbot(chatIDInt64, "🛠️ **已接收到订阅转换安装指令，** 后台正在异步执行...")
 
         if err := t.serverService.InstallSubconverter(); err != nil {
-            // 这里也是调用无返回值函数，直接用即可
+            // 直接调用发送函数（无返回值）
             t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("❌ **安装指令启动失败：**\n`%v`", err))
         } else {
             t.SendMsgToTgbot(chatIDInt64, "✅ **安装指令已成功发送到后台。**\n\n请等待安装完成的管理员通知。")
@@ -3656,7 +3657,7 @@ func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) er
         return nil
     }
 
-    // 默认回答，避免界面卡住
+    // 默认回答，避免用户界面卡住
     _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("操作已完成。"))
     return nil
 }
