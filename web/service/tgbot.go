@@ -15,7 +15,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"net/http"
+	"encoding/json"    // 新增：用于 json.Marshal / Unmarshal
+    "net/http"         // 新增：用于 http.Client / Transport
+    "crypto/tls"       // 新增：用于 tls.Config
+    "os/exec"          // 新增：用于 exec.Command（getDomain 等）
+    "path/filepath"    // 新增：用于 filepath.Base / Dir（getDomain 用到）
 
 	"x-ui/config"
 	"x-ui/database"
