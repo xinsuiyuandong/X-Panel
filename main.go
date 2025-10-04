@@ -53,11 +53,37 @@ func runWebServer() {
 		log.Fatalf("Error initializing database: %v", err)
 	}
 
-	// 中文注释: xrayService 在这里被创建，我们需要将它传递给我们的新任务
+	// 〔中文注释〕: 1. 初始化所有需要的服务实例
 	xrayService := service.XrayService{}
+	settingService := service.SettingService{}
+	serverService := service.ServerService{}
+	// 你可能还需要 InboundService 等，按需添加
+	inboundService := service.InboundService{}
 
+	// 〔中文注释〕: 2. 初始化 TG Bot 服务 (如果已启用)
+	tgEnable, err := settingService.GetTgbotEnabled()
+	if err != nil {
+		logger.Warningf("无法获取 Telegram Bot 设置: %v", err)
+	}
+
+	var tgBotService *service.Tgbot // 注意这里用具体类型 *service.Tgbot
+	if tgEnable {
+		tgBotService = new(service.Tgbot)
+		// 可以在这里注入 tgBotService 所需的依赖，例如：
+	    tgBotService.SetServerService(&serverService) // 如果需要的话
+	}
+
+	// 〔中文注释〕: 3. 【核心步骤】执行依赖注入
+	//    将 tgBotService 实例注入到 serverService 中。
+	//    这样 serverService 内部的 tgService 字段就不再是 nil 了。
+	serverService.SetTelegramService(tgBotService)
+	//    同理，也为 InboundService 注入
+	inboundService.SetTelegramService(tgBotService)
+	
 	var server *web.Server
-	server = web.NewServer()
+	
+	// 〔中文注释〕: 调用我们刚刚改造过的 web.NewServer，把功能完整的 serverService 传进去。
+	server = web.NewServer(serverService)
 	global.SetWebServer(server)
 	err = server.Start()
 	if err != nil {
