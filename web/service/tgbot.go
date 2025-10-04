@@ -124,7 +124,7 @@ func (t *Tgbot) GetHashStorage() *global.HashStorage {
 
 func (t *Tgbot) Start(i18nFS embed.FS) error {
 	// Initialize localizer
-	err := locale.InitLocalizer(i18nFS, &t.settingService)
+	err := locale.InitLocalizer(i18nFS, t.settingService)
 	if err != nil {
 		return err
 	}
