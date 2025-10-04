@@ -95,9 +95,9 @@ const (
 type Tgbot struct {
 	inboundService *InboundService
 	settingService *SettingService
-	serverService  *ServerService
-	xrayService    *XrayService
-	lastStatus     *Status
+	serverService *ServerService
+	xrayService *XrayService
+	lastStatus *Status
 }
 
 // 【新增方法】: 用于从外部注入 ServerService 实例
