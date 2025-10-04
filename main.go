@@ -57,7 +57,7 @@ func runWebServer() {
 	xrayService := service.XrayService{}
 	settingService := service.SettingService{}
 	serverService := service.ServerService{}
-	// 你可能还需要 InboundService 等，按需添加
+	// 还需要 InboundService 等，按需添加
 	inboundService := service.InboundService{}
 
 	// 〔中文注释〕: 2. 初始化 TG Bot 服务 (如果已启用)
@@ -66,7 +66,7 @@ func runWebServer() {
 		logger.Warningf("无法获取 Telegram Bot 设置: %v", err)
 	}
 
-	var tgBotService *service.Tgbot // 注意这里用具体类型 *service.Tgbot
+	var tgBotService service.TelegramService 
 	if tgEnable {
 		tgBotService = new(service.Tgbot)
 		// 可以在这里注入 tgBotService 所需的依赖，例如：
@@ -84,6 +84,15 @@ func runWebServer() {
 	
 	// 〔中文注释〕: 调用我们刚刚改造过的 web.NewServer，把功能完整的 serverService 传进去。
 	server = web.NewServer(serverService)
+    // 将 tgBotService 注入到 web.Server 中，使其在 web.go/Server.Start() 中可用
+    if tgBotService != nil {
+        if tgbot, ok := tgBotService.(*service.Tgbot); ok {
+            // 需要注入 ServerService，因为 Tgbot 的回调处理需要用到它
+            tgbot.SetServerService(&serverService) 
+        }
+        server.SetTelegramService(tgBotService)
+    }
+	
 	global.SetWebServer(server)
 	err = server.Start()
 	if err != nil {
