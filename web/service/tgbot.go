@@ -3133,7 +3133,8 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 	}
 
 	// 确保 AddInbound 函数能访问到注入的 tgService，从而触发TG通知。
-	createdInbound, _, err := t.inboundService.AddInbound(newInbound)
+	inboundService := InboundService{}
+	createdInbound, _, err := inboundService.AddInbound(newInbound)
 	if err != nil {
 		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 远程创建失败: 保存入站时出错: %v", err))
 		return
