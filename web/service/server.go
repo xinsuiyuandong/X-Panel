@@ -1034,22 +1034,36 @@ func (s *ServerService) InstallSubconverter() error {
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
-			errorMsg := fmt.Sprintf("❌ **订阅转换安装失败！**\n\n**错误详情**:\n`%s`", string(output))
-			logger.Errorf("执行脚本 '%s subconverter' 失败: %v, 输出: %s", scriptPath, err, string(output))
-			if s.tgService != nil && s.tgService.IsRunning() {
-				s.tgService.SendMessage(errorMsg)
-			}
-			return
-		}
-
-		logger.Infof("脚本 '%s subconverter' 执行成功。", scriptPath)
-
-		// 〔中文注释〕: 安装成功后，调用 TG 服务发送成功通知
+		     return fmt.Errorf("订阅转换安装失败: %v\n输出: %s", err, string(output))
+	  } else {
+        // 安装成功后，发送通知到 TG 机器人
 		if s.tgService != nil && s.tgService.IsRunning() {
-			// 〔中文注释〕: 直接调用 tgbot.go 中新增的 SendSubconverterSuccess 方法
-			// 该方法内部会自己获取域名并发送格式化好的消息
-			s.tgService.SendSubconverterSuccess()
-		}
+            // 获取面板域名，注意：t.getDomain() 是 Tgbot 的方法
+            domain, getDomainErr := s.tgService.GetDomain() 
+            if getDomainErr != nil {
+                logger.Errorf("TG Bot: 订阅转换安装成功，但获取域名失败: %v", getDomainErr)
+            } else {
+                // 构造消息，使用用户指定的格式
+                message := fmt.Sprintf(
+                    "🎉 **恭喜！【订阅转换】模块已成功安装！**\n\n"+
+                    "您现在可以使用以下地址访问 Web 界面：\n\n"+
+                    "🔗 **登录地址**: `https://%s:15268`\n\n"+
+                    "默认用户名: `admin`\n"+
+                    "默认密码: `123456`\n\n"+
+                    "可登录订阅转换后台修改您的密码！", domain)
+                
+                // 发送成功消息
+                if sendErr := s.tgService.SendMessage(message); sendErr != nil {
+                    logger.Errorf("TG Bot: 订阅转换安装成功，但发送通知失败: %v", sendErr)
+                } else {
+                    logger.Info("TG Bot: 订阅转换安装成功通知已发送。")
+                 }
+             }
+		 }
+
+		logger.Info("订阅转换安装成功。")
+		return nil
+	  }
 	}()
 
 	return nil // 立即返回，表示指令已接收
