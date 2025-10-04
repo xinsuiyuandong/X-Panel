@@ -3189,6 +3189,9 @@ func (t *Tgbot) buildRealityInbound() (*model.Inbound, error) {
 	remark := t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 	port := 10000 + common.RandomInt(55535 - 10000 + 1)
 
+	// 按照要求格式：inbound-端口号
+    tag := fmt.Sprintf("inbound-%d", port) 
+
 	realityDests := []string{"tesla.com:443", "sega.com:443", "apple.com:443", "icloud.com:443", "lovelive-anime.jp:443", "meta.com:443"}
 	randomDest := realityDests[common.RandomInt(len(realityDests))]
 	randomSni := strings.Split(randomDest, ":")[0]
@@ -3253,6 +3256,7 @@ func (t *Tgbot) buildRealityInbound() (*model.Inbound, error) {
                     Enable:         true,
                     Listen:         "",                     // 对应前端 listen: ''
                     Port:           port,
+				    Tag:            tag,
                     Protocol:       "vless",
                    // 如果你的 model.Inbound 有这些字段（前端 data 也包含），可以设置或保持默认
                     ExpiryTime:     0,                      // 前端 expiryTime: 0
@@ -3274,17 +3278,30 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
 		return nil, fmt.Errorf("获取 UUID 失败: %v", err)
 	}
 
-	// 1、直接将 encMsg 转换为顶层响应 map
-	encResp, ok := encMsg.(map[string]any)
-	if !ok {
-		return nil, errors.New("VLESS 加密配置格式不正确: 响应结构异常")
+	// encMsg 是一个 JSON 字符串或 []byte，必须先解析。
+	var encResp map[string]any
+	
+    // 统一处理 string 或 []byte 类型的原始 JSON 响应
+	switch v := encMsg.(type) {
+	case []byte:
+		err = json.Unmarshal(v, &encResp)
+	case string:
+		err = json.Unmarshal([]byte(v), &encResp)
+	case map[string]any:
+		// 如果 service 层已经解析，则直接使用
+		encResp = v
+	default:
+		return nil, errors.New("VLESS 加密配置格式不正确: 响应类型异常")
 	}
 
-    // 2、直接从顶层响应中获取 auths 数组
-	// 〔中文注释〕: 现在从正确的 encResp 中获取 auths
+    if err != nil {
+		return nil, fmt.Errorf("VLESS 加密配置解析失败: %w", err)
+	}
+    
+    // 2、现在从正确的 encResp (map[string]any) 中获取 auths 数组
 	auths, ok := encResp["auths"].([]interface{})
 	if !ok {
-		// 如果顶层没有 auths，可能是 GetNewVlessEnc 失败，返回更明确的错误信息
+		// 修正：如果顶层没有 auths，抛出错误，
 		return nil, errors.New("VLESS 加密配置 auths 格式不正确")
 	}
 
@@ -3317,6 +3334,8 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
 	remark := t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 	allowedPorts := []int{2053, 2083, 2087, 2096, 8443}
 	port := allowedPorts[common.RandomInt(len(allowedPorts))]
+	// 按照要求格式：inbound-端口号
+    tag := fmt.Sprintf("inbound-%d", port) 
 	path := "/" + t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 	certPath := fmt.Sprintf("/root/cert/%s/fullchain.pem", domain)
 	keyPath := fmt.Sprintf("/root/cert/%s/privkey.pem", domain)
@@ -3387,6 +3406,7 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
                      Enable:         true,
                      Listen:         "",
                      Port:           port,
+				     Tag:            tag,
                      Protocol:       "vless",
                      ExpiryTime:     0,
                      DeviceLimit:    0,
