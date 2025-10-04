@@ -50,7 +50,7 @@ type TelegramService interface {
 	// 您可以根据 server.go 的需要，在这里继续扩展接口
 	// 〔中文注释〕: 将 SendOneClickConfig 方法添加到接口中，这样其他服务可以通过接口来调用它，
 	// 实现了与具体实现 Tgbot 的解耦。
-	SendOneClickConfig(inbound *model.Inbound, inFromPanel bool) error
+	SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, chatId int64) error
 }
 
 var (
