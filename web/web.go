@@ -89,7 +89,7 @@ type Server struct {
 
 	xrayService    service.XrayService
 	settingService service.SettingService
-	tgbotService   service.Tgbot
+	tgbotService    service.TelegramService
 	// 〔中文注释〕: 添加这个字段，用来“持有”从 main.go 传递过来的 serverService 实例。
 	serverService  service.ServerService
 
@@ -97,6 +97,11 @@ type Server struct {
 
 	ctx    context.Context
 	cancel context.CancelFunc
+}
+
+// 【新增方法】：用于 main.go 将创建好的 tgBotService 注入进来
+func (s *Server) SetTelegramService(tgService service.TelegramService) {
+    s.tgbotService = tgService
 }
 
 // 〔中文注释〕: 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
@@ -370,13 +375,19 @@ func (s *Server) Start() (err error) {
 
 	s.startTask()
 
-	isTgbotenabled, err := s.settingService.GetTgbotEnabled()
-	if (err == nil) && (isTgbotenabled) {
-		tgBot := s.tgbotService.NewTgbot()
-		tgBot.Start(i18nFS)
-	}
+    // 启动 TG Bot
+    isTgbotenabled, err := s.settingService.GetTgbotEnabled()
+    if (err == nil) && (isTgbotenabled) {
+        // 现在直接在注入的实例上调用 Start 方法，而不是 NewTgbot()
+        // 因为 main.go 已经注入了完整的实例
+        if tgbot, ok := s.tgbotService.(*service.Tgbot); ok {
+            tgbot.Start(i18nFS)
+        } else {
+            logger.Warning("Telegram Bot 已启用，但注入的实例类型不正确或为 nil，无法启动。")
+        }
+    }
 
-	return nil
+    return nil
 }
 
 func (s *Server) Stop() error {
