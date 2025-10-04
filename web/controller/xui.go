@@ -11,6 +11,7 @@ type XUIController struct {
 	serverController      *ServerController
 	settingController     *SettingController
 	xraySettingController *XraySettingController
+	serverService  service.ServerService
 }
 
 func NewXUIController(g *gin.RouterGroup) *XUIController {
