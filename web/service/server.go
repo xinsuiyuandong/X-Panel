@@ -101,6 +101,11 @@ type ServerService struct {
 	noIPv6         bool
 }
 
+// 【新增方法】: 用于从外部注入 TelegramService 实例
+func (s *ServerService) SetTelegramService(tgService TelegramService) {
+    s.tgService = tgService
+}
+
 func getPublicIP(url string) string {
 	client := &http.Client{
 		Timeout: 3 * time.Second,
