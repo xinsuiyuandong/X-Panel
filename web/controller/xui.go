@@ -30,7 +30,7 @@ func (a *XUIController) initRouter(g *gin.RouterGroup) {
 	g.GET("/navigation", a.navigation)
 
 	a.inboundController = NewInboundController(g)
-	a.serverController = NewServerController(g, s.serverService)
+	a.serverController = NewServerController(g, a.serverService)
 	a.settingController = NewSettingController(g)
 	a.xraySettingController = NewXraySettingController(g)
 }
