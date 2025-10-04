@@ -90,6 +90,8 @@ type Server struct {
 	xrayService    service.XrayService
 	settingService service.SettingService
 	tgbotService   service.Tgbot
+	// 〔中文注释〕: 添加这个字段，用来“持有”从 main.go 传递过来的 serverService 实例。
+	serverService  service.ServerService
 
 	cron *cron.Cron
 
@@ -97,11 +99,14 @@ type Server struct {
 	cancel context.CancelFunc
 }
 
-func NewServer() *Server {
+// 〔中文注释〕: 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
+func NewServer(serverService service.ServerService) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Server{
 		ctx:    ctx,
 		cancel: cancel,
+		// 〔中文注释〕: 2. 将传入的 serverService 存储到 Server 结构体的字段中。
+		serverService: serverService,
 	}
 }
 
@@ -229,7 +234,8 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 	g := engine.Group(basePath)
 
 	s.index = controller.NewIndexController(g)
-	s.server = controller.NewServerController(g)
+	// 〔中文注释〕: 调用我们刚刚改造过的 NewServerController，并将 s.serverService 作为参数传进去。
+	s.server = controller.NewServerController(g, s.serverService)
 	s.panel = controller.NewXUIController(g)
 	s.api = controller.NewAPIController(g)
 
