@@ -51,6 +51,8 @@ type TelegramService interface {
 	// 〔中文注释〕: 将 SendOneClickConfig 方法添加到接口中，这样其他服务可以通过接口来调用它，
 	// 实现了与具体实现 Tgbot 的解耦。
 	SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, chatId int64) error
+	// 新增 GetDomain 方法签名，以满足 server.go 的调用需求
+    GetDomain() (string, error)
 }
 
 var (
@@ -3646,4 +3648,9 @@ func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) er
     // 默认回答，避免用户界面卡住
     _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("操作已完成。"))
     return nil
+}
+
+// 新增一个公共方法 (大写 G) 来包装私有方法
+func (t *Tgbot) GetDomain() (string, error) {
+    return t.getDomain()
 }
