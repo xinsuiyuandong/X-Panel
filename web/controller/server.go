@@ -27,9 +27,13 @@ type ServerController struct {
 	lastGetVersionsTime time.Time
 }
 
-func NewServerController(g *gin.RouterGroup) *ServerController {
+// 〔中文注释〕: 1. 在函数参数中，增加 serverService service.ServerService，让它可以接收一个服务实例。
+func NewServerController(g *gin.RouterGroup, serverService service.ServerService) *ServerController {
 	a := &ServerController{
 		lastGetStatusTime: time.Now(),
+		// 〔中文注释〕: 2. 将传入的 serverService 赋值给 a.serverService。
+		//    这样一来，这个 Controller 内部使用的就是我们在 main.go 中创建的那个功能完整的服务了。
+		serverService:  serverService,
 	}
 	a.initRouter(g)
 	a.startTask()
