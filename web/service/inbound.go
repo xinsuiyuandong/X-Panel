@@ -286,7 +286,7 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 
 					// 【修改位置】: 将 global.TgBot 替换为 s.tgService
 					// 〔中文注释〕: 调用注入的服务实例的方法来发送消息。
-					err := s.tgService.SendOneClickConfig(ib, true)
+					err := s.tgService.SendOneClickConfig(ib, true, 0)
 					if err != nil {
 						logger.Warningf("发送【一键配置】TG 通知失败: %v", err)
 					}
