@@ -11,6 +11,7 @@ type APIController struct {
 	inboundController *InboundController
 	serverController  *ServerController
 	Tgbot             service.Tgbot
+	serverService  service.ServerService
 }
 
 func NewAPIController(g *gin.RouterGroup) *APIController {
