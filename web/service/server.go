@@ -1035,7 +1035,7 @@ func (s *ServerService) InstallSubconverter() error {
 
 		if err != nil {
 		     return fmt.Errorf("订阅转换安装失败: %v\n输出: %s", err, string(output))
-	  } else {
+	     } else {
         // 安装成功后，发送通知到 TG 机器人
 		if s.tgService != nil && s.tgService.IsRunning() {
             // 获取面板域名，注意：t.getDomain() 是 Tgbot 的方法
