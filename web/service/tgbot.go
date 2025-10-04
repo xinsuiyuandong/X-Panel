@@ -3148,7 +3148,8 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 	// 【调用 TG Bot 专属的通知方法】
     // inFromPanel 设置为 false，表示这是来自 TG 机器人的操作
     // 之前 SendOneClickConfig 的 inbound 参数是 *model.Inbound，所以我们传入 createdInbound
-    err = t.SendOneClickConfig(createdInbound, false)
+	// 将当前的 chatId 传入，确保配置消息发送给发起指令的用户
+    err = t.SendOneClickConfig(createdInbound, false, chatId)
     if err != nil {
         // 如果发送通知失败，给用户一个提示，但不要中断流程
         t.SendMsgToTgbot(chatId, fmt.Sprintf("⚠️ 入站创建成功，但通知消息发送失败: %v", err))
@@ -3261,15 +3262,24 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
 		return nil, fmt.Errorf("获取 UUID 失败: %v", err)
 	}
 
-	encObj, ok := encMsg.(map[string]any)
-	if !ok || encObj["auths"] == nil {
-		return nil, errors.New("VLESS 加密配置格式不正确")
+	// 1、将 encMsg 转换为顶层响应 map
+	encResp, ok := encMsg.(map[string]any)
+	if !ok || encResp["obj"] == nil {
+		return nil, errors.New("VLESS 加密配置格式不正确: 响应结构异常")
 	}
 
+    // 2、从顶层响应中获取嵌套的 obj map
+	encObj, ok := encResp["obj"].(map[string]any)
+	if !ok || encObj["auths"] == nil {
+		return nil, errors.New("VLESS 加密配置格式不正确: 无法解析 obj.auths")
+	}
+
+
 	// 〔中文注释〕: 首先，将 auths 断言为 []interface{}，这是一个通用的切片类型。
+    // 3、现在从正确的 encObj 中获取 auths
 	auths, ok := encObj["auths"].([]interface{})
 	if !ok {
-		return nil, errors.New("VLESS 加密配置 auths 格式不正确")
+		return nil, errors.New("VLESS 加密配置 auths 格式不正确") 
 	}
 
 	var decryption, encryption string
@@ -3381,7 +3391,7 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
            }
 
 // 发送【一键配置】的专属消息
-func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool) error {
+func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, targetChatId int64) error {	
 	var link string
 	var err error
 
