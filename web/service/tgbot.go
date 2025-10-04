@@ -3132,9 +3132,12 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 		return
 	}
 
-	// 确保 AddInbound 函数能访问到注入的 tgService，从而触发TG通知。
+	// 〔中文注释〕: 创建一个 InboundService 实例，并将当前的 Tgbot 实例 (t) 作为 tgService 注入进去。
 	inboundService := InboundService{}
+	inboundService.SetTelegramService(t) // 将当前的 bot 实例注入
+
 	createdInbound, _, err := inboundService.AddInbound(newInbound)
+	
 	if err != nil {
 		t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 远程创建失败: 保存入站时出错: %v", err))
 		return
@@ -3263,25 +3266,28 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
 		return nil, errors.New("VLESS 加密配置格式不正确")
 	}
 
-	// 先断言为 `[]interface{}`，然后在循环内部再将每个元素断言为 `map[string]interface{}`。
+	// 〔中文注释〕: 首先，将 auths 断言为 []interface{}，这是一个通用的切片类型。
 	auths, ok := encObj["auths"].([]interface{})
 	if !ok {
 		return nil, errors.New("VLESS 加密配置 auths 格式不正确")
 	}
+
 	var decryption, encryption string
+	// 〔中文注释〕: 遍历这个通用切片。
 	for _, auth := range auths {
-        // 〔中文注释〕：将每个元素断言为 map[string]interface{}
+		// 〔中文注释〕: 然后，将切片中的每个元素断言为 map[string]interface{}，这是一个通用的 map 类型。
 		authMap, ok := auth.(map[string]interface{})
 		if ok {
-            // 〔中文注释〕：从 map 中取值后，再将其断言为 string
-            label, _ := authMap["label"].(string)
-            if label == "ML-KEM-768, Post-Quantum" {
-                decryption, _ = authMap["decryption"].(string)
-                encryption, _ = authMap["encryption"].(string)
-                break
-            }
-        }
+			// 〔中文注释〕: 从 map 中取出 "label" 的值，并将其断言为 string 类型进行比较。
+			if label, ok2 := authMap["label"].(string); ok2 && label == "ML-KEM-768, Post-Quantum" {
+				// 〔中文注释〕: 确认 label 匹配后，再分别取出 "decryption" 和 "encryption" 的值。
+				decryption, _ = authMap["decryption"].(string)
+				encryption, _ = authMap["encryption"].(string)
+				break
+			}
+		}
 	}
+	
 	if decryption == "" || encryption == "" {
 		return nil, errors.New("未能找到 ML-KEM-768 加密密钥，请检查 Xray 版本")
 	}
