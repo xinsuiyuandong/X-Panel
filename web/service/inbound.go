@@ -22,6 +22,11 @@ type InboundService struct {
 	tgService TelegramService
 }
 
+// 【新增方法】: 用于从外部注入 TelegramService 实例
+func (s *InboundService) SetTelegramService(tgService TelegramService) {
+    s.tgService = tgService
+}
+
 func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
 	db := database.GetDB()
 	var inbounds []*model.Inbound
