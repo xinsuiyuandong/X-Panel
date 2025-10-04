@@ -70,7 +70,7 @@ func runWebServer() {
 	if tgEnable {
 		tgBotService = new(service.Tgbot)
 		// 可以在这里注入 tgBotService 所需的依赖，例如：
-	    tgBotService.SetServerService(&serverService) // 如果需要的话
+	    // tgBotService.SetServerService(&serverService) // 如果需要的话
 	}
 
 	// 〔中文注释〕: 3. 【核心步骤】执行依赖注入
@@ -159,7 +159,7 @@ func runWebServer() {
 				logger.Debug("Error stopping sub server:", err)
 			}
 
-			server = web.NewServer()
+			server = web.NewServer(serverService)
 			global.SetWebServer(server)
 			err = server.Start()
 			if err != nil {
