@@ -3264,24 +3264,18 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
 		return nil, fmt.Errorf("获取 UUID 失败: %v", err)
 	}
 
-	// 1、将 encMsg 转换为顶层响应 map
+	// 1、直接将 encMsg 转换为顶层响应 map
 	encResp, ok := encMsg.(map[string]any)
-	if !ok || encResp["obj"] == nil {
+	if !ok {
 		return nil, errors.New("VLESS 加密配置格式不正确: 响应结构异常")
 	}
 
-    // 2、从顶层响应中获取嵌套的 obj map
-	encObj, ok := encResp["obj"].(map[string]any)
-	if !ok || encObj["auths"] == nil {
-		return nil, errors.New("VLESS 加密配置格式不正确: 无法解析 obj.auths")
-	}
-
-
-	// 〔中文注释〕: 首先，将 auths 断言为 []interface{}，这是一个通用的切片类型。
-    // 3、现在从正确的 encObj 中获取 auths
-	auths, ok := encObj["auths"].([]interface{})
+    // 2、直接从顶层响应中获取 auths 数组
+	// 〔中文注释〕: 现在从正确的 encResp 中获取 auths
+	auths, ok := encResp["auths"].([]interface{})
 	if !ok {
-		return nil, errors.New("VLESS 加密配置 auths 格式不正确") 
+		// 如果顶层没有 auths，可能是 GetNewVlessEnc 失败，返回更明确的错误信息
+		return nil, errors.New("VLESS 加密配置 auths 格式不正确")
 	}
 
 	var decryption, encryption string
