@@ -1590,7 +1590,7 @@
                     return; // 如果是 http，则终止后续所有操作
                 }
 
-                // 【第二步】: (此部分保留) 弹出确认框，询问用户是否继续
+                // 【第二步】：弹出确认框，询问用户是否继续
                 this.$confirm({
                     title: '{{ i18n "pages.inbounds.subConversion.modalTitle"}}',
                     content: '{{ i18n "pages.inbounds.subConversion.modalContent"}}',
@@ -1599,10 +1599,10 @@
                     class: themeSwitcher.currentTheme,
                     onOk: () => {
                         const subConverterUrl = `https://${window.location.hostname}:15268`;
-                        const loadingMessage = this.$message.loading('正在检测订阅转换服务 (端口15268)...', 0);
+                        const loadingMessage = this.$message.loading('正在检测订阅转换服务 (运行端口15268)...', 0);
 
                         const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3秒超时检测
+                        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时检测
 
                         // 【第三步】: 尝试通过 fetch API 访问订阅转换服务端口
                         fetch(subConverterUrl, {
@@ -1632,26 +1632,19 @@
                                 cancelText: '稍后再说',
                                 class: themeSwitcher.currentTheme,
                                 onOk: async () => {
-                                    // 【第四步】: 用户点击“立即安装”，调用后端的 API 接口
+                                    // 〔中文注释〕：从这里开始是全新的轮询检测逻辑
+                                    // 1. 先向后端发送安装指令
                                     const installLoading = this.$message.loading('正在向后端发送安装指令...', 0);
                                     try {
-                                        // 〔重要提示〕: 此处假设后端提供了一个用于安装的 API 接口。
-                                        // 您需要在后端代码中添加一个例如 `/panel/api/server/install/subconverter` 的接口，
-                                        // 该接口的功能是执行 "x-ui subconverter" 这个 shell 命令。
                                         const msg = await HttpUtil.post('/panel/api/server/install/subconverter');
-                                        installLoading(); // 关闭安装加载提示
-                                        if (msg.success) {
-                                            this.$success({
-                                                title: '指令已成功发送',
-                                                content: '后端已开始执行安装任务。请等待约1分钟后再次尝试访问，或通过服务器日志查看详细安装进度。',
-                                                class: themeSwitcher.currentTheme,
-                                            });
-                                        } else {
+                                        installLoading(); // 指令发送成功后，关闭这个短暂的加载提示
+                                        if (!msg.success) {
                                             this.$error({
                                                 title: '指令发送失败',
-                                                content: msg.msg || '发生未知错误，请检查后端日志或尝试手动安装。',
+                                                content: msg.msg || '发生未知错误，请检查后端日志。',
                                                 class: themeSwitcher.currentTheme,
                                             });
+                                            return;
                                         }
                                     } catch (error) {
                                         installLoading();
@@ -1660,7 +1653,77 @@
                                             content: '无法连接到后端API接口，请检查您的网络连接或后端服务是否正常运行。',
                                             class: themeSwitcher.currentTheme,
                                         });
+                                        return;
                                     }
+
+                                    // 2. 指令发送成功后，创建并显示一个用于轮询的模态框
+                                    const h = this.$createElement;
+                                    const modal = this.$info({
+                                        title: '⏳ 正在安装并检测服务状态',
+                                        content: '指令已发送，后台正在执行安装。前端将自动轮询检测服务状态，请稍候... (最长等待2分钟)',
+                                        class: themeSwitcher.currentTheme,
+                                        okText: '后台运行',
+                                        okButtonProps: {
+                                            props: {
+                                                loading: true // 让按钮一直处于加载状态，表示正在进行中
+                                            }
+                                        },
+                                    });
+
+                                    // 3. 设置轮询器和超时器
+                                    let pollingInterval;
+                                    const pollingTimeout = setTimeout(() => {
+                                        clearInterval(pollingInterval); // 停止轮询
+                                        modal.update({
+                                            title: '❌ 安装超时',
+                                            content: '安装过程超过2分钟仍未完成。请检查服务器日志以了解详细信息，或稍后刷新页面重试。',
+                                            okText: '关闭',
+                                            okButtonProps: {
+                                                props: {
+                                                    loading: false
+                                                }
+                                            },
+                                        });
+                                    }, 120000); // 2分钟超时
+
+                                    // 4. 开始轮询
+                                    pollingInterval = setInterval(() => {
+                                        fetch(subConverterUrl, { method: 'GET', mode: 'no-cors' })
+                                            .then(() => {
+                                                // 5. 检测成功！
+                                                clearTimeout(pollingTimeout); // 清除超时
+                                                clearInterval(pollingInterval); // 停止轮询
+
+                                                // 更新模态框为成功状态，并提供可点击的链接
+                                                modal.update({
+                                                    title: '✅ 安装成功！',
+                                                    // 使用 VNode 来创建可点击的链接
+                                                    content: h('div', {}, [
+                                                        h('p', '【订阅转换服务】已成功安装并启动。'),
+                                                        h('p', [
+                                                            '您可以点击访问: ',
+                                                            h('a', {
+                                                                attrs: {
+                                                                    href: subConverterUrl,
+                                                                    target: '_blank'
+                                                                }
+                                                            }, subConverterUrl)
+                                                        ]),
+                                                        h('p', { style: 'font-size: 12px; color: #888; margin-top: 10px;'}, 'TG机器人也已收到成功通知。')
+                                                    ]),
+                                                    okText: '完成',
+                                                    okButtonProps: {
+                                                        props: {
+                                                            loading: false
+                                                        }
+                                                    },
+                                                });
+                                            })
+                                            .catch(() => {
+                                                // 检测失败，继续等待下一次轮询
+                                                console.log('Polling subconverter... service not ready yet.');
+                                            });
+                                    }, 5000); // 每5秒检测一次
                                 },
                             });
                         });
