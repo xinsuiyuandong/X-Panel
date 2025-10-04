@@ -93,11 +93,21 @@ const (
 )
 
 type Tgbot struct {
-	inboundService InboundService
-	settingService SettingService
-	serverService  ServerService
-	xrayService    XrayService
-	lastStatus     *Status
+	inboundService *InboundService 
+	settingService *SettingService 
+	serverService  *ServerService
+	xrayService    *XrayService
+	lastStatus     *Status
+}
+
+// 【新增方法】: 用于从外部注入 ServerService 实例
+func (t *Tgbot) SetServerService(s *ServerService) {
+	t.serverService = s
+}
+
+// 配合目前 main.go 代码结构实践。
+func (t *Tgbot) SetInboundService(s *InboundService) {
+	t.inboundService = s
 }
 
 func (t *Tgbot) NewTgbot() *Tgbot {
