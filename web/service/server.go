@@ -24,7 +24,7 @@ import (
 	"x-ui/util/common"
 	"x-ui/util/sys"
 	"x-ui/xray"
-	
+
 	"github.com/google/uuid"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
@@ -103,7 +103,7 @@ type ServerService struct {
 
 // 【新增方法】: 用于从外部注入 TelegramService 实例
 func (s *ServerService) SetTelegramService(tgService TelegramService) {
-    s.tgService = tgService
+	s.tgService = tgService
 }
 
 func getPublicIP(url string) string {
@@ -484,7 +484,7 @@ func (s *ServerService) UpdateXray(version string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// 5. Restart xray
 	if err := s.xrayService.RestartXray(true); err != nil {
 		logger.Error("start xray failed:", err)
@@ -596,7 +596,8 @@ func (s *ServerService) GetConfigJson() (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	contents, err := json.MarshalIndent(config, "", "  ")
+	// 修复：将 U+00A0 替换为标准空格
+	contents, err := json.MarshalIndent(config, "", " ")
 	if err != nil {
 		return nil, err
 	}
@@ -838,7 +839,7 @@ func (s *ServerService) GetNewX25519Cert() (any, error) {
 
 	keyPair := map[string]any{
 		"privateKey": privateKey,
-		"publicKey":  publicKey,
+		"publicKey": publicKey, // 修复：U+00A0 替换为标准空格
 	}
 
 	return keyPair, nil
@@ -894,7 +895,6 @@ func (s *ServerService) GetNewEchCert(sni string) (interface{}, error) {
 	}, nil
 }
 
-
 func (s *ServerService) GetNewVlessEnc() (any, error) {
 	cmd := exec.Command(xray.GetBinaryPath(), "vlessenc")
 	var out bytes.Buffer
@@ -947,7 +947,6 @@ func (s *ServerService) GetNewUUID() (map[string]string, error) {
 	}, nil
 }
 
-
 func (s *ServerService) GetNewmlkem768() (any, error) {
 	// Run the command
 	cmd := exec.Command(xray.GetBinaryPath(), "mlkem768")
@@ -976,22 +975,22 @@ func (s *ServerService) GetNewmlkem768() (any, error) {
 
 // SaveLinkHistory 保存一个新的链接记录，并确保其被永久写入数据库文件。
 func (s *ServerService) SaveLinkHistory(historyType, link string) error {
-    record := &database.LinkHistory{
-        Type:      historyType,
-        Link:      link,
-        CreatedAt: time.Now(),
-    }
-    
-    // 【核心修正】: 第一步，调用重构后的 AddLinkHistory 函数。
-    // 这个函数现在是一个原子事务。如果它没有返回错误，就意味着数据已经成功提交到了 .wal 日志文件。
-    err := database.AddLinkHistory(record)
-    if err != nil {
-        return err // 如果事务失败，直接返回错误，不执行后续操作
-    }
+	record := &database.LinkHistory{
+		Type:      historyType,
+		Link:      link,
+		CreatedAt: time.Now(),
+	}
 
-    // 【核心修正】: 第二步，在事务成功提交后，我们在这里调用 Checkpoint。
-    // 此时 .wal 文件中已经包含了我们的新数据，调用 Checkpoint 可以确保这些数据被立即写入主数据库文件。
-    return database.Checkpoint()
+	// 【核心修正】: 第一步，调用重构后的 AddLinkHistory 函数。
+	// 这个函数现在是一个原子事务。如果它没有返回错误，就意味着数据已经成功提交到了 .wal 日志文件。
+	err := database.AddLinkHistory(record)
+	if err != nil {
+		return err // 如果事务失败，直接返回错误，不执行后续操作
+	}
+
+	// 【核心修正】: 第二步，在事务成功提交后，我们在这里调用 Checkpoint。
+	// 此时 .wal 文件中已经包含了我们的新数据，调用 Checkpoint 可以确保这些数据被立即写入主数据库文件。
+	return database.Checkpoint()
 }
 
 // LoadLinkHistory loads the latest 10 links from the database
@@ -1010,12 +1009,12 @@ func (s *ServerService) InstallSubconverter() error {
 			// 即使机器人未运行，安装流程也应继续，只是不发通知
 		}
 
-        // 将脚本路径为 /usr/bin/x-ui
-        // 〔中文注释〕: 通常，安装脚本会将主命令软链接或复制到 /usr/bin/ 目录下，使其成为一个系统命令。
-        // 直接调用这个命令比调用源文件路径更规范，也能确保执行的是用户在命令行中使用的同一个脚本。
+		// 将脚本路径为 /usr/bin/x-ui
+		// 〔中文注释〕: 通常，安装脚本会将主命令软链接或复制到 /usr/bin/ 目录下，使其成为一个系统命令。
+		// 直接调用这个命令比调用源文件路径更规范，也能确保执行的是用户在命令行中使用的同一个脚本。
 		scriptPath := "/usr/bin/x-ui"
 
-        // 〔中文注释〕: 检查脚本文件是否存在
+		// 〔中文注释〕: 检查脚本文件是否存在
 		if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
 			errMsg := fmt.Sprintf("订阅转换安装失败：关键脚本文件 `%s` 未找到。", scriptPath)
 			logger.Error(errMsg)
@@ -1026,44 +1025,51 @@ func (s *ServerService) InstallSubconverter() error {
 			return
 		}
 
-        // 〔中文注释〕: 正确的调用方式是：命令是 "x-ui"，参数是 "subconverter"。
+		// 〔中文注释〕: 正确的调用方式是：命令是 "x-ui"，参数是 "subconverter"。
 		cmd := exec.Command(scriptPath, "subconverter")
 
-        // 〔中文注释〕: 执行命令并获取其合并的输出（标准输出 + 标准错误），方便排查问题。
-        // 〔重要〕: 这个命令可能需要几分钟才能执行完毕，Go程序会在此等待直到脚本执行完成。
+		// 〔中文注释〕: 执行命令并获取其合并的输出（标准输出 + 标准错误），方便排查问题。
+		// 〔重要〕: 这个命令可能需要几分钟才能执行完毕，Go程序会在此等待直到脚本执行完成。
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
-		     return fmt.Errorf("订阅转换安装失败: %v\n输出: %s", err, string(output))
-	     } else {
-        // 安装成功后，发送通知到 TG 机器人
-		if s.tgService != nil && s.tgService.IsRunning() {
-            // 获取面板域名，注意：t.getDomain() 是 Tgbot 的方法
-            domain, getDomainErr := s.tgService.GetDomain() 
-            if getDomainErr != nil {
-                logger.Errorf("TG Bot: 订阅转换安装成功，但获取域名失败: %v", getDomainErr)
-            } else {
-                // 构造消息，使用用户指定的格式
-                message := fmt.Sprintf(
-                    "🎉 **恭喜！【订阅转换】模块已成功安装！**\n\n"+
-                    "您现在可以使用以下地址访问 Web 界面：\n\n"+
-                    "🔗 **登录地址**: `https://%s:15268`\n\n"+
-                    "默认用户名: `admin`\n"+
-                    "默认密码: `123456`\n\n"+
-                    "可登录订阅转换后台修改您的密码！", domain)
-                
-                // 发送成功消息
-                if sendErr := s.tgService.SendMessage(message); sendErr != nil {
-                    logger.Errorf("TG Bot: 订阅转换安装成功，但发送通知失败: %v", sendErr)
-                } else {
-                    logger.Info("TG Bot: 订阅转换安装成功通知已发送。")
-                 }
-             }
-		 }
+			// 修复：移除 U+00A0 缩进
+			if s.tgService != nil && s.tgService.IsRunning() {
+				// 构造失败消息
+				message := fmt.Sprintf("❌ **订阅转换安装失败**！\n\n**错误信息**: %v\n**输出**: %s", err, string(output))
+				s.tgService.SendMessage(message)
+			}
+			logger.Errorf("订阅转换安装失败: %v\n输出: %s", err, string(output))
+			return
+		} else {
+			// 安装成功后，发送通知到 TG 机器人
+			if s.tgService != nil && s.tgService.IsRunning() {
+				// 获取面板域名，注意：t.getDomain() 是 Tgbot 的方法
+				domain, getDomainErr := s.tgService.GetDomain()
+				if getDomainErr != nil {
+					logger.Errorf("TG Bot: 订阅转换安装成功，但获取域名失败: %v", getDomainErr)
+				} else {
+					// 构造消息，使用用户指定的格式
+					message := fmt.Sprintf(
+						"🎉 **恭喜！【订阅转换】模块已成功安装！**\n\n"+
+							"您现在可以使用以下地址访问 Web 界面：\n\n"+
+							"🔗 **登录地址**: `https://%s:15268`\n\n"+
+							"默认用户名: `admin`\n"+
+							"默认密码: `123456`\n\n"+
+							"可登录订阅转换后台修改您的密码！", domain)
 
-		logger.Info("订阅转换安装成功。")
-		return nil
-	  }
+					// 发送成功消息
+					if sendErr := s.tgService.SendMessage(message); sendErr != nil {
+						logger.Errorf("TG Bot: 订阅转换安装成功，但发送通知失败: %v", sendErr)
+					} else {
+						logger.Info("TG Bot: 订阅转换安装成功通知已发送。")
+					}
+				}
+			}
+
+			logger.Info("订阅转换安装成功。")
+			return
+		}
 	}()
 
 	return nil // 立即返回，表示指令已接收
