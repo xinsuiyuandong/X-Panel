@@ -3278,51 +3278,28 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
 		return nil, fmt.Errorf("获取 UUID 失败: %v", err)
 	}
 
-	// encMsg 是一个 JSON 字符串或 []byte，必须先解析。
-	var encResp map[string]any
-	
-    // 统一处理 string 或 []byte 类型的原始 JSON 响应
+	// 将 GetNewVlessEnc() 返回的原始输出转换为字符串
+	var encMsgString string
 	switch v := encMsg.(type) {
 	case []byte:
-		err = json.Unmarshal(v, &encResp)
+		encMsgString = string(v)
 	case string:
-		err = json.Unmarshal([]byte(v), &encResp)
-	case map[string]any:
-		// 如果 service 层已经解析，则直接使用
-		encResp = v
+		encMsgString = v
 	default:
 		return nil, errors.New("VLESS 加密配置格式不正确: 响应类型异常")
 	}
 
-    if err != nil {
-		return nil, fmt.Errorf("VLESS 加密配置解析失败: %w", err)
-	}
-    
-    // 2、现在从正确的 encResp (map[string]any) 中获取 auths 数组
-	auths, ok := encResp["auths"].([]interface{})
-	if !ok {
-		// 修正：如果顶层没有 auths，抛出错误，
-		return nil, errors.New("VLESS 加密配置 auths 格式不正确")
+	// 使用正则表达式从原始字符串中解析 decryption 和 encryption
+	var decryption, encryption string
+	re := regexp.MustCompile(`(?s)Authentication: ML-KEM-768, Post-Quantum\s*"decryption":\s*"([^"]+)"\s*"encryption":\s*"([^"]+)"`)
+	matches := re.FindStringSubmatch(encMsgString)
+	if len(matches) >= 3 {
+		decryption = matches[1]
+		encryption = matches[2]
 	}
 
-	var decryption, encryption string
-	// 〔中文注释〕: 遍历这个通用切片。
-	for _, auth := range auths {
-		// 〔中文注释〕: 然后，将切片中的每个元素断言为 map[string]interface{}，这是一个通用的 map 类型。
-		authMap, ok := auth.(map[string]interface{})
-		if ok {
-			// 〔中文注释〕: 从 map 中取出 "label" 的值，并将其断言为 string 类型进行比较。
-			if label, ok2 := authMap["label"].(string); ok2 && label == "ML-KEM-768, Post-Quantum" {
-				// 〔中文注释〕: 确认 label 匹配后，再分别取出 "decryption" 和 "encryption" 的值。
-				decryption, _ = authMap["decryption"].(string)
-				encryption, _ = authMap["encryption"].(string)
-				break
-			}
-		}
-	}
-	
 	if decryption == "" || encryption == "" {
-		return nil, errors.New("未能找到 ML-KEM-768 加密密钥，请检查 Xray 版本")
+		return nil, errors.New("未能从 vlessenc 输出中解析 ML-KEM-768 加密密钥，请检查 Xray 版本")
 	}
 
 	domain, err := t.getDomain()
@@ -3452,18 +3429,17 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 		caption = fmt.Sprintf("✅ **TG 远程【一键配置】创建成功！**\n\n备注: `%s`\n\n👇 **点击下方链接可直接导入**\n`%s`", inbound.Remark, link)
 	}
 
-    for _, adminId := range adminIds {
-        photoParams := tu.Photo(
-           tu.ID(adminId),
-           tu.FileFromBytes(qrCodeBytes, "qrcode.png"), // 推荐写法：内部会构造 InputFileUpload
-        ).WithCaption(caption).WithParseMode(telego.ModeMarkdown)
+    // 不再遍历所有管理员，而是直接发送给目标用户 (targetChatId)
+    photoParams := tu.Photo(
+       tu.ID(targetChatId),
+       tu.FileFromBytes(qrCodeBytes, "qrcode.png"),
+    ).WithCaption(caption).WithParseMode(telego.ModeMarkdown)
 
-        if _, err := bot.SendPhoto(context.Background(), photoParams); err != nil {
-            logger.Warningf("发送带二维码的 TG 消息给 %d 失败: %v", adminId, err)
-            // fallback：别把此无返回值函数当作表达式
-            t.SendMsgToTgbot(adminId, caption)
-        }
-     }
+    if _, err := bot.SendPhoto(context.Background(), photoParams); err != nil {
+        logger.Warningf("发送带二维码的 TG 消息给 %d 失败: %v", targetChatId, err)
+        // Fallback: 如果图片发送失败，则只发送文本链接
+        t.SendMsgToTgbot(targetChatId, caption)
+    }
 
 
 
