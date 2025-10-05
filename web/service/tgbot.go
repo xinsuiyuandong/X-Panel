@@ -3286,7 +3286,7 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
 
 	var decryption, encryption string
 
-	// 使用正则表达式来查找类似 "decryption": "..." 的键值对
+	// Regex to find key-value pairs like "decryption": "..."
 	re := regexp.MustCompile(`^"(\w+)":\s*"([^"]+)"`)
 
 	lines := strings.Split(encMsgStr, "\n")
