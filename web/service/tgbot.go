@@ -3278,55 +3278,57 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
 		return nil, fmt.Errorf("获取 UUID 失败: %v", err)
 	}
 
+	// serverService 返回的是命令行的原始输出，是字符串类型，必须手动解析它。
+	encMsgStr, ok := encMsgAny.(string)
+	if !ok {
+		return nil, fmt.Errorf("VLESS 加密配置格式不正确: 期望得到一个字符串，但收到了 %T", encMsgAny)
+	}
+
 	var decryption, encryption string
 
-	// 直接将 encMsg 断言为 map[string]any 类型，模拟前端接收到的 encMsg 对象
-	encMsgMap, ok := encMsg.(map[string]any)
-	if !ok {
-		// 如果断言失败，提供一个更明确的错误信息
-		return nil, fmt.Errorf("VLESS 加密配置格式不正确: 响应类型不是预期的 map 结构，而是 %T", encMsg)
-	}
-	
-	// 重点修正：模拟前端的 encMsg.obj.auths 逻辑
-	// 注意：TG机器人直接调用 service，可能没有最外层的 "success" 和 "obj" 包装，
-	// 我们需要兼容两种情况：直接就是 {auths: [...]} 或者 {obj: {auths: [...]}}
-	
-	var auths []interface{}
-	
-	// 尝试直接获取 auths
-	if authsVal, found := encMsgMap["auths"]; found {
-		auths, _ = authsVal.([]interface{})
-	}
-	
-	// 如果直接获取不到，再尝试从 obj 中获取
-	if auths == nil {
-		if objVal, found := encMsgMap["obj"]; found {
-			if objMap, ok := objVal.(map[string]any); ok {
-				if authsVal, found := objMap["auths"]; found {
-					auths, _ = authsVal.([]interface{})
+	// 使用正则表达式来查找类似 "decryption": "..." 的键值对
+	re := regexp.MustCompile(`^"(\w+)":\s*"([^"]+)"`)
+
+	lines := strings.Split(encMsgStr, "\n")
+	inMlkemSection := false // 标记是否已进入我们需要的 ML-KEM-768 配置区
+
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+
+		// 检查是否进入了正确的配置区
+		if strings.Contains(trimmedLine, "Authentication: ML-KEM-768, Post-Quantum") {
+			inMlkemSection = true
+			continue // 从下一行开始读取密钥
+		}
+
+		// 如果已经离开了 ML-KEM-768 配置区，就停止查找
+		if inMlkemSection && strings.HasPrefix(trimmedLine, "Authentication:") {
+			break
+		}
+
+		// 在正确的配置区内进行匹配
+		if inMlkemSection {
+			matches := re.FindStringSubmatch(trimmedLine)
+			// 一个有效的匹配结果应该有3个部分: [完整匹配项, 键, 值]
+			if len(matches) == 3 {
+				key := matches[1]
+				value := matches[2]
+				if key == "decryption" {
+					decryption = value
+				} else if key == "encryption" {
+					encryption = value
 				}
 			}
 		}
-	}
 
-	if auths == nil {
-		return nil, errors.New("VLESS 加密配置 auths 格式不正确: 未能在响应中找到 'auths' 数组")
-	}
-
-	// 遍历 auths 数组寻找 ML-KEM-768 (这部分逻辑与前端一致)
-	for _, auth := range auths {
-		authMap, ok := auth.(map[string]interface{})
-		if ok {
-			if label, ok2 := authMap["label"].(string); ok2 && label == "ML-KEM-768, Post-Quantum" {
-				decryption, _ = authMap["decryption"].(string)
-				encryption, _ = authMap["encryption"].(string)
-				break
-			}
+		// 如果两个密钥都找到了，就可以提前结束循环
+		if decryption != "" && encryption != "" {
+			break
 		}
 	}
 
 	if decryption == "" || encryption == "" {
-		return nil, errors.New("未能在 auths 数组中找到 ML-KEM-768 加密密钥，请检查 Xray 版本")
+		return nil, errors.New("未能在 vlessenc 命令输出中找到 ML-KEM-768 加密密钥，请检查 Xray 版本")
 	}
 
 	domain, err := t.getDomain()
