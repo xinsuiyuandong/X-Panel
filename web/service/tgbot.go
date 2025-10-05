@@ -3278,28 +3278,57 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
 		return nil, fmt.Errorf("获取 UUID 失败: %v", err)
 	}
 
-	// 将 GetNewVlessEnc() 返回的原始输出转换为字符串
-	var encMsgString string
-	switch v := encMsg.(type) {
-	case []byte:
-		encMsgString = string(v)
-	case string:
-		encMsgString = v
-	default:
-		return nil, errors.New("VLESS 加密配置格式不正确: 响应类型异常")
-	}
-
-	// 使用正则表达式从原始字符串中解析 decryption 和 encryption
 	var decryption, encryption string
-	re := regexp.MustCompile(`(?s)Authentication: ML-KEM-768, Post-Quantum\s*"decryption":\s*"([^"]+)"\s*"encryption":\s*"([^"]+)"`)
-	matches := re.FindStringSubmatch(encMsgString)
-	if len(matches) >= 3 {
-		decryption = matches[1]
-		encryption = matches[2]
+
+	// 增加对 map[string]any 类型的正确处理逻辑
+	switch v := encMsg.(type) {
+	case map[string]any:
+		// 场景1: GetNewVlessEnc() 返回的是一个 map 结构
+		obj, ok := v["obj"].(map[string]any)
+		if !ok {
+			return nil, errors.New("VLESS 加密配置格式不正确: API 响应中缺少 'obj' 结构")
+		}
+
+		auths, ok := obj["auths"].([]interface{})
+		if !ok {
+			return nil, errors.New("VLESS 加密配置 auths 格式不正确: 'obj' 中缺少 'auths' 数组")
+		}
+
+		// 遍历 auths 数组寻找 ML-KEM-768
+		for _, auth := range auths {
+			authMap, ok := auth.(map[string]interface{})
+			if ok {
+				if label, ok2 := authMap["label"].(string); ok2 && label == "ML-KEM-768, Post-Quantum" {
+					decryption, _ = authMap["decryption"].(string)
+					encryption, _ = authMap["encryption"].(string)
+					break
+				}
+			}
+		}
+
+	case string, []byte:
+		// 场景2 (备用): GetNewVlessEnc() 返回的是纯文本
+		var encMsgString string
+		if asStr, ok := v.(string); ok {
+			encMsgString = asStr
+		} else {
+			encMsgString = string(v.([]byte))
+		}
+		
+		re := regexp.MustCompile(`(?s)Authentication: ML-KEM-768, Post-Quantum\s*"decryption":\s*"([^"]+)"\s*"encryption":\s*"([^"]+)"`)
+		matches := re.FindStringSubmatch(encMsgString)
+		if len(matches) >= 3 {
+			decryption = matches[1]
+			encryption = matches[2]
+		}
+	
+	default:
+		// 当遇到未知类型时，打印出具体类型，方便调试
+		return nil, fmt.Errorf("VLESS 加密配置格式不正确: 响应类型异常 (%T)", encMsg)
 	}
 
 	if decryption == "" || encryption == "" {
-		return nil, errors.New("未能从 vlessenc 输出中解析 ML-KEM-768 加密密钥，请检查 Xray 版本")
+		return nil, errors.New("未能找到或解析 ML-KEM-768 加密密钥，请检查 Xray 版本和面板日志")
 	}
 
 	domain, err := t.getDomain()
