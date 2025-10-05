@@ -3280,45 +3280,34 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
 
 	var decryption, encryption string
 
-	// encMsg 是 map[string]any 结构，并尝试从嵌套的 "obj" -> "auths" 中提取数据
+	// 确认顶层类型是 map[string]interface{}
 	encMsgMap, ok := encMsg.(map[string]interface{})
 	if !ok {
-		// 再次检查，如果不是 map，说明 serverService 行为不一致，抛出警告
 		return nil, fmt.Errorf("VLESS 加密配置格式不正确: 期望得到 map[string]interface {}，但收到了 %T", encMsg)
 	}
 	
-	var auths []interface{}
+	// 从顶层 map 中直接获取 "auths" 键的值
+	authsVal, found := encMsgMap["auths"]
 	
-	// 1. 尝试从顶层键 "obj" 中获取数据
-	if objVal, found := encMsgMap["obj"]; found {
-		if objMap, ok := objVal.(map[string]interface{}); ok {
-			// 2. 从 "obj" 内部获取 "auths"
-			if authsVal, found := objMap["auths"]; found {
-				auths, _ = authsVal.([]interface{})
-			}
-		}
-	}
-
-	// 兼容性处理：如果上述步骤未成功，可能是 service 层直接返回了 auths 数组
-	if auths == nil {
-		if authsVal, found := encMsgMap["auths"]; found {
-			auths, _ = authsVal.([]interface{})
-		}
-	}
-	
-	if auths == nil {
+	if !found {
 		return nil, errors.New("VLESS 加密配置 auths 格式不正确: 未能在响应中找到 'auths' 数组")
 	}
 
+	// 将 auths 的值断言为正确的类型 []map[string]string 
+    // 这是因为 server.go 中的 GetNewVlessEnc 明确返回这个类型。
+	auths, ok := authsVal.([]map[string]string)
+	if !ok {
+        // 如果断言失败，则意味着 auths 数组的内部元素类型不匹配
+		return nil, fmt.Errorf("VLESS 加密配置 auths 格式不正确: 'auths' 数组的内部元素类型应为 map[string]string，但收到了 %T", authsVal)
+	}
+	
 	// 遍历 auths 数组寻找 ML-KEM-768
 	for _, auth := range auths {
-		authMap, ok := auth.(map[string]interface{})
-		if ok {
-			if label, ok2 := authMap["label"].(string); ok2 && label == "ML-KEM-768, Post-Quantum" {
-				decryption, _ = authMap["decryption"].(string)
-				encryption, _ = authMap["encryption"].(string)
-				break
-			}
+        // 现在 auth 已经是 map[string]string 类型，可以直接安全访问
+		if label, ok2 := auth["label"]; ok2 && label == "ML-KEM-768, Post-Quantum" {
+			decryption = auth["decryption"]
+			encryption = auth["encryption"]
+			break // 找到后跳出循环
 		}
 	}
 
