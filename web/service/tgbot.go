@@ -3168,7 +3168,7 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
         logger.Errorf("TG Bot: 远程创建入站成功，但发送通知失败: %v", err)
     } else {
         // 成功发送二维码/配置消息后，再给用户一个确认提示
-        t.SendMsgToTgbot(chatId, "✅ **入站已创建，二维码/配置已发送至管理员私信。**")
+        t.SendMsgToTgbot(chatId, "✅ **入站已创建，【二维码/配置链接】已发送至管理员私信。**")
     }
 }
 
@@ -3437,9 +3437,9 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 
 	var caption string
 	if inFromPanel {
-		caption = fmt.Sprintf("✅ **面板【一键配置】入站已创建成功！**\n\n备注: `%s`\n\n👇 **点击下方链接可直接导入**\n`%s`", inbound.Remark, link)
+		caption = fmt.Sprintf("✅ **面板【一键配置】入站已创建成功！**\n\n备注: `%s`\n\n👇 **点击下方链接可直接导入**\n\n`%s`", inbound.Remark, link)
 	} else {
-		caption = fmt.Sprintf("✅ **TG 远程【一键配置】创建成功！**\n\n备注: `%s`\n\n👇 **点击下方链接可直接导入**\n`%s`", inbound.Remark, link)
+		caption = fmt.Sprintf("✅ **TG 远程【一键配置】创建成功！**\n\n备注: `%s`\n\n👇 **点击下方链接可直接导入**\n\n`%s`", inbound.Remark, link)
 	}
 
     // 不再遍历所有管理员，而是直接发送给目标用户 (targetChatId)
@@ -3485,9 +3485,9 @@ func (t *Tgbot) generateRealityLink(inbound *model.Inbound) (string, error) {
 
 	domain, err := t.getDomain()
 	if err != nil {
-		domain = "[您的面板域名]"
+		return "", err
 	}
-
+	
 	return fmt.Sprintf("vless://%s@%s:%d?type=tcp&encryption=none&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F&flow=xtls-rprx-vision#%s-%s",
 		uuid, domain, inbound.Port, publicKey, sni, sid, inbound.Remark, inbound.Remark), nil
 }
