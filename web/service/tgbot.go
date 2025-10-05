@@ -3269,7 +3269,7 @@ func (t *Tgbot) buildRealityInbound() (*model.Inbound, error) {
 
 // 【新增函数】: 构建 TLS 配置对象 (1:1 复刻自 inbounds.html)
 func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
-	encMsg, err := t.serverService.GetNewVlessEnc()
+	encMsgAny, err := t.serverService.GetNewVlessEnc()
 	if err != nil {
 		return nil, fmt.Errorf("获取 VLESS 加密配置失败: %v", err)
 	}
