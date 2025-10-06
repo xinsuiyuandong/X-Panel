@@ -3517,7 +3517,7 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 
 
     // 历史记录保存逻辑
-	linkType := "vless_reality"
+	linkType = "vless_reality"
 	if strings.Contains(link, "security=tls") {
 		linkType = "vless_tls_encryption"
 	}
