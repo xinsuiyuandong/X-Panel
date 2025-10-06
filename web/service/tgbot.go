@@ -3563,7 +3563,8 @@ func (t *Tgbot) generateTlsLink(inbound *model.Inbound) (string, error) {
 }
 
 // 【新增辅助函数】: 发送【订阅转换】安装成功的通知
-func (t *Tgbot) SendSubconverterSuccess() {
+// func (t *Tgbot) SendSubconverterSuccess() {
+func (t *Tgbot) SendSubconverterSuccess(targetChatId int64) { 
 	domain, err := t.getDomain()
 	if err != nil {
 		domain = "[您的面板域名]"
@@ -3760,4 +3761,5 @@ func (t *Tgbot) openPortWithUFW(port int) error {
 		// 返回详细的错误信息，包括 Shell 脚本的输出
 		return fmt.Errorf("执行 ufw 端口放行脚本失败: %v, Shell 输出: %s", err, logOutput)
 	}
+    return nil
 }
