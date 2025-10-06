@@ -1187,6 +1187,36 @@
                 }
             },
 
+			// 【新增函数】: 专门用于调用后端 API 放行端口的方法
+async openPort(port) {
+    if (!port || port <= 0) {
+        this.$message.error('无效端口号，无法放行。');
+        return false;
+    }
+
+    const loadingMessage = this.$message.loading(`正在向后端发送放行端口 ${port} 的指令...`, 0);
+    let success = true;
+    
+    try {
+        // 假设后端 API 路径为 /panel/api/server/openPort，参数为 port
+        const msg = await HttpUtil.post('/panel/api/server/openPort', { port: port });
+        
+        if (msg.success) {
+            this.$message.success(`端口 ${port} 已成功放行/检查!`);
+        } else {
+            success = false;
+            this.$message.error(`端口 ${port} 放行失败: ${msg.msg || '未知错误，请检查后端日志。'}`);
+        }
+    } catch (err) {
+        success = false;
+        console.error(`请求放行端口 ${port} 失败:`, err);
+        this.$message.error(`请求放行端口 ${port} 失败，请检查网络。 ${err.message}`);
+    } finally {
+        loadingMessage(); // 无论成功或失败，都关闭加载提示
+    }
+    return success;
+},
+
 			// 〔中文注释〕: 新增一个专门用于生成“一键配置”二维码的方法
             generateOneClickQrCode(link) {
                 // 〔中文注释〕: this.$nextTick 是一个 Vue 特有的功能，它会等待 DOM 更新完成后再执行内部的代码。
@@ -1301,6 +1331,13 @@
                     // 随机生成 10000-55535 之间的端口
                     const port = Math.floor(Math.random() * (55535 - 10000 + 1)) + 10000;
 
+					// 【新增代码】: 自动调用 openPort 接口放行端口
+                    const portOpenSuccess = await this.openPort(port);
+                    if (!portOpenSuccess) {
+                       // 【不中断流程，给出警告提示】
+                       this.$message.warning(`**注意：** 自动放行端口 ${port} 失败，请务必手动到您的 **VPS 防火墙**（例如 ufw、security group）放行该端口，否则入站将无法连接。`);
+                    }
+        
 	                // 【中文注释】: 从预设列表中随机选择一个SNI
                     const randomDest = this.realityDestinations[Math.floor(Math.random() * this.realityDestinations.length)];
           
@@ -1427,6 +1464,13 @@
                     // 随机生成2053, 2083, 2087, 2096, 8443这5个端口中的其中一个
                     const allowedPorts = [2053, 2083, 2087, 2096, 8443];
                     const port = allowedPorts[Math.floor(Math.random() * allowedPorts.length)];
+
+					// 【新增代码】: 自动调用 openPort 接口放行端口
+                    const portOpenSuccess = await this.openPort(port);
+                    if (!portOpenSuccess) {
+                    // 【不中断流程，给出警告提示】
+                        this.$message.warning(`**注意：** 自动放行端口 ${port} 失败，请务必手动到您的 **VPS 防火墙**（例如 ufw、security group）放行该端口，否则入站将无法连接。`);
+                    }
                     
 					// 随机生成一个8位大小写字母的路径
 					const path = "/" + Array.from({ length: 8 }, () =>
@@ -1633,6 +1677,38 @@
                                 class: themeSwitcher.currentTheme,
                                 onOk: async () => {
                                     // 〔中文注释〕：从这里开始是全新的轮询检测逻辑
+									const portsToOpen = [8000, 15268];
+                                    let openPortFailed = false; // 用于标记是否有端口放行失败
+                        
+                                    // 1. 【新增逻辑】：先尝试放行 8000 和 15268 端口 (不中断流程)
+                                    const openPortLoading = this.$message.loading(`正在尝试自动放行端口 ${portsToOpen.join(' 和 ')}...`, 0);
+
+                                    // 使用 Promise.allSettled 确保所有端口放行尝试完成后才继续
+                                    const openPortResults = await Promise.allSettled(
+                                        portsToOpen.map(port => this.openPort(port))
+                                    );
+                        
+                                    openPortLoading(); // 关闭放行加载提示
+                        
+                                    openPortResults.forEach(result => {
+                                    // 检查每个放行操作是否失败 (openPort 返回 false)
+                                    if (result.status === 'fulfilled' && result.value === false) {
+                                        openPortFailed = true;
+                                    }
+                                    // Promise.allSettled 的 rejected 状态表明 openPort 内部抛出异常 (如网络错误)，也视为放行失败
+                                    if (result.status === 'rejected') {
+                                        openPortFailed = true;
+                                     }
+                                });
+
+                                    if (openPortFailed) {
+                                   // 使用非模态、自动关闭的 this.$message.warning
+                                    this.$message.warning({
+                                        content: `端口自动放行失败。**安装流程将继续**，但请您务必进入 VPS 手动放行 8000 和 15268 端口。`,
+                                        duration: 10, // 持续 10 秒后自动关闭
+                                        key: 'portOpenWarning', // 可选：指定一个key，防止重复弹出
+                                    });
+                                  }
                                     // 1. 先向后端发送安装指令
                                     const installLoading = this.$message.loading('正在向后端发送安装指令...', 0);
                                     try {
@@ -1697,20 +1773,25 @@
                                                 // 更新模态框为成功状态，并提供可点击的链接
                                                 modal.update({
                                                     title: '✅ 安装成功！',
-                                                    // 使用 VNode 来创建可点击的链接
-                                                    content: h('div', {}, [
-                                                        h('p', '【订阅转换服务】已成功安装并启动。'),
-                                                        h('p', [
-                                                            '您可以点击访问: ',
-                                                            h('a', {
-                                                                attrs: {
-                                                                    href: subConverterUrl,
-                                                                    target: '_blank'
-                                                                }
-                                                            }, subConverterUrl)
-                                                        ]),
-                                                        h('p', { style: 'font-size: 12px; color: #888; margin-top: 10px;'}, 'TG机器人也已收到成功通知。')
-                                                    ]),
+                                                    // 使用 VNode 来创建指定的提示内容，并使用 pre-wrap 样式保留换行和格式
+                                                    content: h('div', { style: 'white-space: pre-wrap; text-align: left;' }, [
+                                                        h('p', { style: 'font-weight: bold; font-size: 16px; margin-bottom: 10px;'}, '🎉 恭喜！【订阅转换】模块已成功安装！'),
+                                                        h('p', '您现在可以使用以下地址访问 Web 界面：'),
+                                                        h('p', [
+                                                            h('strong', '🔗 登录地址: '),
+                                                            h('a', {
+                                                                attrs: {
+                                                                    href: loginUrl,
+                                                                    target: '_blank'
+                                                                },
+                                                                style: 'font-family: monospace; font-weight: bold;'
+                                                            }, loginUrl)
+                                                        ]),
+                                                        h('p', '默认用户名: admin'),
+                                                        h('p', '默认 密码: 123456'),
+                                                        h('p', { style: 'margin-top: 10px; font-style: italic;' }, '可登录订阅转换后台修改您的密码！'),
+                                                        h('p', { style: 'font-size: 12px; color: #888; margin-top: 10px;'}, 'TG机器人也已收到成功通知。')
+                                                    ]),
                                                     okText: '完成',
                                                     okButtonProps: {
                                                         props: {
