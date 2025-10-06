@@ -1162,8 +1162,8 @@ func (s *ServerService) OpenPort(port string) error {
 	if ! command -v ufw &>/dev/null; then
 		echo "ufw 防火墙未安装，正在安装..."
 		# 使用绝对路径执行 apt-get，避免 PATH 问题
-		/usr/bin/apt-get update -qq >/dev/null
-		/usr/bin/apt-get install -y ufw
+		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
+		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y ufw
 		if [ $? -ne 0 ]; then echo "❌ ufw 安装失败，可能不是 Debian/Ubuntu 系统，或者权限不足。"; exit 1; fi
 	fi
 
@@ -1182,7 +1182,6 @@ func (s *ServerService) OpenPort(port string) error {
 	`, portInt) // 使用转换后的 portInt
 
 	// 3. 使用 exec.CommandContext 运行命令
-	// 引入 context.Background() 和 os/exec 包
 	cmd := exec.CommandContext(context.Background(), "/bin/bash", "-c", shellCommand)
 	
 	// 4. 捕获命令的输出
@@ -1194,7 +1193,6 @@ func (s *ServerService) OpenPort(port string) error {
 
 	if err != nil {
 		// 6. 返回详细的错误信息，包括 Shell 脚本的输出，便于前端展示警告。
-		// 引入 fmt 和 strings 包
 		errorMsg := fmt.Sprintf("端口 %s 自动放行失败。\n请检查 VPS 是否为 Debian/Ubuntu 系统，是否安装 UFW 或权限是否足够。\n\n**详细输出：**\n```\n%s\n```\n\n**请手动执行以下命令放行端口：**\n`ufw allow %s && ufw allow %s/tcp && ufw allow %s/udp && ufw reload`", 
 			port, logOutput, port, port, port)
 		
