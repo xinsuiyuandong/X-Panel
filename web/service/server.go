@@ -36,9 +36,6 @@ import (
 	"github.com/shirou/gopsutil/v4/net"
 )
 
-// 〔中文注释〕: 恢复在代码更新中意外丢失的包级变量 p。
-var p = xray.GetProcess()
-
 type ProcessState string
 
 const (
