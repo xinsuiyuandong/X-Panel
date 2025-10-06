@@ -1714,14 +1714,14 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 	 case "oneclick_reality":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 正在创建 Vless + Reality 节点...")
-		 t.SendMsgToTgbot(chatId, "🚀 正在远程创建【Vless + Reality】节点，请稍候...")
+		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 正在创建 Vless + TCP + Reality 节点...")
+		 t.SendMsgToTgbot(chatId, "🚀 正在远程创建【Vless + TCP + Reality】节点，请稍候...")
 		 t.remoteCreateOneClickInbound("reality", chatId)
 
 	 case "oneclick_tls":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🛡️ 正在创建 Vless加密+ XHTTP + TLS 节点...")
-		 t.SendMsgToTgbot(chatId, "🛡️ 正在远程创建【Vless加密+ XHTTP + TLS】节点，请稍候...")
+		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🛡️ 正在创建 Vless Encryption + XHTTP + TLS 节点...")
+		 t.SendMsgToTgbot(chatId, "🛡️ 正在远程创建【Vless Encryption + XHTTP + TLS】节点，请稍候...")
 		 t.remoteCreateOneClickInbound("tls", chatId)
 
 	 case "subconverter_install":
@@ -3448,11 +3448,15 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 	var streamSettings map[string]any
 	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
 
+	// --- 1. 确定链接和协议类型 ---
+	var linkType string
 	if security, ok := streamSettings["security"].(string); ok {
 		if security == "reality" {
 			link, err = t.generateRealityLink(inbound)
+			linkType = "VLESS + TCP + Reality" // 协议类型
 		} else if security == "tls" {
 			link, err = t.generateTlsLink(inbound)
+			linkType = "Vless Encryption + XHTTP + TLS" // 协议类型
 		} else {
 			return fmt.Errorf("未知的入站 security 类型: %s", security)
 		}
@@ -3471,13 +3475,24 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 		qrCodeBytes = nil // 确保 qrCodeBytes 为 nil，用于后续判断
 	}
 
+	// --- 2. 获取生成时间 ---
+	now := time.Now().Format("2006-01-02 15:04:05")
+
+	// --- 3. 构造包含所有信息并严格遵循格式的描述消息 ---
+	baseCaption := fmt.Sprintf(
+		"入站备注：\n\n`%s`\n\n用户 Email：\n\n`%s`\n\n协议类型：\n\n`%s`\n\n设备限制：0（无限制），\n\n生成时间：\n\n`%s`",
+		inbound.Remark,
+		inbound.Remark, // 默认使用 Remark 作为 Email
+		linkType,
+		now,
+	)
+
 	var caption string
 	if inFromPanel {
-		caption = fmt.Sprintf("✅ **面板【一键配置】入站已创建成功！**\n\n入站备注：`%s`\n用户 Email：`%s`\n\n👇 **可点击下方链接直接复制导入** 👇", inbound.Remark, inbound.Remark)
+		caption = fmt.Sprintf("✅ **面板【一键配置】入站已创建成功！**\n\n%s\n\n👇 **可点击下方链接直接【复制/导入】** 👇", baseCaption)
 	} else {
-		caption = fmt.Sprintf("✅ **TG端 远程【一键配置】创建成功！**\n\n入站备注：`%s`\n用户 Email：`%s`\n\n👇 **可点击下方链接直接复制导入** 👇", inbound.Remark, inbound.Remark)
+		caption = fmt.Sprintf("✅ **TG端 远程【一键配置】创建成功！**\n\n%s\n\n👇 **可点击下方链接直接【复制/导入】** 👇", baseCaption)
 	}
-
 	// 发送主消息（包含描述和二维码）
 	if len(qrCodeBytes) > 0 {
         // 尝试发送图片消息
@@ -3501,7 +3516,7 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
     t.SendMsgToTgbot(targetChatId, link)
 
 
-
+    // 历史记录保存逻辑
 	linkType := "vless_reality"
 	if strings.Contains(link, "security=tls") {
 		linkType = "vless_tls_encryption"
