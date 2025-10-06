@@ -1680,7 +1680,7 @@ async openPort(port) {
 									const portsToOpen = [8000, 15268];
                                     let openPortFailed = false; // 用于标记是否有端口放行失败
                         
-                                    // 1. 【新增逻辑】：先尝试放行 8000 和 15268 端口 (不中断流程)
+                                    // 【新增逻辑】：先尝试放行 8000 和 15268 端口 (不中断流程)
                                     const openPortLoading = this.$message.loading(`正在尝试自动放行端口 ${portsToOpen.join(' 和 ')}...`, 0);
 
                                     // 使用 Promise.allSettled 确保所有端口放行尝试完成后才继续
