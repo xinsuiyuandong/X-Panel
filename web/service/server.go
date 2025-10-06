@@ -1183,8 +1183,8 @@ func (s *ServerService) OpenPort(port string) error {
 	`, portInt) // 使用转换后的 portInt
 
 	// 3. 使用 exec.CommandContext 运行命令
-    // 添加 60 秒超时，防止命令挂起导致 HTTP 连接断开
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second) 
+    // 添加 70 秒超时，防止命令挂起导致 HTTP 连接断开
+	ctx, cancel := context.WithTimeout(context.Background(), 70*time.Second) 
 	defer cancel() // 确保 context 在函数退出时被取消
     
 	cmd := exec.CommandContext(ctx, "/bin/bash", "-c", shellCommand)
