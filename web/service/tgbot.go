@@ -3760,3 +3760,4 @@ func (t *Tgbot) openPortWithUFW(port int) error {
 		// 返回详细的错误信息，包括 Shell 脚本的输出
 		return fmt.Errorf("执行 ufw 端口放行脚本失败: %v, Shell 输出: %s", err, logOutput)
 	}
+}
