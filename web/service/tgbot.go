@@ -3559,9 +3559,10 @@ func (t *Tgbot) generateRealityLink(inbound *model.Inbound) (string, error) {
 	escapedPublicKey := url.QueryEscape(publicKey) 
 	escapedSni := url.QueryEscape(sni)
 	escapedSid := url.QueryEscape(sid)
+	escapedRemark := url.QueryEscape(inbound.Remark) 
 	
 	return fmt.Sprintf("vless://%s@%s:%d?type=tcp&encryption=none&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F&flow=xtls-rprx-vision#%s-%s",
-		uuid, domain, inbound.Port, escapedPublicKey, escapedSni, escapedSid, inbound.Remark, inbound.Remark), nil
+		uuid, domain, inbound.Port, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
 }
 
 // 【新增辅助函数】: 生成 TLS 链接
