@@ -3133,9 +3133,9 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 	var ufwWarning string // 新增变量来捕获警告信息
 
 	if configType == "reality" {
-		newInbound, err = t.buildRealityInbound()
+		newInbound, ufwWarning, err = t.buildRealityInbound()
 	} else if configType == "tls" {
-		newInbound, err = t.buildTlsInbound()
+		newInbound, ufwWarning, err = t.buildTlsInbound()
 	} else {
 		err = errors.New("未知的配置类型")
 	}
@@ -3191,11 +3191,11 @@ TG端 的【一键配置】生成功能，与后台 Web端 类似，跟【入站
 func (t *Tgbot) buildRealityInbound() (*model.Inbound, string, error) {
 	keyPairMsg, err := t.serverService.GetNewX25519Cert()
 	if err != nil {
-		return nil, fmt.Errorf("获取 Reality 密钥对失败: %v", err)
+		return nil, "", fmt.Errorf("获取 Reality 密钥对失败: %v", err)
 	}
 	uuidMsg, err := t.serverService.GetNewUUID()
 	if err != nil {
-		return nil, fmt.Errorf("获取 UUID 失败: %v", err)
+		return nil, "", fmt.Errorf("获取 UUID 失败: %v", err)
 	}
 
 	keyPair := keyPairMsg.(map[string]any)
@@ -3295,11 +3295,11 @@ func (t *Tgbot) buildRealityInbound() (*model.Inbound, string, error) {
 func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签名
 	encMsg, err := t.serverService.GetNewVlessEnc()
 	if err != nil {
-		return nil, fmt.Errorf("获取 VLESS 加密配置失败: %v", err)
+		return nil, "", fmt.Errorf("获取 VLESS 加密配置失败: %v", err)
 	}
 	uuidMsg, err := t.serverService.GetNewUUID()
 	if err != nil {
-		return nil, fmt.Errorf("获取 UUID 失败: %v", err)
+		return nil, "", fmt.Errorf("获取 UUID 失败: %v", err)
 	}
 
 	var decryption, encryption string
@@ -3307,14 +3307,14 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签
 	// 确认顶层类型是 map[string]interface{}
 	encMsgMap, ok := encMsg.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("VLESS 加密配置格式不正确: 期望得到 map[string]interface {}，但收到了 %T", encMsg)
+		return nil, "", fmt.Errorf("VLESS 加密配置格式不正确: 期望得到 map[string]interface {}，但收到了 %T", encMsg)
 	}
 	
 	// 从顶层 map 中直接获取 "auths" 键的值
 	authsVal, found := encMsgMap["auths"]
 	
 	if !found {
-		return nil, errors.New("VLESS 加密配置 auths 格式不正确: 未能在响应中找到 'auths' 数组")
+		return nil, "", errors.New("VLESS 加密配置 auths 格式不正确: 未能在响应中找到 'auths' 数组")
 	}
 
 	// 将 auths 的值断言为正确的类型 []map[string]string 
@@ -3322,7 +3322,7 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签
 	auths, ok := authsVal.([]map[string]string)
 	if !ok {
         // 如果断言失败，则意味着 auths 数组的内部元素类型不匹配
-		return nil, fmt.Errorf("VLESS 加密配置 auths 格式不正确: 'auths' 数组的内部元素类型应为 map[string]string，但收到了 %T", authsVal)
+		return nil, "", fmt.Errorf("VLESS 加密配置 auths 格式不正确: 'auths' 数组的内部元素类型应为 map[string]string，但收到了 %T", authsVal)
 	}
 	
 	// 遍历 auths 数组寻找 ML-KEM-768
@@ -3336,12 +3336,12 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签
 	}
 
 	if decryption == "" || encryption == "" {
-		return nil, errors.New("未能在 auths 数组中找到 ML-KEM-768 加密密钥，请检查 Xray 版本")
+		return nil, "", errors.New("未能在 auths 数组中找到 ML-KEM-768 加密密钥，请检查 Xray 版本")
 	}
 
 	domain, err := t.getDomain()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	uuid := uuidMsg["uuid"]
