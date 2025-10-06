@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 	"context"
+	"errors"
 
 	"x-ui/config"
 	"x-ui/database"
@@ -34,6 +35,9 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/net"
 )
+
+// 〔中文注释〕: 恢复在代码更新中意外丢失的包级变量 p。
+var p = xray.GetProcess()
 
 type ProcessState string
 
@@ -1182,7 +1186,11 @@ func (s *ServerService) OpenPort(port string) error {
 	`, portInt) // 使用转换后的 portInt
 
 	// 3. 使用 exec.CommandContext 运行命令
-	cmd := exec.CommandContext(context.Background(), "/bin/bash", "-c", shellCommand)
+    // 添加 30 秒超时，防止命令挂起导致 HTTP 连接断开
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second) 
+	defer cancel() // 确保 context 在函数退出时被取消
+    
+	cmd := exec.CommandContext(ctx, "/bin/bash", "-c", shellCommand)
 	
 	// 4. 捕获命令的输出
 	output, err := cmd.CombinedOutput()
@@ -1191,8 +1199,14 @@ func (s *ServerService) OpenPort(port string) error {
 	logOutput := strings.TrimSpace(string(output))
 	logger.Infof("执行 ufw 端口放行命令（端口 %s）结果：\n%s", port, logOutput)
 
+
 	if err != nil {
-		// 6. 返回详细的错误信息，包括 Shell 脚本的输出，便于前端展示警告。
+		// 【关键检查】：如果错误是上下文超时引起的，返回特定错误
+        if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+             return fmt.Errorf("端口 %s 自动放行失败：命令执行超时（超过 30 秒）。VPS网络可能太慢或 apt-get 挂起。请手动执行命令。", port)
+        }
+        
+		// 6. 返回详细的错误信息
 		errorMsg := fmt.Sprintf("端口 %s 自动放行失败。\n请检查 VPS 是否为 Debian/Ubuntu 系统，是否安装 UFW 或权限是否足够。\n\n**详细输出：**\n```\n%s\n```\n\n**请手动执行以下命令放行端口：**\n`ufw allow %s && ufw allow %s/tcp && ufw allow %s/udp && ufw reload`", 
 			port, logOutput, port, port, port)
 		
