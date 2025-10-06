@@ -3527,14 +3527,25 @@ func (t *Tgbot) generateRealityLink(inbound *model.Inbound) (string, error) {
 	publicKey := realitySettings["publicKey"].(string)
 
 	shortIdsInterface := realitySettings["shortIds"].([]interface{})
+	// 确保 shortIdsInterface 不为空，否则可能 panic
+	if len(shortIdsInterface) == 0 {
+		return "", errors.New("无法生成 Reality 链接：Short IDs 列表为空")
+	}
 	sid := shortIdsInterface[common.RandomInt(len(shortIdsInterface))].(string)
 
 	domain, err := t.getDomain()
 	if err != nil {
 		return "", err
 	}
+
+	// ---------------------- URL 编码 ----------------------
+	// 必须对查询参数的值（pbk, sni, sid）
+	// Go 标准库中的 net/url.QueryEscape 会处理 Base64 字符串中的 + / 等字符。
+	escapedPublicKey := url.QueryEscape(publicKey)
+	escapedSni := url.QueryEscape(sni)
+	escapedSid := url.QueryEscape(sid)
 	
-	return fmt.Sprintf("vless://%s@%s:%d?type=tcp&encryption=none&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%2F&flow=xtls-rprx-vision#%s-%s",
+	return fmt.Sprintf("vless://%s@%s:%d?type=tcp&encryption=none&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F&flow=xtls-rprx-vision#%s-%s",
 		uuid, domain, inbound.Port, publicKey, sni, sid, inbound.Remark, inbound.Remark), nil
 }
 
