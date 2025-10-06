@@ -369,12 +369,14 @@ func (s *Server) Start() (err error) {
 		return err
 	}
 	listenAddr := net.JoinHostPort(listen, strconv.Itoa(port))
-	listener, err := net.Listen("tcp", listenAddr)
+
+    // 1. 使用 baseListener 临时变量接收 net.Listen 的结果
+	baseListener, err := net.Listen("tcp", listenAddr) 
 	if err != nil {
 		return err
 	}
 
-	var listener net.Listener
+    var listener net.Listener
 
 	// 2. 将 net.Listener 断言为 *net.TCPListener，以便包装
 	tcpListener, ok := baseListener.(*net.TCPListener)
@@ -386,10 +388,11 @@ func (s *Server) Start() (err error) {
         // 3. 【核心修正】：使用包装器设置 Keep-Alive 属性给每个新连接
         kaListener := &keepAliveListener{
             TCPListener: tcpListener,
-            KeepAlivePeriod: 10 * time.Second, // 设置为 10 秒
+            KeepAlivePeriod: 5 * time.Second, // 设置为 5 秒
         }
         listener = net.Listener(kaListener) // 将包装器赋值给最终的 listener
 	}
+	
 	if certFile != "" || keyFile != "" {
 		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 		if err == nil {
