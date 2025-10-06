@@ -3765,8 +3765,8 @@ func (t *Tgbot) openPortWithUFW(port int) error {
 	if ! command -v ufw &>/dev/null; then
 		echo "ufw 防火墙未安装，正在安装..."
 		# 使用绝对路径执行 apt-get，避免 PATH 问题
-		/usr/bin/apt-get update -qq >/dev/null
-		/usr/bin/apt-get install -y ufw
+		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
+		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y ufw
 		if [ $? -ne 0 ]; then echo "❌ ufw 安装失败。"; exit 1; fi
 	fi
 
