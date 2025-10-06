@@ -1143,31 +1143,64 @@ func (s *ServerService) openSubconverterPorts() error {
 }
 
 // 【新增方法实现】: 后台前端开放指定端口
+// OpenPort 供前端调用，自动检查/安装 ufw 并放行指定的端口。
+// 接口：POST /panel/api/server/openPort
 func (s *ServerService) OpenPort(port string) error {
-	// 【中文注释】: 1. 构造 ufw 开放 TCP 和 UDP 端口的复合命令。
-	// ufw allow {port}/tcp && ufw allow {port}/udp && ufw reload
-	// ufw 命令需要 root 权限，通常面板程序以 root 权限运行或通过 sudoers 配置
-	cmdStr := fmt.Sprintf("ufw allow %s/tcp && ufw allow %s/udp && ufw reload", port, port)
+	// 1. 将 port string 转换为 int
+	portInt, err := strconv.Atoi(port)
+	if err != nil {
+		return fmt.Errorf("端口号格式错误，无法转换为数字: %s", port)
+	}
 
-	// 【中文注释】: 2. 使用 /bin/bash -c 来执行复合命令。
-	cmd := exec.Command("/bin/bash", "-c", cmdStr)
+	// 2. 将 Shell 逻辑整合为一个可执行的命令，并使用 /bin/bash -c 执行
+	shellCommand := fmt.Sprintf(`
+	PORT_TO_OPEN=%d
 	
-	// 【中文注释】: 执行命令并捕获 CombinedOutput (stdout + stderr)
+	echo "正在为入站配置自动检查并放行端口 $PORT_TO_OPEN"
+
+	# 1. 检查/安装 ufw (仅限 Debian/Ubuntu 系统)
+	if ! command -v ufw &>/dev/null; then
+		echo "ufw 防火墙未安装，正在安装..."
+		# 使用绝对路径执行 apt-get，避免 PATH 问题
+		/usr/bin/apt-get update -qq >/dev/null
+		/usr/bin/apt-get install -y ufw
+		if [ $? -ne 0 ]; then echo "❌ ufw 安装失败，可能不是 Debian/Ubuntu 系统，或者权限不足。"; exit 1; fi
+	fi
+
+	# 2. 放行端口 (TCP/UDP)
+	echo "正在执行 ufw allow $PORT_TO_OPEN..."
+	ufw allow $PORT_TO_OPEN
+	if [ $? -ne 0 ]; then echo "❌ ufw 端口 $PORT_TO_OPEN 放行失败。"; exit 1; fi
+
+	# 3. 检查/激活防火墙
+	if ! ufw status | grep -q "Status: active"; then
+		echo "ufw 状态：未激活。正在尝试激活..."
+		ufw --force enable
+		if [ $? -ne 0 ]; then echo "❌ ufw 激活失败。"; exit 1; fi
+	fi
+	echo "✅ 端口 $PORT_TO_OPEN 已成功放行/检查。"
+	`, portInt) // 使用转换后的 portInt
+
+	// 3. 使用 exec.CommandContext 运行命令
+	// 引入 context.Background() 和 os/exec 包
+	cmd := exec.CommandContext(context.Background(), "/bin/bash", "-c", shellCommand)
+	
+	// 4. 捕获命令的输出
 	output, err := cmd.CombinedOutput()
-	outputStr := strings.TrimSpace(string(output))
+	
+	// 5. 记录日志，以便诊断
+	logOutput := strings.TrimSpace(string(output))
+	logger.Infof("执行 ufw 端口放行命令（端口 %s）结果：\n%s", port, logOutput)
 
 	if err != nil {
-		// 【中文注释】: 3. 如果命令执行失败 (err != nil)，不中断流程，而是返回一个包含友好提示的错误。
+		// 6. 返回详细的错误信息，包括 Shell 脚本的输出，便于前端展示警告。
+		// 引入 fmt 和 strings 包
+		errorMsg := fmt.Sprintf("端口 %s 自动放行失败。\n请检查 VPS 是否为 Debian/Ubuntu 系统，是否安装 UFW 或权限是否足够。\n\n**详细输出：**\n```\n%s\n```\n\n**请手动执行以下命令放行端口：**\n`ufw allow %s && ufw allow %s/tcp && ufw allow %s/udp && ufw reload`", 
+			port, logOutput, port, port, port)
 		
-		// 构造一个提示用户手动放行的友好消息。
-		errorMsg := fmt.Sprintf("自动放行端口失败。请检查 VPS 是否安装 UFW 或权限是否足够。\n请手动在 VPS 中执行命令放行端口：%s。详细输出：%s", cmdStr, outputStr)
-		
-		logger.Errorf("ufw 开放端口命令执行失败: %v, 输出: %s", err, outputStr) // 记录详细错误日志
-		
-		// 返回一个非致命错误，Controller 层会将其作为提示信息返回给用户
 		return fmt.Errorf(errorMsg)
 	}
-    
-    // 【中文注释】: 4. 如果命令执行成功，返回 nil。
-	return nil
+	
+    // 7. 成功返回 nil
+    return nil
 }
