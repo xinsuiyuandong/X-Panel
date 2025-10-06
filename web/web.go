@@ -46,6 +46,32 @@ type wrapAssetsFS struct {
 	embed.FS
 }
 
+// Keep-Alive 监听器包装器：用于拦截新连接并设置 Keep-Alive 选项
+type keepAliveListener struct {
+	*net.TCPListener
+	KeepAlivePeriod time.Duration
+}
+
+// Accept 方法：拦截连接并设置 Keep-Alive
+func (l keepAliveListener) Accept() (net.Conn, error) {
+	// 1. 接受底层 TCP 连接
+	tc, err := l.TCPListener.AcceptTCP()
+	if err != nil {
+		return nil, err
+	}
+	
+	// 2. 在 *net.TCPConn 上设置 Keep-Alive 属性 (这里的方法是正确的)
+	if err := tc.SetKeepAlive(true); err != nil {
+		logger.Warning("Failed to set KeepAlive:", err)
+	}
+	// 设置心跳包周期为 5 秒
+	if err := tc.SetKeepAlivePeriod(l.KeepAlivePeriod); err != nil {
+		logger.Warning("Failed to set KeepAlivePeriod:", err)
+	}
+	
+	return tc, nil
+}
+
 func (f *wrapAssetsFS) Open(name string) (fs.File, error) {
 	file, err := f.FS.Open("assets/" + name)
 	if err != nil {
@@ -348,20 +374,22 @@ func (s *Server) Start() (err error) {
 		return err
 	}
 
-	// 【强制发送 TCP Keep-Alive 心跳包】
-	if tcpListener, ok := listener.(*net.TCPListener); ok {
-		// 启用 Keep-Alive
-		err = tcpListener.SetKeepAlive(true)
-		if err != nil {
-			logger.Warning("SetKeepAlive failed:", err)
-		}
-		// 设置 Keep-Alive 探针周期为 5 秒 (必须小于任何默认的 30s 或 60s 隐性超时)
-		err = tcpListener.SetKeepAlivePeriod(5 * time.Second)
-		if err != nil {
-			logger.Warning("SetKeepAlivePeriod failed:", err)
-		}
+	var listener net.Listener
+
+	// 2. 将 net.Listener 断言为 *net.TCPListener，以便包装
+	tcpListener, ok := baseListener.(*net.TCPListener)
+	if !ok {
+        // 如果不是 TCPListener，则使用原生的，不设置 Keep-Alive
+		logger.Warning("Listener is not a TCPListener, cannot set KeepAlive.")
+        listener = baseListener
+	} else {
+        // 3. 【核心修正】：使用包装器设置 Keep-Alive 属性给每个新连接
+        kaListener := &keepAliveListener{
+            TCPListener: tcpListener,
+            KeepAlivePeriod: 10 * time.Second, // 设置为 10 秒
+        }
+        listener = net.Listener(kaListener) // 将包装器赋值给最终的 listener
 	}
-	
 	if certFile != "" || keyFile != "" {
 		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 		if err == nil {
