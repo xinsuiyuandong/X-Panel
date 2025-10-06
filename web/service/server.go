@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"context"
 
 	"x-ui/config"
 	"x-ui/database"
@@ -1003,13 +1004,23 @@ func (s *ServerService) LoadLinkHistory() ([]*database.LinkHistory, error) {
 func (s *ServerService) InstallSubconverter() error {
 	// 〔中文注释〕: 使用一个新的 goroutine 来执行耗时的安装任务，这样 API 可以立即返回
 	go func() {
+        
+        // 【新增功能】：执行端口放行操作
+        var ufwWarning string
+        if ufwErr := s.openSubconverterPorts(); ufwErr != nil {
+            // 不中断流程，只生成警告消息
+            logger.Warningf("自动放行 Subconverter 端口失败: %v", ufwErr)
+            ufwWarning = fmt.Sprintf("⚠️ **警告：订阅转换端口放行失败**\n\n自动执行 UFW 命令失败，请务必**手动**在您的 VPS 上放行端口 `8000` 和 `15268`，否则服务将无法访问。失败详情：%v\n\n", ufwErr)
+        }
+
 		// 〔中文注释〕: 检查全局的 TgBot 实例是否存在并且正在运行
 		if s.tgService == nil || !s.tgService.IsRunning() {
 			logger.Warning("TgBot 未运行，无法发送【订阅转换】状态通知。")
 			// 即使机器人未运行，安装流程也应继续，只是不发通知
+            ufwWarning = "" // 如果机器人不在线，不发送任何警告/消息
 		}
 
-		// 将脚本路径为 /usr/bin/x-ui
+		// 脚本路径为 /usr/bin/x-ui
 		// 〔中文注释〕: 通常，安装脚本会将主命令软链接或复制到 /usr/bin/ 目录下，使其成为一个系统命令。
 		// 直接调用这个命令比调用源文件路径更规范，也能确保执行的是用户在命令行中使用的同一个脚本。
 		scriptPath := "/usr/bin/x-ui"
@@ -1033,7 +1044,6 @@ func (s *ServerService) InstallSubconverter() error {
 		output, err := cmd.CombinedOutput()
 
 		if err != nil {
-			// 修复：移除 U+00A0 缩进
 			if s.tgService != nil && s.tgService.IsRunning() {
 				// 构造失败消息
 				message := fmt.Sprintf("❌ **订阅转换安装失败**！\n\n**错误信息**: %v\n**输出**: %s", err, string(output))
@@ -1042,6 +1052,12 @@ func (s *ServerService) InstallSubconverter() error {
 			logger.Errorf("订阅转换安装失败: %v\n输出: %s", err, string(output))
 			return
 		} else {
+            
+            // 【新增逻辑】：如果之前端口放行失败，先发送警告消息
+            if ufwWarning != "" {
+                s.tgService.SendMessage(ufwWarning)
+            }
+
 			// 安装成功后，发送通知到 TG 机器人
 			if s.tgService != nil && s.tgService.IsRunning() {
 				// 获取面板域名，注意：t.getDomain() 是 Tgbot 的方法
@@ -1073,4 +1089,55 @@ func (s *ServerService) InstallSubconverter() error {
 	}()
 
 	return nil // 立即返回，表示指令已接收
+}
+
+// openSubconverterPorts 检查/安装 ufw 并放行 8000 和 15268 端口
+func (s *ServerService) openSubconverterPorts() error {
+	// Shell 脚本：检查/安装 UFW，然后循环放行 8000 和 15268 端口，最后尝试激活
+	shellCommand := `
+	PORTS_TO_OPEN="8000 15268"
+	
+	echo "正在为订阅转换自动检查并放行端口 $PORTS_TO_OPEN"
+
+	# 1. 检查/安装 ufw
+	if ! command -v ufw &>/dev/null; then
+		echo "ufw 防火墙未安装，正在安装..."
+		# 静默更新和安装
+		/usr/bin/apt-get update -qq
+		/usr/bin/apt-get install -y ufw
+		if [ $? -ne 0 ]; then echo "❌ ufw 安装失败或权限不足。"; exit 1; fi
+	fi
+
+	# 2. 放行端口
+	for port in $PORTS_TO_OPEN; do
+		echo "正在执行 ufw allow $port..."
+		ufw allow $port
+		if [ $? -ne 0 ]; then echo "❌ ufw 端口 $port 放行失败。"; exit 1; fi
+	done
+
+	# 3. 检查/激活防火墙
+	if ! ufw status | grep -q "Status: active"; then
+		echo "ufw 状态：未激活。正在尝试激活..."
+		ufw --force enable
+		if [ $? -ne 0 ]; then echo "❌ ufw 激活失败。"; exit 1; fi
+	fi
+    
+    echo "✅ 端口 $PORTS_TO_OPEN 已成功放行/检查。"
+    exit 0
+	`
+
+    // 使用 /bin/bash -c 执行命令，并捕获输出
+	cmd := exec.CommandContext(context.Background(), "/bin/bash", "-c", shellCommand)
+	output, err := cmd.CombinedOutput()
+	logOutput := string(output)
+	
+	// 记录日志，无论成功与否
+	logger.Infof("执行 Subconverter 端口放行命令结果:\n%s", logOutput)
+
+	if err != nil {
+        // 如果 Shell 命令返回非零退出码，则返回错误
+		return fmt.Errorf("ufw 端口放行失败: %v. 脚本输出: %s", err, logOutput)
+	}
+
+	return nil
 }
