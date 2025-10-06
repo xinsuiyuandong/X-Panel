@@ -3130,6 +3130,7 @@ func (t *Tgbot) checkAndInstallSubconverter(chatId int64) {
 func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 	var err error
 	var newInbound *model.Inbound
+	var ufwWarning string // 新增变量来捕获警告信息
 
 	if configType == "reality" {
 		newInbound, err = t.buildRealityInbound()
@@ -3157,6 +3158,11 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 
 	logger.Infof("TG 机器人远程创建入站 %s 成功！", createdInbound.Remark)
 
+	// 【新增功能】：如果端口放行失败，发送警告
+    if ufwWarning != "" { 
+        t.SendMsgToTgbot(chatId, ufwWarning) 
+    } // END NEW LOGIC
+
 	// 【调用 TG Bot 专属的通知方法】
     // inFromPanel 设置为 false，表示这是来自 TG 机器人的操作
     // 之前 SendOneClickConfig 的 inbound 参数是 *model.Inbound，所以我们传入 createdInbound
@@ -3170,10 +3176,19 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
         // 成功发送二维码/配置消息后，再给用户一个确认提示
         t.SendMsgToTgbot(chatId, "✅ **入站已创建，【二维码/配置链接】已发送至管理员私信。**")
     }
+	// 【新增功能】：发送用法说明消息
+    // 使用 ** 粗体标记，并使用多行字符串确保换行显示。
+    usageMessage := `**用法说明：**
+该功能已自动生成现今比较主流的入站协议，简单/直接，不用慢慢配置。
+并随机分配一个可用端口，请确保此端口放行，生成后请直接复制【**链接地址**】。
+TG端 的【一键配置】生成功能，与后台 Web端 类似，跟【入站】的数据是打通的。
+你可以在一键创建后于列表中，手动查看/复制或编辑详细信息，以便添加其他参数。`
+	
+    t.SendMsgToTgbot(chatId, usageMessage)
 }
 
 // 【新增函数】: 构建 Reality 配置对象 (1:1 复刻自 inbounds.html)
-func (t *Tgbot) buildRealityInbound() (*model.Inbound, error) {
+func (t *Tgbot) buildRealityInbound() (*model.Inbound, string, error) {
 	keyPairMsg, err := t.serverService.GetNewX25519Cert()
 	if err != nil {
 		return nil, fmt.Errorf("获取 Reality 密钥对失败: %v", err)
@@ -3188,6 +3203,15 @@ func (t *Tgbot) buildRealityInbound() (*model.Inbound, error) {
 	uuid := uuidMsg["uuid"]
 	remark := t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 	port := 10000 + common.RandomInt(55535 - 10000 + 1)
+
+	var ufwWarning string = "" // NEW
+
+    // 【新增功能】：调用 ufw 放行端口
+	if err := t.openPortWithUFW(port); err != nil {
+        // 【核心修改】：如果端口放行失败，不中断入站创建流程，但生成警告信息
+		logger.Warningf("自动放行端口 %d 失败: %v", port, err)
+        ufwWarning = fmt.Sprintf("⚠️ **警告：端口放行失败**\n\n自动执行 `ufw allow %d` 命令失败，入站创建流程已继续，但请务必**手动**在您的 VPS 上放行端口 `%d`，否则服务将无法访问。失败详情：%v", port, port, err)
+	} // END NEW LOGIC
 
 	// 按照要求格式：inbound-端口号
     tag := fmt.Sprintf("inbound-%d", port) 
@@ -3264,11 +3288,11 @@ func (t *Tgbot) buildRealityInbound() (*model.Inbound, error) {
                     Settings:       string(settings),
                     StreamSettings: string(streamSettings),
                     Sniffing:       string(sniffing),
-                }, nil
+                }, ufwWarning, nil // MODIFIED RETURN
             }
 
 // 【新增函数】: 构建 TLS 配置对象 (1:1 复刻自 inbounds.html)
-func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
+func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签名
 	encMsg, err := t.serverService.GetNewVlessEnc()
 	if err != nil {
 		return nil, fmt.Errorf("获取 VLESS 加密配置失败: %v", err)
@@ -3324,6 +3348,16 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
 	remark := t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 	allowedPorts := []int{2053, 2083, 2087, 2096, 8443}
 	port := allowedPorts[common.RandomInt(len(allowedPorts))]
+	
+	var ufwWarning string = "" // NEW
+
+    // 【新增功能】：调用 ufw 放行端口
+	if err := t.openPortWithUFW(port); err != nil {
+        // 【核心修改】：如果端口放行失败，不中断入站创建流程，但生成警告信息
+		logger.Warningf("自动放行端口 %d 失败: %v", port, err)
+        ufwWarning = fmt.Sprintf("⚠️ **警告：端口放行失败**\n\n自动执行 `ufw allow %d` 命令失败，入站创建流程已继续，但请务必**手动**在您的 VPS 上放行端口 `%d`，否则服务将无法访问。失败详情：%v", port, port, err)
+	} // END NEW LOGIC
+	
 	// 按照要求格式：inbound-端口号
     tag := fmt.Sprintf("inbound-%d", port) 
 	path := "/" + t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
@@ -3403,7 +3437,7 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, error) {
                      Settings:       string(settings),
                      StreamSettings: string(streamSettings),
                      Sniffing:       string(sniffing),
-               }, nil
+               }, ufwWarning, nil // MODIFIED RETURN
            }
 
 // 发送【一键配置】的专属消息
@@ -3430,29 +3464,41 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 		return err
 	}
 
+	// 尝试生成二维码，如果失败，则 qrCodeBytes 为 nil 或空
 	qrCodeBytes, err := qrcode.Encode(link, qrcode.Medium, 256)
 	if err != nil {
-		return fmt.Errorf("生成二维码失败: %v", err)
+		logger.Warningf("生成二维码失败，将尝试发送纯文本链接: %v", err)
+		qrCodeBytes = nil // 确保 qrCodeBytes 为 nil，用于后续判断
 	}
 
 	var caption string
 	if inFromPanel {
-		caption = fmt.Sprintf("✅ **面板【一键配置】入站已创建成功！**\n\n备注: `%s`\n\n👇 **点击下方链接可直接导入**\n\n`%s`", inbound.Remark, link)
+		caption = fmt.Sprintf("✅ **面板【一键配置】入站已创建成功！**\n\n入站备注：`%s`\n用户 Email：`%s`\n\n👇 **可点击下方链接直接复制导入** 👇", inbound.Remark, inbound.Remark)
 	} else {
-		caption = fmt.Sprintf("✅ **TG 远程【一键配置】创建成功！**\n\n备注: `%s`\n\n👇 **点击下方链接可直接导入**\n\n`%s`", inbound.Remark, link)
+		caption = fmt.Sprintf("✅ **TG端 远程【一键配置】创建成功！**\n\n入站备注：`%s`\n用户 Email：`%s`\n\n👇 **可点击下方链接直接复制导入** 👇", inbound.Remark, inbound.Remark)
 	}
 
-    // 不再遍历所有管理员，而是直接发送给目标用户 (targetChatId)
-    photoParams := tu.Photo(
-       tu.ID(targetChatId),
-       tu.FileFromBytes(qrCodeBytes, "qrcode.png"),
-    ).WithCaption(caption).WithParseMode(telego.ModeMarkdown)
+	// 发送主消息（包含描述和二维码）
+	if len(qrCodeBytes) > 0 {
+        // 尝试发送图片消息
+        photoParams := tu.Photo(
+            tu.ID(targetChatId),
+            tu.FileFromBytes(qrCodeBytes, "qrcode.png"),
+        ).WithCaption(caption).WithParseMode(telego.ModeMarkdown)
 
-    if _, err := bot.SendPhoto(context.Background(), photoParams); err != nil {
-        logger.Warningf("发送带二维码的 TG 消息给 %d 失败: %v", targetChatId, err)
-        // Fallback: 如果图片发送失败，则只发送文本链接
+        if _, err := bot.SendPhoto(context.Background(), photoParams); err != nil {
+            logger.Warningf("发送带二维码的 TG 消息给 %d 失败: %v", targetChatId, err)
+            // 如果图片发送失败，回退到发送纯文本描述
+            t.SendMsgToTgbot(targetChatId, caption)
+        }
+    } else {
+        // 如果二维码生成失败，直接发送纯文本描述
         t.SendMsgToTgbot(targetChatId, caption)
     }
+
+    // 链接单独发送，不带任何 Markdown 格式。
+    // 这将确保 Telegram 客户端可以将其正确识别为可点击的 vless:// 链接。
+    t.SendMsgToTgbot(targetChatId, link)
 
 
 
@@ -3488,7 +3534,7 @@ func (t *Tgbot) generateRealityLink(inbound *model.Inbound) (string, error) {
 		return "", err
 	}
 	
-	return fmt.Sprintf("vless://%s@%s:%d?type=tcp&encryption=none&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F&flow=xtls-rprx-vision#%s-%s",
+	return fmt.Sprintf("vless://%s@%s:%d?type=tcp&encryption=none&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%2F&flow=xtls-rprx-vision#%s-%s",
 		uuid, domain, inbound.Port, publicKey, sni, sid, inbound.Remark, inbound.Remark), nil
 }
 
@@ -3532,7 +3578,8 @@ func (t *Tgbot) SendSubconverterSuccess() {
 			"可登录订阅转换后台修改您的密码！",
 		domain,
 	)
-	t.SendMsgToTgbotAdmins(msgText)
+	// t.SendMsgToTgbotAdmins(msgText)
+	t.SendMsgToTgbot(targetChatId, msgText)
 }
 
 // 【新增辅助函数】: 获取域名（shell 方案）
@@ -3667,3 +3714,49 @@ func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) er
 func (t *Tgbot) GetDomain() (string, error) {
     return t.getDomain()
 }
+
+// openPortWithUFW 检查/安装 ufw 并放行指定的端口
+func (t *Tgbot) openPortWithUFW(port int) error {
+	// 将 Shell 逻辑整合为一个可执行的命令，并使用 /bin/bash -c 执行
+	shellCommand := fmt.Sprintf(`
+	PORT_TO_OPEN=%d
+	
+	echo "正在为入站配置自动检查并放行端口 $PORT_TO_OPEN"
+
+	# 1. 检查/安装 ufw
+	if ! command -v ufw &>/dev/null; then
+		echo "ufw 防火墙未安装，正在安装..."
+		# 使用绝对路径执行 apt-get，避免 PATH 问题
+		/usr/bin/apt-get update -qq >/dev/null
+		/usr/bin/apt-get install -y ufw
+		if [ $? -ne 0 ]; then echo "❌ ufw 安装失败。"; exit 1; fi
+	fi
+
+	# 2. 放行端口
+	echo "正在执行 ufw allow $PORT_TO_OPEN..."
+	ufw allow $PORT_TO_OPEN
+	if [ $? -ne 0 ]; then echo "❌ ufw 端口放行失败。"; exit 1; fi
+
+	# 3. 检查/激活防火墙
+	if ! ufw status | grep -q "Status: active"; then
+		echo "ufw 状态：未激活。正在尝试激活..."
+		ufw --force enable
+		if [ $? -ne 0 ]; then echo "❌ ufw 激活失败。"; exit 1; fi
+	fi
+	echo "✅ 端口 $PORT_TO_OPEN 已成功放行/检查。"
+	`, port) // 仅需传递一次 port 参数给 Shell 变量定义
+
+	// 使用 exec.CommandContext 运行命令
+	cmd := exec.CommandContext(context.Background(), "/bin/bash", "-c", shellCommand)
+	
+	// 捕获命令的输出
+	output, err := cmd.CombinedOutput()
+	
+	// 记录日志，以便诊断
+	logOutput := string(output)
+	logger.Infof("执行 ufw 端口放行命令（端口 %d）结果：\n%s", port, logOutput)
+
+	if err != nil {
+		// 返回详细的错误信息，包括 Shell 脚本的输出
+		return fmt.Errorf("执行 ufw 端口放行脚本失败: %v, Shell 输出: %s", err, logOutput)
+	}
