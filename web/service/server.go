@@ -1103,8 +1103,8 @@ func (s *ServerService) openSubconverterPorts() error {
 	if ! command -v ufw &>/dev/null; then
 		echo "ufw 防火墙未安装，正在安装..."
 		# 静默更新和安装
-		/usr/bin/apt-get update -qq
-		/usr/bin/apt-get install -y ufw
+		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
+		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y ufw
 		if [ $? -ne 0 ]; then echo "❌ ufw 安装失败或权限不足。"; exit 1; fi
 	fi
 
