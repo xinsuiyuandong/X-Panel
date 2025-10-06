@@ -12,6 +12,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// 【新增结构体】: 用于接收前端 POST 的 JSON 数据
+type OpenPortRequest struct {
+	Port string `json:"port" form:"port" binding:"required"` // 确保同时支持 json 和 form 标签
+}
+
 var filenameRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
 
 type ServerController struct {
@@ -355,17 +360,12 @@ func (a *ServerController) installSubconverter(c *gin.Context) {
     jsonMsg(c, "Subconverter 安装指令已成功发送", nil)
 }
 
-// 【新增结构体】: 用于接收前端 POST 的 JSON 数据
-type OpenPortRequest struct {
-	Port string `json:"port" binding:"required"` // 前端应发送 {"port": "xxxx"}
-}
-
 // 【新增接口实现】: 前端放行端口
 func (a *ServerController) openPort(c *gin.Context) {
 	var req OpenPortRequest
 
-	// c.ShouldBind 会智能地检查请求的 Content-Type，并兼容 JSON 和 Form 表单。
-	if err := c.ShouldBind(&req); err != nil {
+	// 使用 c.ShouldBindWith 显式强制使用 Form 绑定
+	if err := c.ShouldBindWith(&req, binding.Form); err != nil {
 		jsonMsg(c, "请求端口参数失败", fmt.Errorf("无效的请求参数，请确保端口号存在"))
 		return
 	}
