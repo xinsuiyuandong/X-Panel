@@ -364,8 +364,8 @@ type OpenPortRequest struct {
 func (a *ServerController) openPort(c *gin.Context) {
 	var req OpenPortRequest
 
-	// 【中文注释】: 1. 使用 c.ShouldBindJSON 绑定 JSON 请求体，而非表单提交。
-	if err := c.ShouldBindJSON(&req); err != nil {
+	// c.ShouldBind 会智能地检查请求的 Content-Type，并兼容 JSON 和 Form 表单。
+	if err := c.ShouldBind(&req); err != nil {
 		jsonMsg(c, "请求端口参数失败", fmt.Errorf("无效的请求参数，请确保端口号存在"))
 		return
 	}
