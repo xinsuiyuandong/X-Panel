@@ -1199,7 +1199,7 @@ async openPort(port) {
     
     try {
         // 假设后端 API 路径为 /panel/api/server/openPort，参数为 port
-        const msg = await HttpUtil.post('/panel/api/server/openPort', { port: port });
+        const msg = await HttpUtil.postForm('/panel/api/server/openPort', { port: port });
         
         if (msg.success) {
             this.$message.success(`端口 ${port} 已成功放行/检查!`);
