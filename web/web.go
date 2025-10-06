@@ -347,6 +347,21 @@ func (s *Server) Start() (err error) {
 	if err != nil {
 		return err
 	}
+
+	// 【强制发送 TCP Keep-Alive 心跳包】
+	if tcpListener, ok := listener.(*net.TCPListener); ok {
+		// 启用 Keep-Alive
+		err = tcpListener.SetKeepAlive(true)
+		if err != nil {
+			logger.Warning("SetKeepAlive failed:", err)
+		}
+		// 设置 Keep-Alive 探针周期为 5 秒 (必须小于任何默认的 30s 或 60s 隐性超时)
+		err = tcpListener.SetKeepAlivePeriod(5 * time.Second)
+		if err != nil {
+			logger.Warning("SetKeepAlivePeriod failed:", err)
+		}
+	}
+	
 	if certFile != "" || keyFile != "" {
 		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 		if err == nil {
