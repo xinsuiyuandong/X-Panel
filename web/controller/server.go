@@ -360,35 +360,28 @@ type OpenPortRequest struct {
 	Port string `json:"port" binding:"required"` // 前端应发送 {"port": "xxxx"}
 }
 
-// 【新增接口实现】: 开放端口
+// 【新增接口实现】: 前端放行端口
 func (a *ServerController) openPort(c *gin.Context) {
 	var req OpenPortRequest
 
-	// 【中文注释】: 1. 使用 c.ShouldBindJSON 绑定 JSON 请求体，对应前端的 HttpUtil.post(url, {port: port})
+	// 【中文注释】: 1. 使用 c.ShouldBindJSON 绑定 JSON 请求体，而非表单提交。
 	if err := c.ShouldBindJSON(&req); err != nil {
-		jsonMsg(c, I18nWeb(c, "pages.server.openPortError"), fmt.Errorf("请求参数格式错误或缺少 port 字段"))
+		jsonMsg(c, "请求端口参数失败", fmt.Errorf("无效的请求参数，请确保端口号存在"))
 		return
 	}
 
 	port := req.Port
 	
-	// 【中文注释】: 2. 简单的参数校验
-	if port == "" {
-		jsonMsg(c, I18nWeb(c, "pages.server.openPortError"), fmt.Errorf("端口参数不能为空"))
-		return
-	}
-
-	// 【中文注释】: 3. 调用服务层方法来执行开放端口的逻辑
+	// 【中文注释】: 2. 调用服务层方法执行逻辑
 	err := a.serverService.OpenPort(port)
 	
-	// 【中文注释】: 4. 根据 Service 层的返回结果进行响应
+	// 【中文注释】: 3. 根据 Service 层的返回结果进行响应
 	if err != nil {
-		// 【中文注释】: Service 层返回了非致命错误（即放行失败），将错误信息作为提示返回给前端。
-		// I18nWeb 的第一个参数通常是操作名称。
-		jsonMsg(c, I18nWeb(c, "pages.server.openPortResult"), err) 
+		// 【中文注释】: Service 层返回了非致命错误，直接将错误信息 (err.Error()) 作为提示返回给前端。
+		jsonMsg(c, "放行端口处理完成", err) 
 		return
 	}
 
-	// 【中文注释】: 5. 如果 Service 层返回 nil (命令执行成功)，则向前台返回成功的 JSON 消息。
-	jsonMsg(c, I18nWeb(c, "pages.server.openPortSuccess"), nil)
+	// 【中文注释】: 4. 如果 Service 层返回 nil (命令执行成功)，则返回成功的中文消息。
+	jsonMsg(c, "端口已成功放行", nil)
 }
