@@ -3085,10 +3085,10 @@ func (t *Tgbot) SendMessage(msg string) error {
 func (t *Tgbot) sendOneClickOptions(chatId int64) {
 	optionsKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🚀 VLESS + Reality + TCP").WithCallbackData(t.encodeQuery("oneclick_reality")),
+			tu.InlineKeyboardButton("🚀 Vless + TCP + Reality + Vision").WithCallbackData(t.encodeQuery("oneclick_reality")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🛡️ VLESS + TLS + XHTTP").WithCallbackData(t.encodeQuery("oneclick_tls")),
+			tu.InlineKeyboardButton("🛡️ Vless Encryption + XHTTP + TLS").WithCallbackData(t.encodeQuery("oneclick_tls")),
 		),
 	)
 	t.SendMsgToTgbot(chatId, "请选择您要创建的【一键配置】类型：", optionsKeyboard)
@@ -3539,7 +3539,17 @@ func (t *Tgbot) generateRealityLink(inbound *model.Inbound) (string, error) {
 	realitySettings := streamSettings["realitySettings"].(map[string]interface{})
 	serverNames := realitySettings["serverNames"].([]interface{})
 	sni := serverNames[0].(string)
-	publicKey := realitySettings["publicKey"].(string)
+	
+	// publicKey 在 realitySettings 下的 settings 子对象中
+	settingsMap, ok := realitySettings["settings"].(map[string]interface{})
+	if !ok {
+		return "", errors.New("realitySettings中缺少settings子对象")
+	}
+	publicKey, ok := settingsMap["publicKey"].(string)
+	if !ok {
+		// 再次检查，以防结构有变，但主要依赖 settingsMap
+		return "", errors.New("publicKey字段缺失或格式错误 (可能在settings子对象中)")
+	}
 
 	shortIdsInterface := realitySettings["shortIds"].([]interface{})
 	// 确保 shortIdsInterface 不为空，否则可能 panic
@@ -3584,7 +3594,7 @@ func (t *Tgbot) generateTlsLink(inbound *model.Inbound) (string, error) {
 		return "", err
 	}
 
-	// 链接格式暂时简化，根据您的前端代码，xhttp 未在链接中体现 path
+	// 链接格式简化，根据您的前端代码，xhttp 未在链接中体现 path
 	return fmt.Sprintf("vless://%s@%s:%d?type=tcp&encryption=%s&security=tls&fp=chrome&alpn=http%%2F1.1&sni=%s&flow=xtls-rprx-vision#%s-%s",
 		uuid, domain, inbound.Port, encryption, sni, inbound.Remark, inbound.Remark), nil
 }
