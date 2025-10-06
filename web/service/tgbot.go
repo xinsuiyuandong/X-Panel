@@ -3541,9 +3541,9 @@ func (t *Tgbot) generateRealityLink(inbound *model.Inbound) (string, error) {
 	// ---------------------- URL 编码 ----------------------
 	// 必须对查询参数的值（pbk, sni, sid）
 	// Go 标准库中的 net/url.QueryEscape 会处理 Base64 字符串中的 + / 等字符。
-	escapedPublicKey := url.QueryEscape(publicKey)
-	escapedSni := url.QueryEscape(sni)
-	escapedSid := url.QueryEscape(sid)
+	publicKey := url.QueryEscape(publicKey)
+	sni := url.QueryEscape(sni)
+	sid := url.QueryEscape(sid)
 	
 	return fmt.Sprintf("vless://%s@%s:%d?type=tcp&encryption=none&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F&flow=xtls-rprx-vision#%s-%s",
 		uuid, domain, inbound.Port, publicKey, sni, sid, inbound.Remark, inbound.Remark), nil
