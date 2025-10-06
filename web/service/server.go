@@ -1141,3 +1141,33 @@ func (s *ServerService) openSubconverterPorts() error {
 
 	return nil
 }
+
+// 【新增方法实现】: 后台前端开放指定端口
+func (s *ServerService) OpenPort(port string) error {
+	// 【中文注释】: 1. 构造 ufw 开放 TCP 和 UDP 端口的复合命令。
+	// ufw allow {port}/tcp && ufw allow {port}/udp && ufw reload
+	// ufw 命令需要 root 权限，通常面板程序以 root 权限运行或通过 sudoers 配置
+	cmdStr := fmt.Sprintf("ufw allow %s/tcp && ufw allow %s/udp && ufw reload", port, port)
+
+	// 【中文注释】: 2. 使用 /bin/bash -c 来执行复合命令。
+	cmd := exec.Command("/bin/bash", "-c", cmdStr)
+	
+	// 【中文注释】: 执行命令并捕获 CombinedOutput (stdout + stderr)
+	output, err := cmd.CombinedOutput()
+	outputStr := strings.TrimSpace(string(output))
+
+	if err != nil {
+		// 【中文注释】: 3. 如果命令执行失败 (err != nil)，不中断流程，而是返回一个包含友好提示的错误。
+		
+		// 构造一个提示用户手动放行的友好消息。
+		errorMsg := fmt.Sprintf("自动放行端口失败。请检查 VPS 是否安装 UFW 或权限是否足够。\n请手动在 VPS 中执行命令放行端口：%s。详细输出：%s", cmdStr, outputStr)
+		
+		logger.Errorf("ufw 开放端口命令执行失败: %v, 输出: %s", err, outputStr) // 记录详细错误日志
+		
+		// 返回一个非致命错误，Controller 层会将其作为提示信息返回给用户
+		return fmt.Errorf(errorMsg)
+	}
+    
+    // 【中文注释】: 4. 如果命令执行成功，返回 nil。
+	return nil
+}
