@@ -63,6 +63,7 @@ func (a *ServerController) initRouter(g *gin.RouterGroup) {
 	g.POST("/history/save", a.saveHistory)
 	g.GET("/history/load", a.loadHistory)
 	g.POST("/install/subconverter", a.installSubconverter)
+	g.POST("/openPort", a.openPort)
 }
 
 func (a *ServerController) refreshStatus() {
@@ -352,4 +353,42 @@ func (a *ServerController) installSubconverter(c *gin.Context) {
     }
     // 〔中文注释〕: 如果没有错误，则向前台返回成功的 JSON 消息。
     jsonMsg(c, "Subconverter 安装指令已成功发送", nil)
+}
+
+// 【新增结构体】: 用于接收前端 POST 的 JSON 数据
+type OpenPortRequest struct {
+	Port string `json:"port" binding:"required"` // 前端应发送 {"port": "xxxx"}
+}
+
+// 【新增接口实现】: 开放端口
+func (a *ServerController) openPort(c *gin.Context) {
+	var req OpenPortRequest
+
+	// 【中文注释】: 1. 使用 c.ShouldBindJSON 绑定 JSON 请求体，对应前端的 HttpUtil.post(url, {port: port})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.server.openPortError"), fmt.Errorf("请求参数格式错误或缺少 port 字段"))
+		return
+	}
+
+	port := req.Port
+	
+	// 【中文注释】: 2. 简单的参数校验
+	if port == "" {
+		jsonMsg(c, I18nWeb(c, "pages.server.openPortError"), fmt.Errorf("端口参数不能为空"))
+		return
+	}
+
+	// 【中文注释】: 3. 调用服务层方法来执行开放端口的逻辑
+	err := a.serverService.OpenPort(port)
+	
+	// 【中文注释】: 4. 根据 Service 层的返回结果进行响应
+	if err != nil {
+		// 【中文注释】: Service 层返回了非致命错误（即放行失败），将错误信息作为提示返回给前端。
+		// I18nWeb 的第一个参数通常是操作名称。
+		jsonMsg(c, I18nWeb(c, "pages.server.openPortResult"), err) 
+		return
+	}
+
+	// 【中文注释】: 5. 如果 Service 层返回 nil (命令执行成功)，则向前台返回成功的 JSON 消息。
+	jsonMsg(c, I18nWeb(c, "pages.server.openPortSuccess"), nil)
 }
