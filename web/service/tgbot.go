@@ -3563,8 +3563,8 @@ func (t *Tgbot) generateTlsLink(inbound *model.Inbound) (string, error) {
 }
 
 // 【新增辅助函数】: 发送【订阅转换】安装成功的通知
-// func (t *Tgbot) SendSubconverterSuccess() {
-func (t *Tgbot) SendSubconverterSuccess(targetChatId int64) { 
+func (t *Tgbot) SendSubconverterSuccess() {
+// func (t *Tgbot) SendSubconverterSuccess(targetChatId int64) { 
 	domain, err := t.getDomain()
 	if err != nil {
 		domain = "[您的面板域名]"
@@ -3579,8 +3579,8 @@ func (t *Tgbot) SendSubconverterSuccess(targetChatId int64) {
 			"可登录订阅转换后台修改您的密码！",
 		domain,
 	)
-	// t.SendMsgToTgbotAdmins(msgText)
-	t.SendMsgToTgbot(targetChatId, msgText)
+	t.SendMsgToTgbotAdmins(msgText)
+	// t.SendMsgToTgbot(targetChatId, msgText)
 }
 
 // 【新增辅助函数】: 获取域名（shell 方案）
