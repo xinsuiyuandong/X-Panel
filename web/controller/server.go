@@ -10,13 +10,7 @@ import (
 	"x-ui/web/service"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
 )
-
-// 【新增结构体】: 用于接收前端 POST 的 JSON 数据
-type OpenPortRequest struct {
-	Port string `json:"port" form:"port" binding:"required"` // 确保同时支持 json 和 form 标签
-}
 
 var filenameRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
 
@@ -363,15 +357,17 @@ func (a *ServerController) installSubconverter(c *gin.Context) {
 
 // 【新增接口实现】: 前端放行端口
 func (a *ServerController) openPort(c *gin.Context) {
-	var req OpenPortRequest
-
-	// 使用 c.ShouldBindWith 显式强制使用 Form 绑定
-	if err := c.ShouldBindWith(&req, binding.Form); err != nil {
+	
+	// 直接使用 c.PostForm("port") 获取表单数据
+	// 这是最可靠的获取 port=xxxx 格式数据的方法，不受 Content-Type 歧义的影响。
+	port := c.PostForm("port")
+	
+	// 1. 手动进行参数校验
+	if port == "" {
+		// 如果端口为空，返回参数错误提示
 		jsonMsg(c, "请求端口参数失败", fmt.Errorf("无效的请求参数，请确保端口号存在"))
 		return
 	}
-
-	port := req.Port
 	
 	// 【中文注释】: 2. 调用服务层方法执行逻辑
 	err := a.serverService.OpenPort(port)
