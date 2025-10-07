@@ -110,9 +110,29 @@ func (t *Tgbot) SetInboundService(s *InboundService) {
 	t.inboundService = s
 }
 
+// 〔中文注释〕: 在这里添加新的构造函数
+// NewTgBot 创建并返回一个完全初始化的 Tgbot 实例。
+// 这个函数确保了所有服务依赖项都被正确注入，避免了空指针问题。
+func NewTgBot(
+	inboundService *InboundService,
+	settingService *SettingService,
+	serverService *ServerService,
+	xrayService *XrayService,
+) *Tgbot {
+	return &Tgbot{
+		inboundService: inboundService,
+		settingService: settingService,
+		serverService:  serverService,
+		xrayService:    xrayService,
+		// lastStatus 保持默认的 nil 即可
+	}
+}
+
+/*
 func (t *Tgbot) NewTgbot() *Tgbot {
 	return new(Tgbot)
 }
+*/
 
 func (t *Tgbot) I18nBot(name string, params ...string) string {
 	return locale.I18n(locale.Bot, name, params...)
