@@ -61,6 +61,15 @@ func runWebServer() {
 	inboundService := service.InboundService{}
 	lastStatus := service.Status{}
 
+	// 创建 Xray API 实例
+	xrayApi := xray.NewXrayAPI() 
+	
+	// 注入到 XrayService 中 
+	xrayService.SetXrayAPI(xrayApi) 
+	
+	// 注入到 InboundService 中 
+	inboundService.SetXrayAPI(xrayApi)
+
 	// 〔中文注释〕: 2. 初始化 TG Bot 服务 (如果已启用)
 	tgEnable, err := settingService.GetTgbotEnabled()
 	if err != nil {
