@@ -28,6 +28,11 @@ type XrayService struct {
 	xrayAPI        xray.XrayAPI
 }
 
+// SetXrayAPI 用于从外部注入 XrayAPI 实例
+func (s *XrayService) SetXrayAPI(api xray.XrayAPI) {
+    s.xrayAPI = api
+}
+
 // IsXrayRunning 检查 Xray 是否正在运行
 func (s *XrayService) IsXrayRunning() bool {
 	return p != nil && p.IsRunning()
