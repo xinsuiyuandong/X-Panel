@@ -59,6 +59,7 @@ func runWebServer() {
 	serverService := service.ServerService{}
 	// 还需要 InboundService 等，按需添加
 	inboundService := service.InboundService{}
+	lastStatus := service.Status{}
 
 	// 〔中文注释〕: 2. 初始化 TG Bot 服务 (如果已启用)
 	tgEnable, err := settingService.GetTgbotEnabled()
