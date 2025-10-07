@@ -3632,7 +3632,7 @@ func (t *Tgbot) SendSubconverterSuccess() {
 			"您现在可以使用以下地址访问 Web 界面：\n\n"+
 			"🔗 **登录地址**: `https://%s:15268`\n\n"+
 			"默认用户名: `admin`\n"+
-			"默认密码: `123456`\n\n"+
+			"默认 密码: `123456`\n\n"+
 			"可登录订阅转换后台修改您的密码！",
 		domain,
 	)
