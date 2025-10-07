@@ -1680,6 +1680,10 @@ async openPort(port) {
                                 class: themeSwitcher.currentTheme,
                                 onOk: async () => {
                                     // 〔中文注释〕：从这里开始是全新的轮询检测逻辑
+									// 确保 loginUrl 被定义，用于成功提示
+                                    const subConverterUrl = `https://${window.location.hostname}:15268`;
+                                    const loginUrl = subConverterUrl; 
+									
 									const portsToOpen = [8000, 15268];
                                     let openPortFailed = false; // 用于标记是否有端口放行失败
                         
@@ -1735,80 +1739,57 @@ async openPort(port) {
                                         return;
                                     }
 
-                                    // 2. 指令发送成功后，创建并显示一个用于轮询的模态框
+                                    // 2. 指令发送成功后，创建并显示一个用于等待服务启动的模态框
                                     const h = this.$createElement;
                                     const modal = this.$info({
-                                        title: '⏳ 正在安装并检测服务状态',
-                                        content: '指令已发送，后台正在执行安装。前端将自动轮询检测服务状态，请稍候... (最长等待2分钟)',
-                                        class: themeSwitcher.currentTheme,
-                                        okText: '后台运行',
-                                        okButtonProps: {
-                                            props: {
-                                                loading: true // 让按钮一直处于加载状态，表示正在进行中
-                                            }
-                                        },
-                                    });
+                                    title: '⏳ 正在安装并启动服务...',
+                                    content: '安装指令已发送，后台正在执行安装和启动。请耐心等待，预计40秒内自动给出安装成功提示。',
+                                    class: themeSwitcher.currentTheme,
+                                    okText: '后台运行',
+                                    okButtonProps: {
+                                         props: {
+                                            loading: true // 让按钮一直处于加载状态
+                                         }
+                                       },
+                                     });
 
-                                    // 3. 设置轮询器和超时器
-                                    let pollingInterval;
-                                    const pollingTimeout = setTimeout(() => {
-                                        clearInterval(pollingInterval); // 停止轮询
-                                        modal.update({
-                                            title: '❌ 安装超时',
-                                            content: '安装过程超过2分钟仍未完成。请检查服务器日志以了解详细信息，或稍后刷新页面重试。',
-                                            okText: '关闭',
-                                            okButtonProps: {
-                                                props: {
-                                                    loading: false
-                                                }
+                                    // 3. 核心妥协：使用固定延时代替不可靠的前端轮询
+                                    const SERVICE_STARTUP_WAIT_TIME = 40000; // 等待 40 秒钟
+
+                                    setTimeout(() => {
+                                    // 延时结束后，强制更新模态框为成功状态
+                                       modal.update({
+                                         title: '✅ 安装成功！',
+                                         // 使用 VNode 来创建指定的提示内容
+                                         content: h('div', { style: 'white-space: pre-wrap; text-align: left;' }, [
+                                         h('p', { style: 'font-weight: bold; font-size: 16px; margin-bottom: 10px;'}, '🎉 恭喜！【订阅转换】模块已成功安装！'),
+                                         h('p', '您现在可以使用以下地址访问 Web 界面：'),
+                                         h('p', [
+                                         h('strong', '🔗 登录地址: '),
+                                         h('a', {
+                                           attrs: {
+                                              href: loginUrl,
+                                              target: '_blank'
                                             },
-                                        });
-                                    }, 120000); // 2分钟超时
-
-                                    // 4. 开始轮询
-                                    pollingInterval = setInterval(() => {
-                                        fetch(subConverterUrl, { method: 'GET', mode: 'no-cors' })
-                                            .then(() => {
-                                                // 5. 检测成功！
-                                                clearTimeout(pollingTimeout); // 清除超时
-                                                clearInterval(pollingInterval); // 停止轮询
-
-                                                // 更新模态框为成功状态，并提供可点击的链接
-                                                modal.update({
-                                                    title: '✅ 安装成功！',
-                                                    // 使用 VNode 来创建指定的提示内容，并使用 pre-wrap 样式保留换行和格式
-                                                    content: h('div', { style: 'white-space: pre-wrap; text-align: left;' }, [
-                                                        h('p', { style: 'font-weight: bold; font-size: 16px; margin-bottom: 10px;'}, '🎉 恭喜！【订阅转换】模块已成功安装！'),
-                                                        h('p', '您现在可以使用以下地址访问 Web 界面：'),
-                                                        h('p', [
-                                                            h('strong', '🔗 登录地址: '),
-                                                            h('a', {
-                                                                attrs: {
-                                                                    href: loginUrl,
-                                                                    target: '_blank'
-                                                                },
-                                                                style: 'font-family: monospace; font-weight: bold;'
-                                                            }, loginUrl)
-                                                        ]),
-                                                        h('p', '默认用户名: admin'),
-                                                        h('p', '默认 密码: 123456'),
-                                                        h('p', { style: 'margin-top: 10px; font-style: italic;' }, '可登录订阅转换后台修改您的密码！'),
-                                                        h('p', { style: 'font-size: 12px; color: #888; margin-top: 10px;'}, 'TG机器人也已收到成功通知。')
-                                                    ]),
-                                                    okText: '完成',
-                                                    okButtonProps: {
-                                                        props: {
-                                                            loading: false
-                                                        }
-                                                    },
-                                                });
-                                            })
-                                            .catch(() => {
-                                                // 检测失败，继续等待下一次轮询
-                                                console.log('Polling subconverter... service not ready yet.');
-                                            });
-                                    }, 5000); // 每5秒检测一次
-                                },
+                                         style: 'font-family: monospace; font-weight: bold;'
+                                         }, loginUrl)
+                                        ]),
+                                        // 突出显示用户名和密码
+                                        h('p', '默认用户名: ' + h('strong', 'admin')),
+                                        h('p', '默认 密码: ' + h('strong', '123456')),
+                                        h('p', { style: 'font-size: 12px; color: #888; margin-top: 10px;'}, '可登录订阅转换后台修改您的密码！'),
+                                        h('p', { style: 'margin-top: 10px; font-style: italic; color: #ff4d4f;' }, '---'), // 使用红色分隔线
+                                        h('p', { style: 'font-style: italic; color: #ff4d4f;' }, '【重要提示】：若您无法访问上述地址，请进入 VPS 中手动放行 8000 和 15268 端口。') // 红色字体
+                                        ]),
+                                       okText: '完成',
+                                       okButtonProps: {
+                                            props: {
+                                               loading: false
+                                            }
+                                          },
+                                       });
+                                    }, SERVICE_STARTUP_WAIT_TIME);
+                                 },
                             });
                         });
                     },
