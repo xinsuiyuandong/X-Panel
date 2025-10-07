@@ -1198,19 +1198,22 @@ async openPort(port) {
     let success = true;
     
     try {
-        // 假设后端 API 路径为 /panel/api/server/openPort，参数为 port
+        // 〔中文注释〕: 调用后端API，它现在会立刻返回一个表示“指令已发送”的JSON。
         const msg = await HttpUtil.postForm('/panel/api/server/openPort', { port: port });
         
         if (msg.success) {
-            this.$message.success(`端口 ${port} 已成功放行/检查!`);
+            // 〔中文注释〕: 将提示信息修改为更准确的“指令已发送”，因为任务正在后台运行。
+            this.$message.success(`端口 ${port} 放行指令已发送，后台执行中！`);
         } else {
             success = false;
-            this.$message.error(`端口 ${port} 放行失败: ${msg.msg || '未知错误，请检查后端日志。'}`);
+            // 〔中文注释〕: 如果API调用本身就失败了（例如后端服务挂了），则显示错误。
+            this.$message.error(`发送端口 ${port} 放行指令失败: ${msg.msg || '未知错误，请检查后端日志。'}`);
         }
     } catch (err) {
         success = false;
         console.error(`请求放行端口 ${port} 失败:`, err);
-        this.$message.error(`请求放行端口 ${port} 失败，请检查网络。 ${err.message}`);
+        // 〔中文注释〕: 网络错误或返回了非JSON内容（例如502网关错误）会在这里捕获。
+        this.$message.error(`请求放行端口 ${port} 失败，请检查网络或后端服务状态。 ${err.message}`);
     } finally {
         loadingMessage(); // 无论成功或失败，都关闭加载提示
     }
