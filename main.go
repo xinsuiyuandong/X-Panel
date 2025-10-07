@@ -63,7 +63,7 @@ func runWebServer() {
 	lastStatus := service.Status{}
 
 	// 创建 Xray API 实例
-	xrayApi := xray.NewXrayAPI() 
+	xrayApi := xray.NewAPI()
 	
 	// 注入到 XrayService 中 
 	xrayService.SetXrayAPI(xrayApi) 
