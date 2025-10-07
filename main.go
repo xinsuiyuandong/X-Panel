@@ -167,6 +167,10 @@ func runWebServer() {
 			}
 
 			server = web.NewServer(serverService)
+			// 重新注入 tgBotService
+            if tgBotService != nil {
+                 server.SetTelegramService(tgBotService)
+            }
 			global.SetWebServer(server)
 			err = server.Start()
 			if err != nil {
