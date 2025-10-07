@@ -22,6 +22,11 @@ type InboundService struct {
 	tgService TelegramService
 }
 
+// 【新增方法】: 用于从外部注入 XrayAPI 实例
+func (s *InboundService) SetXrayAPI(api xray.XrayAPI) {
+    s.xrayApi = api
+}
+
 // 【新增方法】: 用于从外部注入 TelegramService 实例
 func (s *InboundService) SetTelegramService(tgService TelegramService) {
     s.tgService = tgService
