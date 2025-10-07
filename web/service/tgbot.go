@@ -124,7 +124,7 @@ func NewTgBot(
 		settingService: settingService,
 		serverService:  serverService,
 		xrayService:    xrayService,
-		// lastStatus 保持默认的 nil 即可
+		lastStatus:     Status
 	}
 }
 
