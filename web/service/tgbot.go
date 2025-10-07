@@ -118,13 +118,14 @@ func NewTgBot(
 	settingService *SettingService,
 	serverService *ServerService,
 	xrayService *XrayService,
+	lastStatus *Status,
 ) *Tgbot {
 	return &Tgbot{
 		inboundService: inboundService,
 		settingService: settingService,
 		serverService:  serverService,
 		xrayService:    xrayService,
-		lastStatus:     Status
+		lastStatus:     lastStatus,
 	}
 }
 
