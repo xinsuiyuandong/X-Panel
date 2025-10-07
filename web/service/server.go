@@ -1145,71 +1145,67 @@ func (s *ServerService) openSubconverterPorts() error {
 
 // 【新增方法实现】: 后台前端开放指定端口
 // OpenPort 供前端调用，自动检查/安装 ufw 并放行指定的端口。
-// 接口：POST /panel/api/server/openPort
-func (s *ServerService) OpenPort(port string) error {
-	// 1. 将 port string 转换为 int
-	portInt, err := strconv.Atoi(port)
-	if err != nil {
-		return fmt.Errorf("端口号格式错误，无法转换为数字: %s", port)
-	}
+// 〔中文注释〕: 整个函数逻辑被放入一个 go func() 协程中，实现异步后台执行。
+// 〔中文注释〕: 函数签名不再返回 error，因为它会立即返回，无法得知后台任务的最终结果。
+func (s *ServerService) OpenPort(port string) {
+	// 〔中文注释〕: 启动一个新的协程来处理耗时任务，这样 HTTP 请求可以立刻返回。
+	go func() {
+		// 1. 将 port string 转换为 int
+		portInt, err := strconv.Atoi(port)
+		if err != nil {
+			// 〔中文注释〕: 在后台任务中，如果出错，我们只能记录日志，因为无法再返回给前端。
+			logger.Errorf("端口号格式错误，无法转换为数字: %s", port)
+			return
+		}
 
-	// 2. 将 Shell 逻辑整合为一个可执行的命令，并使用 /bin/bash -c 执行
-	shellCommand := fmt.Sprintf(`
-	PORT_TO_OPEN=%d
-	
-	echo "正在为入站配置自动检查并放行端口 $PORT_TO_OPEN"
-
-	# 1. 检查/安装 ufw (仅限 Debian/Ubuntu 系统)
-	if ! command -v ufw &>/dev/null; then
-		echo "ufw 防火墙未安装，正在安装..."
-		# 使用绝对路径执行 apt-get，避免 PATH 问题
-		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
-		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y ufw
-		if [ $? -ne 0 ]; then echo "❌ ufw 安装失败，可能不是 Debian/Ubuntu 系统，或者权限不足。"; exit 1; fi
-	fi
-
-	# 2. 放行端口 (TCP/UDP)
-	echo "正在执行 ufw allow $PORT_TO_OPEN..."
-	ufw allow $PORT_TO_OPEN
-	if [ $? -ne 0 ]; then echo "❌ ufw 端口 $PORT_TO_OPEN 放行失败。"; exit 1; fi
-
-	# 3. 检查/激活防火墙
-	if ! ufw status | grep -q "Status: active"; then
-		echo "ufw 状态：未激活。正在尝试激活..."
-		ufw --force enable
-		if [ $? -ne 0 ]; then echo "❌ ufw 激活失败。"; exit 1; fi
-	fi
-	echo "✅ 端口 $PORT_TO_OPEN 已成功放行/检查。"
-	`, portInt) // 使用转换后的 portInt
-
-	// 3. 使用 exec.CommandContext 运行命令
-    // 添加 70 秒超时，防止命令挂起导致 HTTP 连接断开
-	ctx, cancel := context.WithTimeout(context.Background(), 70*time.Second) 
-	defer cancel() // 确保 context 在函数退出时被取消
-    
-	cmd := exec.CommandContext(ctx, "/bin/bash", "-c", shellCommand)
-	
-	// 4. 捕获命令的输出
-	output, err := cmd.CombinedOutput()
-	
-	// 5. 记录日志，以便诊断
-	logOutput := strings.TrimSpace(string(output))
-	logger.Infof("执行 ufw 端口放行命令（端口 %s）结果：\n%s", port, logOutput)
-
-
-	if err != nil {
-		// 【关键检查】：如果错误是上下文超时引起的，返回特定错误
-        if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-             return fmt.Errorf("端口 %s 自动放行失败：命令执行超时（超过 30 秒）。VPS网络可能太慢或 apt-get 挂起。请手动执行命令。", port)
-        }
-        
-		// 6. 返回详细的错误信息
-		errorMsg := fmt.Sprintf("端口 %s 自动放行失败。\n请检查 VPS 是否为 Debian/Ubuntu 系统，是否安装 UFW 或权限是否足够。\n\n**详细输出：**\n```\n%s\n```\n\n**请手动执行以下命令放行端口：**\n`ufw allow %s && ufw allow %s/tcp && ufw allow %s/udp && ufw reload`", 
-			port, logOutput, port, port, port)
+		// 2. 将 Shell 逻辑整合为一个可执行的命令，并使用 /bin/bash -c 执行
+		shellCommand := fmt.Sprintf(`
+		PORT_TO_OPEN=%d
 		
-		return fmt.Errorf(errorMsg)
-	}
-	
-    // 7. 成功返回 nil
-    return nil
+		echo "正在为入站配置自动检查并放行端口 $PORT_TO_OPEN"
+
+		# 1. 检查/安装 ufw (仅限 Debian/Ubuntu 系统)
+		if ! command -v ufw &>/dev/null; then
+			echo "ufw 防火墙未安装，正在安装..."
+			# 使用绝对路径执行 apt-get，避免 PATH 问题
+			DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
+			DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y ufw
+			if [ $? -ne 0 ]; then echo "❌ ufw 安装失败，可能不是 Debian/Ubuntu 系统，或者权限不足。"; exit 1; fi
+		fi
+
+		# 2. 放行端口 (TCP/UDP)
+		echo "正在执行 ufw allow $PORT_TO_OPEN..."
+		ufw allow $PORT_TO_OPEN
+		if [ $? -ne 0 ]; then echo "❌ ufw 端口 $PORT_TO_OPEN 放行失败。"; exit 1; fi
+
+		# 3. 检查/激活防火墙
+		if ! ufw status | grep -q "Status: active"; then
+			echo "ufw 状态：未激活。正在尝试激活..."
+			ufw --force enable
+			if [ $? -ne 0 ]; then echo "❌ ufw 激活失败。"; exit 1; fi
+		fi
+		echo "✅ 端口 $PORT_TO_OPEN 已成功放行/检查。"
+		`, portInt) // 使用转换后的 portInt
+
+		// 3. 使用 exec.CommandContext 运行命令
+		// 添加 70 秒超时，防止命令挂起导致 HTTP 连接断开
+		ctx, cancel := context.WithTimeout(context.Background(), 70*time.Second)
+		defer cancel() // 确保 context 在函数退出时被取消
+
+		cmd := exec.CommandContext(ctx, "/bin/bash", "-c", shellCommand)
+
+		// 4. 捕获命令的输出
+		output, err := cmd.CombinedOutput()
+
+		// 5. 记录日志，以便诊断
+		logOutput := strings.TrimSpace(string(output))
+		logger.Infof("执行 ufw 端口放行命令（端口 %s）结果：\n%s", port, logOutput)
+
+		// 〔中文注释〕: 这里的错误处理现在只用于在后台记录日志。
+		if err != nil {
+			errorMsg := fmt.Sprintf("后台执行端口 %s 自动放行失败。错误: %v", port, err)
+			logger.Error(errorMsg)
+			// 〔可选〕: 未来可以在这里加入 Telegram 机器人通知等功能，来通知管理员任务失败。
+		}
+	}()
 }
