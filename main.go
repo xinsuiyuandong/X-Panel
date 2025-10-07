@@ -22,7 +22,6 @@ import (
 	"x-ui/web"
 	"x-ui/web/global"
 	"x-ui/web/service"
-	"x-ui/xray"
 
 	"github.com/joho/godotenv"
 	"github.com/op/go-logging"
@@ -54,54 +53,11 @@ func runWebServer() {
 		log.Fatalf("Error initializing database: %v", err)
 	}
 
-	// 〔中文注释〕: 1. 初始化所有需要的服务实例
+	// 中文注释: xrayService 在这里被创建，我们需要将它传递给我们的新任务
 	xrayService := service.XrayService{}
-	settingService := service.SettingService{}
-	serverService := service.ServerService{}
-	// 还需要 InboundService 等，按需添加
-	inboundService := service.InboundService{}
-	lastStatus := service.Status{}
 
-	// 创建 Xray API 实例
-	xrayApi := xray.XrayAPI{}
-	
-	// 注入到 XrayService 中 
-	xrayService.SetXrayAPI(xrayApi) 
-	
-	// 注入到 InboundService 中 
-	inboundService.SetXrayAPI(xrayApi)
-
-	// 〔中文注释〕: 2. 初始化 TG Bot 服务 (如果已启用)
-	tgEnable, err := settingService.GetTgbotEnabled()
-	if err != nil {
-		logger.Warningf("无法获取 Telegram Bot 设置: %v", err)
-	}
-
-	var tgBotService service.TelegramService 
-	if tgEnable {
-		// 将所有需要的服务作为参数传递进去，确保返回的 tgBotService 是一个完全初始化的、可用的实例。
-		tgBot := service.NewTgBot(&inboundService, &settingService, &serverService, &xrayService, &lastStatus)
-		tgBotService = tgBot
-	}
-
-	// 〔中文注释〕: 3. 【核心步骤】执行依赖注入
-	//    将 tgBotService 实例注入到 serverService 中。
-	//    这样 serverService 内部的 tgService 字段就不再是 nil 了。
-	serverService.SetTelegramService(tgBotService)
-	//    同理，也为 InboundService 注入
-	inboundService.SetTelegramService(tgBotService)
-	
 	var server *web.Server
-	
-	// 〔中文注释〕: 调用我们刚刚改造过的 web.NewServer，把功能完整的 serverService 传进去。
-	server = web.NewServer(serverService)
-    // 将 tgBotService 注入到 web.Server 中，使其在 web.go/Server.Start() 中可用
-    if tgBotService != nil {
-		// 〔中文注释〕: 这里的注入是为了让 Web Server 可以在启动时调用 Tgbot.Start()
-        // 同时，也确保了 Web 层的回调处理能使用到这个完整的 Bot 实例
-        server.SetTelegramService(tgBotService)
-    }
-	
+	server = web.NewServer()
 	global.SetWebServer(server)
 	err = server.Start()
 	if err != nil {
@@ -177,11 +133,7 @@ func runWebServer() {
 				logger.Debug("Error stopping sub server:", err)
 			}
 
-			server = web.NewServer(serverService)
-			// 重新注入 tgBotService
-            if tgBotService != nil {
-                 server.SetTelegramService(tgBotService)
-            }
+			server = web.NewServer()
 			global.SetWebServer(server)
 			err = server.Start()
 			if err != nil {
