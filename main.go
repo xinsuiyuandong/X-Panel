@@ -68,9 +68,9 @@ func runWebServer() {
 
 	var tgBotService service.TelegramService 
 	if tgEnable {
-		tgBotService = new(service.Tgbot)
-		// 可以在这里注入 tgBotService 所需的依赖，例如：
-	    // tgBotService.SetServerService(&serverService) // 如果需要的话
+		// 将所有需要的服务作为参数传递进去，确保返回的 tgBotService 是一个完全初始化的、可用的实例。
+		tgBot := service.NewTgBot(&inboundService, &settingService, &serverService, &xrayService)
+		tgBotService = tgBot
 	}
 
 	// 〔中文注释〕: 3. 【核心步骤】执行依赖注入
@@ -86,10 +86,8 @@ func runWebServer() {
 	server = web.NewServer(serverService)
     // 将 tgBotService 注入到 web.Server 中，使其在 web.go/Server.Start() 中可用
     if tgBotService != nil {
-        if tgbot, ok := tgBotService.(*service.Tgbot); ok {
-            // 需要注入 ServerService，因为 Tgbot 的回调处理需要用到它
-            tgbot.SetServerService(&serverService) 
-        }
+		// 〔中文注释〕: 这里的注入是为了让 Web Server 可以在启动时调用 Tgbot.Start()
+        // 同时，也确保了 Web 层的回调处理能使用到这个完整的 Bot 实例
         server.SetTelegramService(tgBotService)
     }
 	
