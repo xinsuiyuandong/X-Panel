@@ -357,28 +357,20 @@ func (a *ServerController) installSubconverter(c *gin.Context) {
 
 // 【新增接口实现】: 前端放行端口
 func (a *ServerController) openPort(c *gin.Context) {
-	
+
 	// 直接使用 c.PostForm("port") 获取表单数据
-	// 这是最可靠的获取 port=xxxx 格式数据的方法，不受 Content-Type 歧义的影响。
 	port := c.PostForm("port")
-	
+
 	// 1. 手动进行参数校验
 	if port == "" {
-		// 如果端口为空，返回参数错误提示
 		jsonMsg(c, "请求端口参数失败", fmt.Errorf("无效的请求参数，请确保端口号存在"))
 		return
 	}
-	
-	// 【中文注释】: 2. 调用服务层方法执行逻辑
-	err := a.serverService.OpenPort(port)
-	
-	// 【中文注释】: 3. 根据 Service 层的返回结果进行响应
-	if err != nil {
-		// 【中文注释】: Service 层返回了非致命错误，直接将错误信息 (err.Error()) 作为提示返回给前端。
-		jsonMsg(c, "放行端口处理完成", err) 
-		return
-	}
 
-	// 【中文注释】: 4. 如果 Service 层返回 nil (命令执行成功)，则返回成功的中文消息。
-	jsonMsg(c, "端口已成功放行", nil)
+	// 【中文注释】: 2. 调用服务层方法，该方法会立即返回，并在后台启动一个协程执行任务。
+	a.serverService.OpenPort(port)
+
+	// 【中文注释】: 3. 因为服务层方法是异步的，不再检查它的 error 返回值。
+	//    直接向前端返回一个成功的消息，告知用户指令已发送。
+	jsonMsg(c, "端口放行指令已成功发送，正在后台执行...", nil)
 }
