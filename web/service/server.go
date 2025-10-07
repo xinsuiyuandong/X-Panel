@@ -18,7 +18,6 @@ import (
 	"strings"
 	"time"
 	"context"
-	"errors"
 
 	"x-ui/config"
 	"x-ui/database"
