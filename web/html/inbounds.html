@@ -1775,10 +1775,10 @@ async openPort(port) {
                                          }, loginUrl)
                                         ]),
                                         // 突出显示用户名和密码
-                                        h('p', '默认用户名: ' + h('strong', 'admin')),
-                                        h('p', '默认 密码: ' + h('strong', '123456')),
+                                        h('p', [ '默认用户名: ', h('strong', 'admin') ]),
+                                        h('p', [ '默认 密码: ', h('strong', '123456') ]),
                                         h('p', { style: 'font-size: 12px; color: #888; margin-top: 10px;'}, '可登录订阅转换后台修改您的密码！'),
-                                        h('p', { style: 'margin-top: 10px; font-style: italic; color: #ff4d4f;' }, '---'), // 使用红色分隔线
+                                        h('p', { style: 'margin-top: 10px; font-style: italic; color: #ff4d4f;' }, '---------------------------------------'), // 使用红色分隔线
                                         h('p', { style: 'font-style: italic; color: #ff4d4f;' }, '【重要提示】：若您无法访问上述地址，请进入 VPS 中手动放行 8000 和 15268 端口。') // 红色字体
                                         ]),
                                        okText: '完成',
