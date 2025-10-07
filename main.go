@@ -22,6 +22,7 @@ import (
 	"x-ui/web"
 	"x-ui/web/global"
 	"x-ui/web/service"
+	"x-ui/xray"
 
 	"github.com/joho/godotenv"
 	"github.com/op/go-logging"
