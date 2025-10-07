@@ -69,7 +69,7 @@ func runWebServer() {
 	var tgBotService service.TelegramService 
 	if tgEnable {
 		// 将所有需要的服务作为参数传递进去，确保返回的 tgBotService 是一个完全初始化的、可用的实例。
-		tgBot := service.NewTgBot(&inboundService, &settingService, &serverService, &xrayService)
+		tgBot := service.NewTgBot(&inboundService, &settingService, &serverService, &xrayService, &lastStatus)
 		tgBotService = tgBot
 	}
 
