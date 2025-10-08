@@ -2107,9 +2107,9 @@ func (t *Tgbot) getServerUsage(chatId int64, messageID ...int) string {
 func (t *Tgbot) sendServerUsage() string {
 	info := t.prepareServerUsageInfo()
 	// 【安全修正】：最小化 HTML 安全转义
-    info = strings.ReplaceAll(info, "&", "&amp;")
-    info = strings.ReplaceAll(info, "<", "&lt;")
-    info = strings.ReplaceAll(info, ">", "&gt;")
+	info = strings.ReplaceAll(info, "&", "&amp;")
+	info = strings.ReplaceAll(info, "<", "&lt;")
+	info = strings.ReplaceAll(info, ">", "&gt;")
     
 	return info
 }
@@ -2218,9 +2218,9 @@ func (t *Tgbot) getInboundUsages() string {
 		}
 	}
 	// 【安全修正】：最小化 HTML 安全转义
-    info = strings.ReplaceAll(info, "&", "&amp;")
-    info = strings.ReplaceAll(info, "<", "&lt;")
-    info = strings.ReplaceAll(info, ">", "&gt;")
+	info = strings.ReplaceAll(info, "&", "&amp;")
+	info = strings.ReplaceAll(info, "<", "&lt;")
+	info = strings.ReplaceAll(info, ">", "&gt;")
     
 	return info
 }
