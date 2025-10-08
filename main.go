@@ -177,7 +177,7 @@ func runWebServer() {
 				logger.Debug("Error stopping sub server:", err)
 			}
 
-			server = web.NewServer(serverService)
+			server = web.NewServer(serverService, xrayService, settingService)
 			// 重新注入 tgBotService
             if tgBotService != nil {
                  server.SetTelegramService(tgBotService)
