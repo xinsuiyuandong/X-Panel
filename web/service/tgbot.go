@@ -2110,7 +2110,7 @@ func (t *Tgbot) sendServerUsage() string {
 	info = strings.ReplaceAll(info, "&", "&amp;")
 	info = strings.ReplaceAll(info, "<", "&lt;")
 	info = strings.ReplaceAll(info, ">", "&gt;")
-    
+	
 	return info
 }
 
@@ -2221,7 +2221,7 @@ func (t *Tgbot) getInboundUsages() string {
 	info = strings.ReplaceAll(info, "&", "&amp;")
 	info = strings.ReplaceAll(info, "<", "&lt;")
 	info = strings.ReplaceAll(info, ">", "&gt;")
-    
+	
 	return info
 }
 
