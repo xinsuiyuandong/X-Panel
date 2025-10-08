@@ -93,8 +93,8 @@ func runWebServer() {
 	
 	var server *web.Server
 	
-	// 〔中文注释〕: 调用我们刚刚改造过的 web.NewServer，把功能完整的 serverService 传进去。
-	server = web.NewServer(serverService)
+	// 在这里，将 xrayService 和 settingService 实例一并传入
+	server = web.NewServer(serverService, xrayService, settingService)
     // 将 tgBotService 注入到 web.Server 中，使其在 web.go/Server.Start() 中可用
     if tgBotService != nil {
 		// 〔中文注释〕: 这里的注入是为了让 Web Server 可以在启动时调用 Tgbot.Start()
