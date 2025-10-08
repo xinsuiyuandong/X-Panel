@@ -2043,30 +2043,15 @@ func (t *Tgbot) SendReport() {
 		t.SendMsgToTgbotAdmins(msg)
 	}
 
-	// 〔中文注释〕: 发送完服务器信息后，强制延迟 3 秒。
-    time.Sleep(3 * time.Second)
-	
 	info := t.sendServerUsage()
 	t.SendMsgToTgbotAdmins(info)
-	
-	// 〔中文注释〕: 发送完服务器信息后，强制延迟 3 秒。
-    time.Sleep(3 * time.Second)
 
 	t.sendExhaustedToAdmins()
-
-	// 〔中文注释〕: 发送完服务器信息后，强制延迟 3 秒。
-    time.Sleep(3 * time.Second)
-	
 	t.notifyExhausted()
-
-	// 〔中文注释〕: 发送完服务器信息后，强制延迟 3 秒。
-    time.Sleep(3 * time.Second)
 
 	backupEnable, err := t.settingService.GetTgBotBackup()
 	if err == nil && backupEnable {
 		t.SendBackupToAdmins()
-		// 〔中文注释〕: 发送完服务器信息后，强制延迟 3 秒。
-        time.Sleep(3 * time.Second)
 	}
 }
 
@@ -2106,11 +2091,6 @@ func (t *Tgbot) getServerUsage(chatId int64, messageID ...int) string {
 // Send server usage without an inline keyboard
 func (t *Tgbot) sendServerUsage() string {
 	info := t.prepareServerUsageInfo()
-	// 【安全修正】：最小化 HTML 安全转义
-	info = strings.ReplaceAll(info, "&", "&amp;")
-	info = strings.ReplaceAll(info, "<", "&lt;")
-	info = strings.ReplaceAll(info, ">", "&gt;")
-	
 	return info
 }
 
@@ -2217,14 +2197,8 @@ func (t *Tgbot) getInboundUsages() string {
 			info += "\r\n"
 		}
 	}
-	// 【安全修正】：最小化 HTML 安全转义
-	info = strings.ReplaceAll(info, "&", "&amp;")
-	info = strings.ReplaceAll(info, "<", "&lt;")
-	info = strings.ReplaceAll(info, ">", "&gt;")
-	
 	return info
 }
-
 func (t *Tgbot) getInbounds() (*telego.InlineKeyboardMarkup, error) {
 	inbounds, err := t.inboundService.GetAllInbounds()
 	if err != nil {
