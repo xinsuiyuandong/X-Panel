@@ -131,13 +131,21 @@ func (s *Server) SetTelegramService(tgService service.TelegramService) {
 }
 
 // 〔中文注释〕: 1. 让 NewServer 能够接收一个 serverService 实例作为参数。
-func NewServer(serverService service.ServerService) *Server {
+// 【修改】: 增加 xrayService 和 settingService 作为参数
+func NewServer(
+	serverService service.ServerService,
+	xrayService service.XrayService,
+	settingService service.SettingService,
+) *Server {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Server{
 		ctx:    ctx,
 		cancel: cancel,
 		// 〔中文注释〕: 2. 将传入的 serverService 存储到 Server 结构体的字段中。
-		serverService: serverService,
+		// 【修改】: 同时初始化所有接收到的服务
+		serverService:  serverService,
+		xrayService:    xrayService,
+		settingService: settingService,
 	}
 }
 
