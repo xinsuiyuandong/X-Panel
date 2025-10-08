@@ -2043,15 +2043,30 @@ func (t *Tgbot) SendReport() {
 		t.SendMsgToTgbotAdmins(msg)
 	}
 
+	// 〔中文注释〕: 发送完服务器信息后，强制延迟 1 秒。
+    time.Sleep(1 * time.Second)
+	
 	info := t.sendServerUsage()
 	t.SendMsgToTgbotAdmins(info)
+	
+	// 〔中文注释〕: 发送完服务器信息后，强制延迟 1 秒。
+    time.Sleep(1 * time.Second)
 
 	t.sendExhaustedToAdmins()
+
+	// 〔中文注释〕: 发送完服务器信息后，强制延迟 1 秒。
+    time.Sleep(1 * time.Second)
+	
 	t.notifyExhausted()
+
+	// 〔中文注释〕: 发送完服务器信息后，强制延迟 1 秒。
+    time.Sleep(1 * time.Second)
 
 	backupEnable, err := t.settingService.GetTgBotBackup()
 	if err == nil && backupEnable {
 		t.SendBackupToAdmins()
+		// 〔中文注释〕: 发送完服务器信息后，强制延迟 1 秒。
+        time.Sleep(1 * time.Second)
 	}
 }
 
