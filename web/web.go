@@ -321,7 +321,32 @@ func (s *Server) startTask() {
 			runtime = "@daily"
 		}
 		logger.Infof("Tg notify enabled,run at %s", runtime)
-		_, err = s.cron.AddJob(runtime, job.NewStatsNotifyJob())
+
+		// 【中文注释】在注册每日任务时增加运行时检查，防止 Bot 未启动导致中断。
+		// ======================================================
+		_, err = s.cron.AddFunc(runtime, func() {
+			// 【中文注释】: 若 bot 尚未初始化或未运行，则跳过
+			if s.tgbotService == nil {
+				logger.Warning("StatsNotifyJob: tgbotService 为 nil，跳过执行。")
+				return
+			}
+			if bot, ok := s.tgbotService.(*service.Tgbot); ok {
+				if !bot.IsRunning() {
+					logger.Warning("StatsNotifyJob: TG Bot 尚未运行，跳过执行。")
+					return
+				}
+			}
+
+			// 【中文注释】: 捕获 panic，避免单次错误影响 cron 运行
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Errorf("StatsNotifyJob panic: %v", r)
+				}
+			}()
+
+			// 【中文注释】: 调用原有每日报告任务
+			job.NewStatsNotifyJob().Run()
+		})
 		if err != nil {
 			logger.Warning("Add NewStatsNotifyJob error", err)
 			return
@@ -431,19 +456,22 @@ func (s *Server) Start() (err error) {
 		s.httpServer.Serve(listener)
 	}()
 
-	s.startTask()
-
     // 启动 TG Bot
     isTgbotenabled, err := s.settingService.GetTgbotEnabled()
-    if (err == nil) && (isTgbotenabled) {
+	if (err == nil) && (isTgbotenabled) {
         // 现在直接在注入的实例上调用 Start 方法，而不是 NewTgbot()
         // 因为 main.go 已经注入了完整的实例
-        if tgbot, ok := s.tgbotService.(*service.Tgbot); ok {
-            tgbot.Start(i18nFS)
-        } else {
-            logger.Warning("Telegram Bot 已启用，但注入的实例类型不正确或为 nil，无法启动。")
-        }
-    }
+		if tgbot, ok := s.tgbotService.(*service.Tgbot); ok {
+			logger.Info("启动 Telegram Bot（在注册定时任务之前）...")
+			tgbot.Start(i18nFS)
+		} else {
+			logger.Warning("Telegram Bot 已启用，但注入的实例类型不正确或为 nil，无法启动。")
+		}
+	} else {
+		logger.Infof("Telegram Bot 未启用或读取设置失败: %v", err)
+	}
+	
+	s.startTask()
 
     return nil
 }
