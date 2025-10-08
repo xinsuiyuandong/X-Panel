@@ -129,6 +129,7 @@ func runWebServer() {
 		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 
+		/*
 		// 〔中文注释〕: 步骤一：在循环外部，只声明一次 tgBotService 变量。
 		// 我们将其声明为接口类型，初始值为 nil。
 		var tgBotService service.TelegramService
@@ -145,6 +146,7 @@ func runWebServer() {
 		if tgEnable {
 			tgBotService = new(service.Tgbot)
 		}
+		*/
 		
 		// 〔中文注释〕：步骤四：创建任务实例时，将 xrayService 和 可能为 nil 的 tgBotService 一同传入。
 		// 这样做是安全的，因为 check_client_ip_job.go 内部的 SendMessage 调用前，会先判断服务实例是否可用。
