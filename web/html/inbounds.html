@@ -722,6 +722,9 @@
                         <a-button @click="handleOneClickOk('vless_tls_encryption')" block style="margin-bottom: 10px;" html-type="button">
                         {{ i18n "pages.inbounds.oneClick.preset.vless_tls_encryption" }}
                         </a-button>
+						<a-button @click="handleOneClickOk('vless_xhttp_reality')" block style="margin-bottom: 10px;" html-type="button">
+                        {{ i18n "pages.inbounds.oneClick.preset.vless_xhttp_reality" }}
+                        </a-button>
                         <a-button @click="handleOneClickOk('switch_vision_seed')" disabled block>
                         {{ i18n "pages.inbounds.oneClick.preset.switch_vision_seed_dev" }}
                         </a-button>
@@ -1293,6 +1296,8 @@ async openPort(port) {
                     await this.createVlessRealityInbound();
                 } else if (presetType === 'vless_tls_encryption') {
                     await this.createVlessTlsEncryptionInbound();
+				} else if (presetType === 'vless_xhttp_reality') { // 【新增】: 响应新按钮的点击
+                    await this.createVlessXhttpRealityInbound();	
                 } else if (presetType === 'switch') {
                     this.$message.info('Switch 模式配置尚未实现');
                 } else {
@@ -1574,6 +1579,126 @@ async openPort(port) {
                     }
                 } catch (err) {
                     console.error("创建 VLESS + TLS + Encryption 入站时出错:", err);
+                    this.$message.error('创建过程中发生网络错误，请检查后端日志。');
+                }
+            },
+
+			// 【新增方法】: 创建 VLESS + XHTTP + Reality 入站
+            async createVlessXhttpRealityInbound() {
+                try {
+                    // 【中文注释】: 并行请求 Reality 密钥对和 UUID
+                    const [keyPairMsg, uuidMsg] = await Promise.all([
+                        HttpUtil.get('/panel/api/server/getNewX25519Cert'),
+                        HttpUtil.get('/panel/api/server/getNewUUID')
+                    ]);
+
+                    if (!keyPairMsg.success || !keyPairMsg.obj || !uuidMsg.success || !uuidMsg.obj) {
+                        this.$message.error('无法从服务器获取 Reality 密钥对或 UUID，请检查后端服务！');
+                        return;
+                    }
+
+                    const { privateKey, publicKey } = keyPairMsg.obj;
+                    const { uuid } = uuidMsg.obj;
+
+                    // 【中文注释】: 生成随机备注、端口和路径
+                    const remark = Array.from({length: 8}, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(Math.random() * 62)]).join("");
+                    const port = Math.floor(Math.random() * (55535 - 10000 + 1)) + 10000;
+                    const path = "/" + Array.from({ length: 8 }, () => "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)]).join("");
+
+                    // 【中文注释】: 尝试自动放行端口
+                    const portOpenSuccess = await this.openPort(port);
+                    if (!portOpenSuccess) {
+                        this.$message.warning(`**注意：** 自动放行端口 ${port} 失败，请务必手动到您的 **VPS 防火墙**放行该端口，否则入站将无法连接。`);
+                    }
+        
+                    // 【中文注释】: 随机选择 SNI 和 Short ID
+                    const randomDest = this.realityDestinations[Math.floor(Math.random() * this.realityDestinations.length)];
+                    const randomSni = randomDest.split(':')[0];
+                    const shortIds = this.generateShortIds();
+                    const linkSid = shortIds[Math.floor(Math.random() * shortIds.length)];
+
+                    // 【中文注释】: 构建发送给后端的入站数据，结构严格按照你提供的 JSON
+                    const data = {
+                        up: 0,
+                        down: 0,
+                        total: 0,
+                        remark: remark,
+                        enable: true,
+                        expiryTime: 0,
+                        deviceLimit: 0, 
+                        listen: '',
+                        port: port,
+                        protocol: 'vless',
+                        settings: JSON.stringify({
+                            clients: [{
+                                id: uuid,
+                                flow: "", // 【中文注释】: XHTTP 模式下 flow 为空
+                                email: remark,
+                                level: 0
+                            }],
+                            decryption: "none",
+                            selectedAuth: "X25519, not Post-Quantum"
+                        }),
+                        streamSettings: JSON.stringify({
+                            network: "xhttp", // 【中文注释】: 网络模式为 xhttp
+                            security: "reality",
+                            realitySettings: {
+                                show: false,
+                                target: randomDest,
+                                xver: 0,
+                                serverNames: [randomSni, `www.${randomSni}`],
+                                privateKey: privateKey,
+                                maxClientVer: "",
+                                minClientVer: "",
+                                maxTimediff: 0,
+                                mldsa65Seed: "",
+                                shortIds: shortIds,
+                                // 【中文注释】: 请注意 publicKey 现在嵌套在 'settings' 对象中
+                                settings: {
+                                    publicKey: publicKey,
+                                    spiderX: "/",
+                                    mldsa65Verify: ""
+                                }
+                            },
+                            xhttpSettings: {
+                                headers: {},
+                                host: "",
+                                mode: "packet-up",
+                                noSSEHeader: false,
+                                path: path, // 【中文注释】: 使用上面生成的随机路径
+                                scMaxBufferedPosts: 30,
+                                scMaxEachPostBytes: "1000000",
+                                scStreamUpServerSecs: "20-80",
+                                xPaddingBytes: "100-1000"
+                            }
+                        }),
+                        sniffing: JSON.stringify({
+                            enabled: true,
+                            destOverride: ["http", "tls", "quic", "fakedns"],
+                            metadataOnly: false,
+                            routeOnly: false
+                        }),
+                    };
+                    
+                    // 【中文注释】: 发送创建请求
+                    const msg = await HttpUtil.post('/panel/api/inbounds/add', data);
+
+                    if (msg.success) {
+                        // 【中文注释】: 创建成功后，生成正确的分享链接，注意包含 type=xhttp 和 path 参数
+                        const link = `vless://${uuid}@${window.location.hostname}:${port}?type=xhttp&encryption=none&path=${encodeURIComponent(path)}&host=&mode=packet-up&security=reality&pbk=${publicKey}&fp=chrome&sni=${randomSni}&sid=${linkSid}&spx=%2F#${remark}-${remark}`;
+                        this.inboundLink = link;
+
+                        // 【中文注释】: 显示二维码并保存到历史记录
+                        this.generateOneClickQrCode(link);
+                        this.saveLinkToHistory('vless_xhttp_reality', link); // 【中文注释】: 使用唯一的类型名保存
+                        
+                        this.$message.success('VLESS + XHTTP + Reality 配置创建成功!');
+                        await this.getDBInbounds();
+                    } else {
+                        this.$message.error('创建失败: ' + msg.msg);
+                    }
+                } catch (err) {
+                    console.error("创建 VLESS + XHTTP + Reality 入站时出错:", err);
                     this.$message.error('创建过程中发生网络错误，请检查后端日志。');
                 }
             },
