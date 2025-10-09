@@ -3109,7 +3109,14 @@ func (t *Tgbot) sendOneClickOptions(chatId int64) {
 			tu.InlineKeyboardButton("🚀 Vless + TCP + Reality + Vision").WithCallbackData(t.encodeQuery("oneclick_reality")),
 		),
 		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⚡ Vless + XHTTP + Reality").WithCallbackData(t.encodeQuery("oneclick_xhttp_reality")),
+		),
+		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🛡️ Vless Encryption + XHTTP + TLS").WithCallbackData(t.encodeQuery("oneclick_tls")),
+		),
+		// 【新增占位按钮】: 为未来的 Switch + vision Seed 预留位置
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🌀 Switch + vision Seed (开发中)").WithCallbackData(t.encodeQuery("oneclick_switch_vision")),
 		),
 	)
 	t.SendMsgToTgbot(chatId, "请选择您要创建的【一键配置】类型：", optionsKeyboard)
@@ -3155,8 +3162,13 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 
 	if configType == "reality" {
 		newInbound, ufwWarning, err = t.buildRealityInbound()
+	} else if configType == "xhttp_reality" {
+		newInbound, ufwWarning, err = t.buildXhttpRealityInbound()
 	} else if configType == "tls" {
 		newInbound, ufwWarning, err = t.buildTlsInbound()
+	} else if configType == "switch_vision" { // 【新增】: 处理开发中的选项
+		t.SendMsgToTgbot(chatId, "此协议组合的功能还在开发中 ............")
+		return // 【中文注释】: 直接返回，不执行任何创建操作
 	} else {
 		err = errors.New("未知的配置类型")
 	}
@@ -3266,9 +3278,9 @@ func (t *Tgbot) buildRealityInbound() (*model.Inbound, string, error) {
                                "serverNames": []string{randomSni, "www." + randomSni},
                               // 注意：realitySettings.settings 是一个对象（map），不是数组
                                "settings": map[string]any{
-                               "publicKey":    publicKey,
-                               "spiderX":      "/",          // 前端写了 spiderX: "/"
-                               "mldsa65Verify": "",
+                                   "publicKey":    publicKey,
+                                   "spiderX":      "/",          // 前端写了 spiderX: "/"
+                                   "mldsa65Verify": "",
                            },
                         "privateKey":   privateKey,
                         "maxClientVer": "",
@@ -3461,23 +3473,130 @@ func (t *Tgbot) buildTlsInbound() (*model.Inbound, string, error) { // 更改签
                }, ufwWarning, nil // MODIFIED RETURN
            }
 
-// 发送【一键配置】的专属消息
+// 【新增函数】: 构建 VLESS + XHTTP + Reality 配置对象
+func (t *Tgbot) buildXhttpRealityInbound() (*model.Inbound, string, error) {
+	keyPairMsg, err := t.serverService.GetNewX25519Cert()
+	if err != nil {
+		return nil, "", fmt.Errorf("获取 Reality 密钥对失败: %v", err)
+	}
+	uuidMsg, err := t.serverService.GetNewUUID()
+	if err != nil {
+		return nil, "", fmt.Errorf("获取 UUID 失败: %v", err)
+	}
+
+	keyPair := keyPairMsg.(map[string]any)
+	privateKey, publicKey := keyPair["privateKey"].(string), keyPair["publicKey"].(string)
+	uuid := uuidMsg["uuid"]
+	remark := t.randomString(8, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+	port := 10000 + common.RandomInt(55535-10000+1)
+	path := "/" + t.randomString(8, "abcdefghijklmnopqrstuvwxyz")
+
+	var ufwWarning string
+	if err := t.openPortWithUFW(port); err != nil {
+		logger.Warningf("自动放行端口 %d 失败: %v", port, err)
+        ufwWarning = fmt.Sprintf("⚠️ **警告：端口放行失败**\n\n自动执行 `ufw allow %d` 命令失败，但入站创建已继续。请务必**手动**在您的 VPS 上放行端口 `%d`，否则服务将无法访问。", port, port)
+	}
+
+	tag := fmt.Sprintf("inbound-%d", port)
+
+	realityDests := []string{"tesla.com:443", "sega.com:443", "apple.com:443", "icloud.com:443", "lovelive-anime.jp:443", "meta.com:443"}
+	randomDest := realityDests[common.RandomInt(len(realityDests))]
+	randomSni := strings.Split(randomDest, ":")[0]
+	shortIds := t.generateShortIds()
+
+	settings, _ := json.Marshal(map[string]any{
+		"clients": []map[string]any{{
+			"id":    uuid,
+			"flow":  "",
+			"email": remark,
+			"level": 0,
+		}},
+		"decryption":   "none",
+		"selectedAuth": "X25519, not Post-Quantum",
+	})
+
+	streamSettings, _ := json.Marshal(map[string]any{
+		"network":  "xhttp",
+		"security": "reality",
+		"realitySettings": map[string]any{
+			"show":         false,
+			"target":       randomDest,
+			"xver":         0,
+			"serverNames":  []string{randomSni, "www." + randomSni},
+			"privateKey":   privateKey,
+			"maxClientVer": "",
+			"minClientVer": "",
+			"maxTimediff":  0,
+			"mldsa65Seed":  "",
+			"shortIds":     shortIds,
+			"settings": map[string]any{
+				"publicKey":    publicKey,
+                "spiderX":      "/",          // 前端写了 spiderX: "/"
+                "mldsa65Verify": "",
+			},
+		},
+		"xhttpSettings": map[string]any{
+			"headers":              map[string]any{},
+			"host":                 "",
+			"mode":                 "packet-up",
+			"noSSEHeader":          false,
+			"path":                 path,
+			"scMaxBufferedPosts":   30,
+			"scMaxEachPostBytes":   "1000000",
+			"scStreamUpServerSecs": "20-80",
+			"xPaddingBytes":        "100-1000",
+		},
+	})
+
+	sniffing, _ := json.Marshal(map[string]any{
+		"enabled":      true,
+		"destOverride": []string{"http", "tls", "quic", "fakedns"},
+		"metadataOnly": false,
+		"routeOnly":    false,
+	})
+
+	return &model.Inbound{
+		UserId:         1,
+		Remark:         remark,
+		Enable:         true,
+		Listen:         "",
+		Port:           port,
+		Tag:            tag,
+		Protocol:       "vless",
+		ExpiryTime:     0,
+		DeviceLimit:    0,
+		Settings:       string(settings),
+		StreamSettings: string(streamSettings),
+		Sniffing:       string(sniffing),
+	}, ufwWarning, nil
+}
+
+// 【修改后函数】: 发送【一键配置】的专属消息，增加链接类型判断
 func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, targetChatId int64) error {	
 	var link string
 	var err error
+	var linkType string
+	var dbLinkType string // 【新增】: 用于存入数据库的类型标识
 
 	var streamSettings map[string]any
 	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
 
-	// --- 1. 确定链接和协议类型 ---
-	var linkType string
+                 // --- 1. 确定链接和协议类型 ---
 	if security, ok := streamSettings["security"].(string); ok {
 		if security == "reality" {
-			link, err = t.generateRealityLink(inbound)
-			linkType = "VLESS + TCP + Reality" // 协议类型
+			if network, ok := streamSettings["network"].(string); ok && network == "xhttp" {
+				link, err = t.generateXhttpRealityLink(inbound)
+				linkType = "VLESS + XHTTP + Reality"
+				dbLinkType = "vless_xhttp_reality"
+			} else {
+				link, err = t.generateRealityLink(inbound)
+				linkType = "VLESS + TCP + Reality"
+				dbLinkType = "vless_reality"
+			}
 		} else if security == "tls" {
 			link, err = t.generateTlsLink(inbound)
-			linkType = "Vless Encryption + XHTTP + TLS" // 协议类型
+            linkType = "Vless Encryption + XHTTP + TLS" // 协议类型
+			dbLinkType = "vless_tls_encryption"
 		} else {
 			return fmt.Errorf("未知的入站 security 类型: %s", security)
 		}
@@ -3536,13 +3655,8 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
     // 这将确保 Telegram 客户端可以将其正确识别为可点击的 vless:// 链接。
     t.SendMsgToTgbot(targetChatId, link)
 
-
-    // 历史记录保存逻辑
-	linkType = "vless_reality"
-	if strings.Contains(link, "security=tls") {
-		linkType = "vless_tls_encryption"
-	}
-	t.saveLinkToHistory(linkType, link)
+	// 使用正确的类型保存历史记录
+	t.saveLinkToHistory(dbLinkType, link)
 
 	return nil
 }
@@ -3618,6 +3732,50 @@ func (t *Tgbot) generateTlsLink(inbound *model.Inbound) (string, error) {
 	// 链接格式简化，根据您的前端代码，xhttp 未在链接中体现 path
 	return fmt.Sprintf("vless://%s@%s:%d?type=tcp&encryption=%s&security=tls&fp=chrome&alpn=http%%2F1.1&sni=%s&flow=xtls-rprx-vision#%s-%s",
 		uuid, domain, inbound.Port, encryption, sni, inbound.Remark, inbound.Remark), nil
+}
+
+// 生成 VLESS + XHTTP + Reality 链接的函数
+func (t *Tgbot) generateXhttpRealityLink(inbound *model.Inbound) (string, error) {
+	var settings map[string]any
+	json.Unmarshal([]byte(inbound.Settings), &settings)
+	clients, _ := settings["clients"].([]interface{})
+	client := clients[0].(map[string]interface{})
+	uuid := client["id"].(string)
+
+	var streamSettings map[string]any
+	json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
+
+	realitySettings := streamSettings["realitySettings"].(map[string]interface{})
+	serverNames := realitySettings["serverNames"].([]interface{})
+	sni := serverNames[0].(string)
+
+	settingsMap, _ := realitySettings["settings"].(map[string]interface{})
+	publicKey, _ := settingsMap["publicKey"].(string)
+
+	shortIdsInterface, _ := realitySettings["shortIds"].([]interface{})
+	if len(shortIdsInterface) == 0 {
+		return "", errors.New("无法生成 Reality 链接：Short IDs 列表为空")
+	}
+	sid := shortIdsInterface[common.RandomInt(len(shortIdsInterface))].(string)
+
+	xhttpSettings, _ := streamSettings["xhttpSettings"].(map[string]interface{})
+	path := xhttpSettings["path"].(string)
+
+	domain, err := t.getDomain()
+	if err != nil {
+		return "", err
+	}
+
+	// 【中文注释】: 对所有URL查询参数进行编码
+	escapedPath := url.QueryEscape(path)
+	escapedPublicKey := url.QueryEscape(publicKey)
+	escapedSni := url.QueryEscape(sni)
+	escapedSid := url.QueryEscape(sid)
+	escapedRemark := url.QueryEscape(inbound.Remark)
+
+	// 【中文注释】: 严格按照最新格式构建链接
+	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=none&path=%s&host=&mode=packet-up&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F#%s-%s",
+		uuid, domain, inbound.Port, escapedPath, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
 }
 
 // 【新增辅助函数】: 发送【订阅转换】安装成功的通知
@@ -3741,8 +3899,24 @@ func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) er
     if strings.HasPrefix(data, "oneclick_") {
         configType := strings.TrimPrefix(data, "oneclick_")
 
+        var creationMessage string
+        switch configType {
+        case "reality":
+            creationMessage = "🚀 Vless + TCP + Reality + Vision"
+        case "xhttp_reality":
+            creationMessage = "⚡ Vless + XHTTP + Reality"
+        case "tls":
+            creationMessage = "🛡️ Vless Encryption + XHTTP + TLS"
+		case "switch_vision": // 【新增】: 为占位按钮提供单独的提示
+			t.SendMsgToTgbot(chatIDInt64, "此协议组合的功能还在开发中 ............")
+			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("开发中..."))
+			return nil
+        default:
+            creationMessage = strings.ToUpper(configType)
+        }
+
         // 注意：不要把无返回值函数当作表达式使用，直接调用即可
-        t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", strings.ToUpper(configType)))
+        t.SendMsgToTgbot(chatIDInt64, fmt.Sprintf("🛠️ 正在为您远程创建 %s 配置，请稍候...", creationMessage))
         t.remoteCreateOneClickInbound(configType, chatIDInt64)
 
         _ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("配置已创建，请查收管理员私信。"))
