@@ -1739,11 +1739,23 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		 t.SendMsgToTgbot(chatId, "🚀 正在远程创建【Vless + TCP + Reality】节点，请稍候...")
 		 t.remoteCreateOneClickInbound("reality", chatId)
 
+	 case "oneclick_xhttp_reality":
+		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "⚡ 正在创建 Vless + XHTTP + Reality 节点...")
+		 t.SendMsgToTgbot(chatId, "⚡ 正在远程创建【Vless + XHTTP + Reality】节点，请稍候...")
+		 t.remoteCreateOneClickInbound("xhttp_reality", chatId)	
+
 	 case "oneclick_tls":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🛡️ 正在创建 Vless Encryption + XHTTP + TLS 节点...")
 		 t.SendMsgToTgbot(chatId, "🛡️ 正在远程创建【Vless Encryption + XHTTP + TLS】节点，请稍候...")
 		 t.remoteCreateOneClickInbound("tls", chatId)
+
+	 case "oneclick_switch_vision":
+		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🌀 Switch + vision Seed 协议组合的功能还在开发中 ...........")
+		 t.SendMsgToTgbot(chatId, "🌀 Switch + vision Seed 协议组合的功能还在开发中 ........，暂不可用...")
+		 t.remoteCreateOneClickInbound("switch_vision", chatId)	
 
 	 case "subconverter_install":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
@@ -3506,10 +3518,12 @@ func (t *Tgbot) buildXhttpRealityInbound() (*model.Inbound, string, error) {
 
 	settings, _ := json.Marshal(map[string]any{
 		"clients": []map[string]any{{
-			"id":    uuid,
-			"flow":  "",
-			"email": remark,
-			"level": 0,
+			"id":       uuid,
+            "flow":     "",       // 在 XHTTP 中 flow: ""
+            "email":    remark,
+            "level":    0,
+            "password": "",       // JS 中 password: ""
+            "enable":   true,
 		}},
 		"decryption":   "none",
 		"selectedAuth": "X25519, not Post-Quantum",
@@ -3538,7 +3552,7 @@ func (t *Tgbot) buildXhttpRealityInbound() (*model.Inbound, string, error) {
 		"xhttpSettings": map[string]any{
 			"headers":              map[string]any{},
 			"host":                 "",
-			"mode":                 "stream-one",
+			"mode":                 "stream-up",
 			"noSSEHeader":          false,
 			"path":                 path,
 			"scMaxBufferedPosts":   30,
@@ -3774,7 +3788,7 @@ func (t *Tgbot) generateXhttpRealityLink(inbound *model.Inbound) (string, error)
 	escapedRemark := url.QueryEscape(inbound.Remark)
 
 	// 【中文注释】: 严格按照最新格式构建链接
-	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=none&path=%s&host=&mode=stream-one&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F#%s-%s",
+	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=none&path=%s&host=&mode=stream-up&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F#%s-%s",
 		uuid, domain, inbound.Port, escapedPath, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
 }
 
