@@ -323,6 +323,7 @@
 
 [pages.inbounds.oneClick.preset]
 "vless_reality" = "VLESS + TCP + Reality + Vision"
+"vless_xhttp_reality" = "VLESS + XHTTP + Reality"
 "vless_tls_encryption" = "VLESS Encryption + TLS（可选套CDN）"
 "switch_vision_seed_dev" = "Switch + Vision Seed (开发中)"
 
