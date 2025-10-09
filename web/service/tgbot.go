@@ -3634,7 +3634,7 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 
 	// --- 3. 构造包含所有信息并严格遵循格式的描述消息 ---
 	baseCaption := fmt.Sprintf(
-		"入站备注：\n\n`%s`\n\n用户 Email：\n\n`%s`\n\n协议类型：\n\n`%s`\n\n设备限制：0（无限制），\n\n生成时间：\n\n`%s`",
+		"入站备注：\n\n`%s`\n\n用户 Email：\n\n`%s`\n\n协议类型：\n\n`%s`\n\n设备限制：0（无限制）\n\n生成时间：\n\n`%s`",
 		inbound.Remark,
 		inbound.Remark, // 默认使用 Remark 作为 Email
 		linkType,
