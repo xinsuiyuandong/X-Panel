@@ -3538,7 +3538,7 @@ func (t *Tgbot) buildXhttpRealityInbound() (*model.Inbound, string, error) {
 		"xhttpSettings": map[string]any{
 			"headers":              map[string]any{},
 			"host":                 "",
-			"mode":                 "packet-up",
+			"mode":                 "stream-one",
 			"noSSEHeader":          false,
 			"path":                 path,
 			"scMaxBufferedPosts":   30,
@@ -3774,7 +3774,7 @@ func (t *Tgbot) generateXhttpRealityLink(inbound *model.Inbound) (string, error)
 	escapedRemark := url.QueryEscape(inbound.Remark)
 
 	// 【中文注释】: 严格按照最新格式构建链接
-	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=none&path=%s&host=&mode=packet-up&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F#%s-%s",
+	return fmt.Sprintf("vless://%s@%s:%d?type=xhttp&encryption=none&path=%s&host=&mode=stream-one&security=reality&pbk=%s&fp=chrome&sni=%s&sid=%s&spx=%%2F#%s-%s",
 		uuid, domain, inbound.Port, escapedPath, escapedPublicKey, escapedSni, escapedSid, escapedRemark, escapedRemark), nil
 }
 
