@@ -1663,7 +1663,7 @@ async openPort(port) {
                             xhttpSettings: {
                                 headers: {},
                                 host: "",
-                                mode: "packet-up",
+                                mode: "stream-one",
                                 noSSEHeader: false,
                                 path: path, // 【中文注释】: 使用上面生成的随机路径
                                 scMaxBufferedPosts: 30,
@@ -1685,7 +1685,7 @@ async openPort(port) {
 
                     if (msg.success) {
                         // 【中文注释】: 创建成功后，生成正确的分享链接，注意包含 type=xhttp 和 path 参数
-                        const link = `vless://${uuid}@${window.location.hostname}:${port}?type=xhttp&encryption=none&path=${encodeURIComponent(path)}&host=&mode=packet-up&security=reality&pbk=${publicKey}&fp=chrome&sni=${randomSni}&sid=${linkSid}&spx=%2F#${remark}-${remark}`;
+                        const link = `vless://${uuid}@${window.location.hostname}:${port}?type=xhttp&encryption=none&path=${encodeURIComponent(path)}&host=&mode=stream-one&security=reality&pbk=${publicKey}&fp=chrome&sni=${randomSni}&sid=${linkSid}&spx=%2F#${remark}-${remark}`;
                         this.inboundLink = link;
 
                         // 【中文注释】: 显示二维码并保存到历史记录
