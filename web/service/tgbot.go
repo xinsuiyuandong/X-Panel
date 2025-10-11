@@ -2050,22 +2050,26 @@ func (t *Tgbot) SendMsgToTgbotAdmins(msg string, replyMarkup ...telego.ReplyMark
 // 〔中文注释〕: 全新重构的 SendReport 函数，只发送四条趣味性内容。
 func (t *Tgbot) SendReport() {
 	// --- 第一条消息：发送问候与时间 (顺序 1) ---
-	runTime, err := t.settingService.GetTgbotRuntime()
-	if err == nil && len(runTime) > 0 {
-		// 〔中文注释〕: 严格按照您指定的格式构建问候消息。
-		greetingMsg := fmt.Sprintf(
-			"☀️ **每日定时报告** (任务: `%s`)\n\n*美好的一天，从〔X-Panel 面板〕开始！*\n\n⏰ **当前时间**\n`%s`",
-			runTime,
-			time.Now().Format("2006-01-02 15:04:05"),
-		)
-		t.SendMsgToTgbotAdmins(greetingMsg)
-	}
+    // 修正：确保任务名称即使为空也能发送消息
+	runTime, _ := t.settingService.GetTgbotRuntime() 
+    taskName := runTime
+    if taskName == "" {
+        taskName = "未配置任务名称" // 使用占位符，避免因空值跳过
+    }
+
+	greetingMsg := fmt.Sprintf(
+		"☀️ **每日定时报告** (任务: `%s`)\n\n*美好的一天，从〔X-Panel 面板〕开始！*\n\n⏰ **当前时间**\n`%s`",
+		taskName,
+		time.Now().Format("2006-01-02 15:04:05"),
+	)
+	t.SendMsgToTgbotAdmins(greetingMsg) 
 	time.Sleep(1000 * time.Millisecond)
 
 	// --- 第二条消息：每日一语（最终稳定版） (顺序 2) ---
 	if verse, err := t.getDailyVerse(); err == nil {
 		t.SendMsgToTgbotAdmins(verse)
 	} else {
+		// 即使失败，也记录日志，不影响后续发送
 		logger.Warningf("获取每日诗词失败: %v", err)
 	}
 	time.Sleep(1000 * time.Millisecond)
@@ -2078,6 +2082,7 @@ func (t *Tgbot) SendReport() {
 	if news, err := t.getNewsBriefingWithFallback(); err == nil {
 		t.SendMsgToTgbotAdmins(news)
 	} else {
+		// 即使失败，也记录日志，不影响发送流程结束
 		logger.Warningf("获取所有新闻资讯失败: %v", err)
 	}
 }
@@ -4027,7 +4032,27 @@ func (t *Tgbot) openPortWithUFW(port int) error {
 }
 
 // =========================================================================================
-// 辅助函数：每日一语 (最终修复：严格遵循官方文档 Token 机制)
+// 【核心数据结构和辅助函数】
+// =========================================================================================
+
+// 〔中文注释〕: 内部通用的新闻数据结构，用于避免类型不匹配错误。
+type NewsItem struct{
+    Title string
+    Description string // 用于 GitHub 描述
+}
+
+// 〔中文注释〕: 内部辅助函数：生成一个安全的随机数。
+func safeRandomInt(max int) int {
+	if max <= 0 { return 0 }
+	result, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
+	if err != nil {
+		return time.Now().Nanosecond() % max
+	}
+	return int(result.Int64())
+}
+
+// =========================================================================================
+// 【辅助函数：每日一语】 (最终修复：严格遵循官方文档 Token 机制，增强健壮性)
 // =========================================================================================
 
 // 〔中文注释〕: 辅助函数：获取完整的古诗词。严格遵循官方 Token 文档，确保稳定性。
@@ -4056,13 +4081,15 @@ func (t *Tgbot) getDailyVerse() (string, error) {
     }
     
     // 2. 使用 Token 获取诗句
-    sentenceURL := fmt.Sprintf("https://v2.jinrishici.com/sentence?client=browser-mode")
+    sentenceURL := "https://v2.jinrishici.com/sentence" // 简化 URL
     req, err := http.NewRequest("GET", sentenceURL, nil)
     if err != nil {
         return "", fmt.Errorf("步骤 2: 创建请求失败: %v", err)
     }
     // 严格按照文档，将 Token 放在 X-User-Token Header 中
     req.Header.Add("X-User-Token", tokenResult.Token)
+    // 增加 User-Agent 伪装成浏览器请求
+    req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
     
     sentenceResp, err := client.Do(req)
     if err != nil {
@@ -4087,7 +4114,8 @@ func (t *Tgbot) getDailyVerse() (string, error) {
     }
 
     if json.Unmarshal(sentenceBody, &result) != nil || result.Status != "success" || result.Data.Content == "" {
-        return "", fmt.Errorf("步骤 2: 解析诗句 JSON 失败或内容为空: %s", string(sentenceBody))
+        // 如果失败，记录完整的 JSON 响应，便于调试
+        return "", fmt.Errorf("步骤 2: 解析诗句 JSON 失败或内容为空。返回状态码: %d, 响应体: %s", sentenceResp.StatusCode, string(sentenceBody))
     }
 
     poemContent := strings.ReplaceAll(result.Data.Content, "，", "，\n")
@@ -4096,18 +4124,8 @@ func (t *Tgbot) getDailyVerse() (string, error) {
 
 
 // =========================================================================================
-// 辅助函数：图片发送 (保持稳定版本)
+// 【辅助函数：图片发送】 (保持稳定版本)
 // =========================================================================================
-
-// 〔中文注释〕: 内部辅助函数：生成一个安全的随机数。
-func safeRandomInt(max int) int {
-	if max <= 0 { return 0 }
-	result, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
-	if err != nil {
-		return time.Now().Nanosecond() % max
-	}
-	return int(result.Int64())
-}
 
 // 〔中文注释〕: 【最终重构】图片发送函数：按优先级尝试3个不同的图片源。
 func (t *Tgbot) sendRandomImageWithFallback() {
@@ -4187,18 +4205,12 @@ func (t *Tgbot) sendRandomImageWithFallback() {
 
 
 // =========================================================================================
-// 辅助函数：新闻资讯 (最终修复：使用 GitHub Trending 中文项目和国际币圈)
+// 【辅助函数：新闻资讯】 (最终修复：使用 Google News 台湾版 RSS 源 + 稳定桥接服务)
 // =========================================================================================
-
-// 〔中文注释〕: 内部通用的新闻数据结构，用于避免类型不匹配错误。
-type NewsItem struct{
-    Title string
-    Description string // 用于 GitHub 描述
-}
 
 // 〔中文注释〕: 辅助函数：核心逻辑，从给定的 API 获取新闻简报。
 func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string, error) {
-    client := &http.Client{Timeout: 10 * time.Second}
+    client := &http.Client{Timeout: 15 * time.Second} // 增加超时时间应对国际连接
     resp, err := client.Get(apiURL)
     if err != nil {
         return "", fmt.Errorf("请求 %s API 失败: %v", sourceName, err)
@@ -4212,8 +4224,21 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
     
     var newsItems []NewsItem 
 
-    // --- 解析逻辑：针对三种不同的 API 格式进行适配 ---
-    if strings.Contains(sourceName, "GitHub") {
+    // --- 解析逻辑：针对 API 格式进行适配 ---
+    if strings.Contains(sourceName, "Google News") {
+        // 适配稳定 RSS-to-JSON 桥接服务格式
+        var result struct {
+            Feed struct { Title string `json:"title"` } `json:"feed"`
+            Items []struct { Title string `json:"title"` } `json:"items"`
+        }
+        if err := json.Unmarshal(body, &result); err == nil && len(result.Items) > 0 {
+             for _, item := range result.Items { 
+                 newsItems = append(newsItems, NewsItem{Title: item.Title}) 
+             }
+        } else {
+             return "", fmt.Errorf("解析 %s JSON 失败或内容为空: %v", sourceName, err)
+        }
+    } else if strings.Contains(sourceName, "GitHub") {
         // 适配 GitHub Trending 聚合 API 格式（IT/AI 领域权威中文源）
         var result []struct {
             RepoName string `json:"repo_name"`
@@ -4264,24 +4289,26 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
 
 // 〔中文注释〕: 【最终重构】新闻资讯获取函数：按优先级尝试3个不同的国际资讯源，直到成功。
 func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
-    // --- 来源 1: IT/AI (GitHub Trending - 中文项目，国际权威平台) ---
-    // 聚合 API 地址：api.gugubaba.com/api/github/trending?language=zh（IT/AI 垂直，中文）
-    newsMsg, err := fetchNewsFromGlobalAPI("https://api.gugubaba.com/api/github/trending?language=zh", "GitHub 中文热榜", 5)
+    // --- 来源 1 (主用，权威/中文): Google News 台湾科技/时事 ---
+    // 使用稳定 RSS-to-JSON 桥接服务：feedtopjson.com
+    // q=AI%2B科技%2B时事 (AI, 科技, 时事)
+    rssURL1 := "https://news.google.com/rss/search?q=AI%2B科技%2B时事%2B区块链&hl=zh-TW&gl=TW&ceid=TW:zh-Hant"
+    apiURL1 := fmt.Sprintf("https://feedtopjson.com/?feed=%s", url.QueryEscape(rssURL1))
+    
+    newsMsg, err := fetchNewsFromGlobalAPI(apiURL1, "Google News 台湾版", 5)
     if err == nil { return newsMsg, nil }
-    logger.Warningf("资讯来源 1 (GitHub 中文热榜) 失败: %v", err)
+    logger.Warningf("资讯来源 1 (Google News 台湾版) 失败: %v", err)
 
-    // --- 来源 2: 区块链/币圈头条 (CoinMarketCap 聚合，国际稳定，中文内容) ---
-    // CoinMarketCap CN 提供的是中文内容
+    // --- 来源 2 (备用，垂直/中文): GitHub Trending 中文项目 (IT/AI) ---
+    newsMsg, err = fetchNewsFromGlobalAPI("https://api.gugubaba.com/api/github/trending?language=zh", "GitHub 中文热榜", 5)
+    if err == nil { return newsMsg, nil }
+    logger.Warningf("资讯来源 2 (GitHub 中文热榜) 失败: %v", err)
+
+    // --- 来源 3 (备用，垂直/中文): 区块链/币圈头条 (CoinMarketCap 聚合) ---
     newsMsg, err = fetchNewsFromGlobalAPI("https://api.coinmarketcap.cn/v1/news/headlines?limit=5", "币圈头条", 5)
     if err == nil { return newsMsg, nil }
-    logger.Warningf("资讯来源 2 (币圈头条) 失败: %v", err)
+    logger.Warningf("资讯来源 3 (币圈头条) 失败: %v", err)
     
-    // --- 来源 3: IT/AI 综合 (GitHub Trending - 综合热榜，英文内容) ---
-    // 备用方案：如果中文热榜失败，则使用全球综合热榜（英文）
-    newsMsg, err = fetchNewsFromGlobalAPI("https://api.gugubaba.com/api/github/trending?language=all", "GitHub 综合热榜 (英文)", 5)
-    if err == nil { return newsMsg, nil }
-    logger.Warningf("资讯来源 3 (GitHub 综合热榜) 失败: %v", err)
-
     // 所有来源都失败
     return "", errors.New("所有国际新闻资讯来源均失败")
 }
