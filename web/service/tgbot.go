@@ -20,6 +20,7 @@ import (
     "crypto/tls"       // 新增：用于 tls.Config
     "os/exec"          // 新增：用于 exec.Command（getDomain 等）
     "path/filepath"    // 新增：用于 filepath.Base / Dir（getDomain 用到）
+	"io/ioutil" // 〔中文注释〕: 新增，用于读取 HTTP API 响应体。
 
 	"x-ui/config"
 	"x-ui/database"
@@ -2046,24 +2047,41 @@ func (t *Tgbot) SendMsgToTgbotAdmins(msg string, replyMarkup ...telego.ReplyMark
 	}
 }
 
+// 〔中文注释〕: 全新重构的 SendReport 函数，只发送您需要的趣味性内容。
 func (t *Tgbot) SendReport() {
+	// --- 第一条消息：发送问候与时间 ---
 	runTime, err := t.settingService.GetTgbotRuntime()
 	if err == nil && len(runTime) > 0 {
-		msg := ""
-		msg += t.I18nBot("tgbot.messages.report", "RunTime=="+runTime)
-		msg += t.I18nBot("tgbot.messages.datetime", "DateTime=="+time.Now().Format("2006-01-02 15:04:05"))
-		t.SendMsgToTgbotAdmins(msg)
+		// 〔中文注释〕: 完全按照您指定的格式构建问候消息。
+		greetingMsg := fmt.Sprintf(
+			"☀️ **每日定时报告** (任务: `%s`)\n\n*美好的一天，从〔X-Panel 面板〕开始！*\n\n⏰ **当前时间**\n`%s`",
+			runTime,
+			time.Now().Format("2006-01-02 15:04:05"),
+		)
+		t.SendMsgToTgbotAdmins(greetingMsg)
 	}
+	// 〔中文注释〕: 延迟片刻，让消息接收更有序。
+	time.Sleep(1000 * time.Millisecond)
 
-	info := t.sendServerUsage()
-	t.SendMsgToTgbotAdmins(info)
+	// --- 第二条消息：每日一语 ---
+	if verse, err := t.getDailyVerse(); err == nil {
+		t.SendMsgToTgbotAdmins(verse)
+	} else {
+		// 〔中文注释〕: 如果获取失败，只记录日志，不影响后续流程。
+		logger.Warningf("获取每日诗词失败: %v", err)
+	}
+	time.Sleep(1000 * time.Millisecond)
 
-	t.sendExhaustedToAdmins()
-	t.notifyExhausted()
+	// --- 第三条消息：今日美图 ---
+	// 〔中文注释〕: 此函数内部会处理图片发送，同样，失败不影响其他消息。
+	t.sendRandomAnimeImage()
+	time.Sleep(1000 * time.Millisecond)
 
-	backupEnable, err := t.settingService.GetTgBotBackup()
-	if err == nil && backupEnable {
-		t.SendBackupToAdmins()
+	// --- 第四条消息：IT/AI 资讯简报 ---
+	if news, err := t.getITNewsBriefing(); err == nil {
+		t.SendMsgToTgbotAdmins(news)
+	} else {
+		logger.Warningf("获取 IT 资讯失败: %v", err)
 	}
 }
 
@@ -4009,4 +4027,117 @@ func (t *Tgbot) openPortWithUFW(port int) error {
 		return fmt.Errorf("执行 ufw 端口放行脚本失败: %v, Shell 输出: %s", err, logOutput)
 	}
     return nil
+}
+
+// 〔中文注释〕: 新增辅助函数，用于从“今日诗词”API 获取一句古诗词。
+func (t *Tgbot) getDailyVerse() (string, error) {
+    client := &http.Client{Timeout: 5 * time.Second}
+    resp, err := client.Get("https://v1.jinrishici.com/all")
+    if err != nil {
+        return "", fmt.Errorf("请求“今日诗词”API失败: %v", err)
+    }
+    defer resp.Body.Close()
+
+    body, err := ioutil.ReadAll(resp.Body)
+    if err != nil {
+        return "", fmt.Errorf("读取“今日诗词”响应失败: %v", err)
+    }
+
+    var result struct {
+        Content string `json:"content"`
+    }
+
+    if err := json.Unmarshal(body, &result); err != nil {
+        return "", fmt.Errorf("解析“今日诗词”JSON失败: %v", err)
+    }
+
+    // 〔中文注释〕: 按您的要求格式化输出。
+    return fmt.Sprintf("📜 **【每日一语】**\n\n> %s", result.Content), nil
+}
+
+// 〔中文注释〕: 新增辅助函数，用于发送一张随机动漫图片给所有管理员。
+func (t *Tgbot) sendRandomAnimeImage() {
+    // 〔中文注释〕: 这是一个稳定可靠的随机动漫图片API。
+    apiURL := "https://api.iw233.cn/api.php?sort=random"
+    client := &http.Client{Timeout: 10 * time.Second}
+
+    resp, err := client.Get(apiURL)
+    if err != nil {
+        logger.Warningf("请求随机动漫图片 API 失败: %v", err)
+        return
+    }
+    defer resp.Body.Close()
+
+	// 〔中文注释〕: 从响应头获取图片最终的URL，以兼容重定向。
+	finalURL := resp.Request.URL.String()
+	if finalURL == "" {
+		logger.Warning("获取到的动漫图片 URL 为空")
+		return
+	}
+
+    // 〔中文注释〕: 遍历所有管理员ID，并向他们分别发送图片。
+    for _, adminId := range adminIds {
+        // 〔中文注释〕: 使用 telego 的 tu.FileFromURL 从链接发送图片，这与您发送二维码的逻辑类似且可靠。
+        photo := tu.Photo(
+            tu.ID(adminId),
+            tu.FileFromURL(finalURL),
+        ).WithCaption("🎨 **【今日美图】**") // 〔中文注释〕: 为图片添加标题。
+
+        _, err := bot.SendPhoto(context.Background(), photo)
+        if err != nil {
+            logger.Warningf("发送动漫图片给管理员 %d 失败: %v", adminId, err)
+        }
+        // 〔中文注释〕: 稍作延迟，避免请求过于频繁。
+        time.Sleep(300 * time.Millisecond)
+    }
+}
+
+// 〔中文注释〕: 新增辅助函数，用于获取 IT 资讯简报。
+func (t *Tgbot) getITNewsBriefing() (string, error) {
+    // 〔中文注释〕: 这是一个提供每日IT资讯的免费API。
+    apiURL := "https://api.vvhan.com/api/itInfo"
+    client := &http.Client{Timeout: 5 * time.Second}
+
+    resp, err := client.Get(apiURL)
+    if err != nil {
+        return "", fmt.Errorf("请求 IT 资讯 API 失败: %v", err)
+    }
+    defer resp.Body.Close()
+
+    body, err := ioutil.ReadAll(resp.Body)
+    if err != nil {
+        return "", fmt.Errorf("读取 IT 资讯响应失败: %v", err)
+    }
+
+    var result struct {
+        Data []struct {
+            Title string `json:"title"`
+        } `json:"data"`
+    }
+
+    if err := json.Unmarshal(body, &result); err != nil {
+        // 〔中文注释〕: 这个API有时会返回非JSON的错误页，我们在这里做兼容处理。
+		if strings.Contains(string(body), " frequência de acesso") {
+			return "", errors.New("IT资讯API触发频率限制")
+		}
+        return "", fmt.Errorf("解析 IT 资讯 JSON 失败: %v", err)
+    }
+
+    if len(result.Data) == 0 {
+        return "", errors.New("IT 资讯内容为空")
+    }
+
+    // 〔中文注释〕: 使用 strings.Builder 高效拼接字符串。
+    var builder strings.Builder
+    builder.WriteString("📰 **【IT / AI 资讯简报】**\n")
+
+    // 〔中文注释〕: 遍历新闻列表，只取前5条。
+    for i, item := range result.Data {
+        if i >= 5 {
+            break
+        }
+        builder.WriteString(fmt.Sprintf("\n%d. %s", i+1, item.Title))
+    }
+
+    return builder.String(), nil
 }
