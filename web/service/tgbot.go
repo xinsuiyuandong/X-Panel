@@ -4406,7 +4406,9 @@ func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
         },
         {
             Name: "Google News 中文简报",
-            API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(fmt.Sprintf("https://news.google.com/rss/search?q=%s&hl=zh-TW&gl=TW&ceid=TW:zh-Hant", url.QueryEscape("AI 科技 国际时事 区块链")))),
+			rssQuery2 := url.QueryEscape("AI 科技 国际时事 区块链 IT AI绘画")    // 扩大搜索范围
+            rssURL2 := fmt.Sprintf("https://news.google.com/rss/search?q=%s&hl=zh-CN&gl=CN", rssQuery2) 
+            API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(rssURL2)),
         },
         {
             Name: "币圈头条",
