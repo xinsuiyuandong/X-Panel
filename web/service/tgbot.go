@@ -4244,28 +4244,22 @@ func (t *Tgbot) sendRandomImageWithFallback() {
 func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string, error) {
     client := &http.Client{Timeout: 15 * time.Second} 
     
-    // 对于 YouTube 和 Google News 源，直接请求原始 URL，不经过 rss2json 桥接服务
     var directURL string
     isXMLSource := strings.Contains(sourceName, "YouTube") || strings.Contains(sourceName, "Google News")
     
-    // 初始化 newsItems 列表
     var newsItems []NewsItem 
     var err error
 
     if isXMLSource {
         // --- XML/RSS 直连解析逻辑 ---
-        
-        // 1. 从 apiURL 中提取真正的 RSS/Atom URL
-        // apiURL 格式示例：https://api.rss2json.com/v1/api.json?rss_url=...
-        directURL = apiURL // 默认为整个 apiURL，以防解析失败
+        directURL = apiURL 
 
         if u, parseErr := url.Parse(apiURL); parseErr == nil {
             if rssURL := u.Query().Get("rss_url"); rssURL != "" {
-                directURL = rssURL // 提取原始 RSS URL
+                directURL = rssURL 
             }
         }
         
-        // 2. 发起 HTTP 请求，并伪装 User-Agent
         req, reqErr := http.NewRequest("GET", directURL, nil)
         if reqErr != nil { return "", fmt.Errorf("创建请求失败: %v", reqErr) }
         req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
@@ -4284,9 +4278,7 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
         if readErr != nil { return "", fmt.Errorf("读取 %s 响应失败: %v", sourceName, readErr) }
 
         
-        // 3. XML 解析
         if strings.Contains(sourceName, "YouTube") {
-            // 解析 YouTube Atom Feed 格式
             var atomFeed AtomFeed
             if xmlErr := xml.Unmarshal(body, &atomFeed); xmlErr == nil && len(atomFeed.Entries) > 0 {
                 for _, entry := range atomFeed.Entries {
@@ -4299,7 +4291,6 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
                 err = fmt.Errorf("解析 YouTube Atom XML 失败: %v", xmlErr)
             }
         } else if strings.Contains(sourceName, "Google News") {
-            // 解析 Google News RSS 格式
             var rssFeed RssFeed
             if xmlErr := xml.Unmarshal(body, &rssFeed); xmlErr == nil && len(rssFeed.Channel.Items) > 0 {
                  for _, item := range rssFeed.Channel.Items {
@@ -4328,7 +4319,6 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
         body, readErr := ioutil.ReadAll(resp.Body)
         if readErr != nil { return "", fmt.Errorf("读取 %s 响应失败: %v", sourceName, readErr) }
         
-        // 适配 CoinMarketCap 格式
         if sourceName == "币圈头条" {
             var result struct { Articles []struct { Title string `json:"title"` } `json:"articles"` }
             if jsonErr := json.Unmarshal(body, &result); jsonErr == nil {
@@ -4339,7 +4329,6 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
                  err = fmt.Errorf("解析 CoinMarketCap JSON 失败: %v", jsonErr)
             }
         } else if strings.Contains(sourceName, "GitHub") { 
-            // 如果您决定保留 GitHub 源，这是它的解析逻辑
              var result []struct {
                 RepoName string `json:"repo_name"`
                 Desc string `json:"desc"`
@@ -4358,7 +4347,7 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
     }
     
     if err != nil {
-        return "", err // 如果在解析阶段失败，直接返回错误
+        return "", err 
     }
 
     if len(newsItems) == 0 {
@@ -4367,22 +4356,28 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
     
     // --- 最终消息构建 ---
     var builder strings.Builder
-    builder.WriteString(fmt.Sprintf("📰 **【%s 简报】**\n", sourceName))
+    builder.WriteString(fmt.Sprintf("📰 **【%s 简报】**\n\n", sourceName)) // 【修改标记】: 在标题后增加 \n\n (两个换行)
 
     for i, item := range newsItems {
         if i >= limit { break }
         if item.Title != "" {
+            
             // 移除 RSS 源标题中可能包含的来源信息，让内容更整洁
             cleanTitle := strings.ReplaceAll(item.Title, " - YouTube", "")
             cleanTitle = strings.ReplaceAll(cleanTitle, " | Google News", "")
             // 移除 HTML 标签（RSS/Atom Title中常见）
             cleanTitle = regexp.MustCompile("<[^>]*>").ReplaceAllString(cleanTitle, "")
-
+            
+            // 【修改标记】: 使用 \n\n 确保每条新闻前有空行
             builder.WriteString(fmt.Sprintf("\n%d. %s", i+1, cleanTitle))
+            
             // 链接/描述只有在特定源时才显示
             if item.Description != "" && (strings.Contains(sourceName, "YouTube") || strings.Contains(sourceName, "Google News") || strings.Contains(sourceName, "GitHub")) {
                  builder.WriteString(fmt.Sprintf("\n  `%s`", item.Description))
             }
+            
+            // 【修改标记】: 在每条新闻项的末尾添加额外的空行，确保分隔清晰
+            builder.WriteString("\n") 
         }
     }
 
