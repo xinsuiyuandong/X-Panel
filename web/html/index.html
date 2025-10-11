@@ -27,26 +27,26 @@
     }
 
     /* ==================================================================
-       核心修正 2：卡片背景 
+       核心修正 2：卡片背景 (取消所有边框效果) - (保持不变)
        ================================================================== */
     
-    /* 1. 卡片基础样式：作为容器，透明背景，**取消所有边框效果** */
+    /* 1. 卡片基础样式 */
     .glass-card {
         border-radius: 16px !important;
         transition: all 0.3s ease;
         position: relative !important;
-        border: none !important; /* 移除原生边框 */
-        background: transparent !important; /* 确保卡片本身透明，透出背景动画 */
+        border: none !important;
+        background: transparent !important;
         overflow: hidden; 
         z-index: 1; 
-        box-shadow: none !important; /* 移除所有动态/静态边框阴影 */
-        animation: none !important; /* 移除所有边框动画 */
+        box-shadow: none !important;
+        animation: none !important;
     }
     .glass-card:hover {
         transform: translateY(-5px); 
     }
 
-    /* 2. 玻璃背景层 (::before) - 负责玻璃模糊和半透明底色 */
+    /* 2. 玻璃背景层 (::before) */
     .glass-card::before {
         content: '';
         position: absolute;
@@ -55,7 +55,7 @@
         right: 0;
         bottom: 0;
         border-radius: 16px;
-        z-index: -1; /* 位于内容下方 */
+        z-index: -1;
         backdrop-filter: blur(15px) !important;
         -webkit-backdrop-filter: blur(15px) !important;
     }
@@ -68,19 +68,19 @@
         background: transparent !important;
     }
 
-    /* 【主题兼容：亮色-light】玻璃内背景，高度透明让主体渐变透出 */
+    /* 【主题兼容：亮色-light】 */
     .light .glass-card::before {
         background: rgba(255, 255, 255, 0.2) !important; 
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15) !important;
     }
-    /* 【主题兼容：暗色-dark / 黑色-black】玻璃内背景，高度透明让主体渐变透出 */
+    /* 【主题兼容：暗色-dark / 黑色-black】 */
     .dark .glass-card::before,
     .black .glass-card::before {
         background: rgba(0, 0, 0, 0.1) !important; 
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
     }
 
-    /* 字体颜色覆盖 (保持不变) */
+    /* 通用字体颜色覆盖 */
     .light .glass-card * {
         color: #2c3e50 !important;
     }
@@ -95,57 +95,61 @@
     }
 
     /* ==================================================================
-       ★ 新增修正：解决问题 1, 2, 3
+       ★ 综合修正：解决之前所有问题 (颜色、下划线、滚动条)
        ================================================================== */
 
-    /* 解决问题 3: 移除【X-Panel面板】卡片标题下方的“下划线” (实际是边框) */
+    /* 移除卡片标题的下边框 */
     .glass-card .ant-card-head {
         border-bottom: none !important;
     }
 
-    /* 解决问题 1 & 2: 修正【Xray】和【管理】卡片底部操作文字的颜色，使其在所有主题下都清晰可见 */
-    /* 同时移除操作栏顶部的分割线，保持玻璃效果的纯粹性 */
+    /* 修正卡片底部操作文字的颜色 */
     .glass-card .ant-card-actions {
         border-top: none !important;
-        background: transparent !important; /* 确保操作栏背景也透明 */
+        background: transparent !important;
     }
-
-    /* 为亮色主题设置深色文字和交互效果 */
     .light .glass-card .ant-card-actions span {
         color: rgba(0, 0, 0, 0.65) !important;
         transition: color 0.3s;
     }
     .light .glass-card .ant-card-actions > li > span:hover span,
     .light .glass-card .ant-card-actions > li > span:hover .anticon {
-        color: #1890ff !important; /* Ant Design 默认的悬停蓝色 */
+        color: #1890ff !important;
     }
-
-    /* 为暗色/黑色主题设置亮色文字和交互效果 */
     .dark .glass-card .ant-card-actions span,
     .black .glass-card .ant-card-actions span {
-        color: rgba(255, 255, 255, 0.85) !important; /* 使用半透明白色以获得更好的视觉效果 */
+        color: rgba(255, 255, 255, 0.85) !important;
         transition: color 0.3s;
     }
     .dark .glass-card .ant-card-actions > li > span:hover span,
     .black .glass-card .ant-card-actions > li > span:hover span,
     .dark .glass-card .ant-card-actions > li > span:hover .anticon,
     .black .glass-card .ant-card-actions > li > span:hover .anticon {
-        color: #40a9ff !important; /* Ant Design 暗色主题下的悬停亮蓝色 */
+        color: #40a9ff !important;
+    }
+
+    /* 隐藏【X-Panel面板】卡片内容区产生的横向滚动条 */
+    .glass-card .ant-card-body div[style*="overflow-x: auto"] {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+    .glass-card .ant-card-body div[style*="overflow-x: auto"]::-webkit-scrollbar {
+        display: none;  /* Safari and Chrome */
     }
 
 
     /* ==================================================================
-       ★ 核心修正 4：底部严格对齐 (Flexbox Equal Height)
+       ★★★★★  最终对齐方案：实现底部严格对齐  ★★★★★
        ================================================================== */
     
-    /* 外层容器：确保内层 Ant-Row 可以被拉伸 (保持不变) */
+    /* 1. 外层容器，使用 flex 布局 */
     .main-content-row {
         display: flex;
         flex-direction: column; 
         flex-grow: 1;
     }
 
-    /* 内层容器：包含两列的 Ant-Row，强制其为 flex 布局并拉伸子项 */
+    /* 2. 包含两列的 Ant-Row，设置为 flex 容器，并拉伸子项（列） */
     .main-content-row > .ant-row { 
         display: flex !important;
         align-items: stretch !important; /* 核心：使所有列（Ant-Col）等高 */
@@ -153,30 +157,30 @@
         flex-wrap: wrap; /* 确保在移动设备上可以正常换行 */
     }
 
-    /* 目标列（Ant-Col）：设置为 flex 布局，以便控制其内部卡片的排列 */
+    /* 3. 目标列（Ant-Col），设置为 flex 容器，以便控制其内部卡片的排列 */
     .main-content-row > .ant-row > .ant-col {
         display: flex;
         flex-direction: column; 
-        /* 移除了 height: 100%，因为 align-items: stretch 已经处理了高度，这样更可靠 */
     }
-
-    /* 让【右侧】列的最后一个卡片（即 Ant-Col:nth-child(2)）自动伸长，以填补剩余的垂直空间 */
-    .main-content-row > .ant-row > .ant-col:nth-child(2) > .glass-card:last-child {
-        flex-grow: 1; 
-    }
-
-    /* 移除两个主列中，所有卡片或组件的最后一个元素的底部边距，以实现完美对齐 */
+    
+    /* 4. 【关键修复】让【左右两列】的【最后一个元素】都自动伸展，填满剩余空间 */
     .main-content-row > .ant-row > .ant-col > *:last-child {
-        margin-bottom: 0 !important;
-    }
-
-    /* 确保被拉伸卡片的内容区域也跟着拉伸，并垂直居中（如果需要） */
-    .main-content-row > .ant-row > .ant-col:nth-child(2) > .glass-card:last-child .ant-card-body {
         flex-grow: 1;
+        margin-bottom: 0 !important; /* 同时移除最后一个元素的下边距 */
+    }
+    
+    /* 5. 确保被拉伸的卡片（或Row）内部也正确地拉伸 */
+    .main-content-row > .ant-row > .ant-col > *:last-child,
+    .main-content-row > .ant-row > .ant-col > *:last-child .ant-card-body {
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        flex-grow: 1;
     }
+    
+    /* 6. (可选，美化) 如果希望拉伸的卡片内容垂直居中，可以加上这个 */
+     .main-content-row > .ant-row > .ant-col > *:last-child .ant-card-body {
+        justify-content: center;
+     }
 
 
     /* 【通用】原始的必要样式保留 */
