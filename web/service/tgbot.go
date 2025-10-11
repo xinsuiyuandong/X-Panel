@@ -4464,11 +4464,11 @@ func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
 	
 	// 定义所有可用的新闻源
 	newsSources := []struct {
-        Name string
-        API  string
-    }{
-        {
-            Name: "YouTube 中文热搜 (AI/IT/旅游)",
+		Name string
+		API  string
+	}{
+		{
+			Name: "YouTube 中文热搜 (AI/IT/旅游)",
             API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?search_query=%s", url.QueryEscape("AI 绘画 IT 旅游 中文")))),
         },
         {
