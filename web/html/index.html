@@ -1,164 +1,146 @@
 {{ template "page/head_start" .}}
 <style>
 
-	 /* 【通用】动态流光背景，作为所有主题的底色，增加炫酷感 */
-	 body {
-	     background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-	     background-size: 400% 400%;
-	     animation: gradientBG 15s ease infinite;
-	 }
+    /* 【通用】动态流光背景，作为所有主题的底色，增加炫酷感 */
+    body {
+        background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+        background-size: 400% 400%;
+        animation: gradientBG 15s ease infinite;
+    }
 
-	 @keyframes gradientBG {
-	     0% { background-position: 0% 50%; }
-	     50% { background-position: 100% 50%; }
-	     100% { background-position: 0% 50%; }
-	 }
+    @keyframes gradientBG {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
 
-	 /* 【通用】让内容区透明，以透出动态背景 */
-	 #app, .ant-layout, .ant-layout-content {
-	     background: transparent !important;
-	 }
+    /* 【通用】让内容区透明，以透出动态背景 */
+    #app, .ant-layout, .ant-layout-content {
+        background: transparent !important;
+    }
 
-	 /* 【通用】卡片核心玻璃效果的基础样式 */
-	 .glass-card {
-	     backdrop-filter: blur(15px) !important;
-	     -webkit-backdrop-filter: blur(15px) !important;
-	     border-radius: 16px !important;
-	     transition: all 0.3s ease;
-	 }
-	 .glass-card:hover {
-	     transform: translateY(-5px); /* 【通用】悬浮动效 */
-	 }
+    /* 【通用】卡片核心玻璃效果的基础样式 */
+    .glass-card {
+        backdrop-filter: blur(15px) !important;
+        -webkit-backdrop-filter: blur(15px) !important;
+        border-radius: 16px !important;
+        transition: all 0.3s ease;
+    }
+    .glass-card:hover {
+        transform: translateY(-5px); /* 【通用】悬浮动效 */
+    }
 
-	 /* ==================================================================
-	      核心修改点：针对不同主题进行样式覆盖，确保兼容性
-	      ================================================================== */
+    /* ==================================================================
+       核心修改点：针对不同主题进行样式覆盖，确保兼容性
+       ================================================================== */
 
-	 /* 【主题兼容：亮色-light】当主题为白色时... */
-	 .light .glass-card {
-	     background: rgba(255, 255, 255, 0.5) !important; /* 使用半透明的白色玻璃 */
-	     border: 1px solid rgba(0, 0, 0, 0.1) !important; /* 使用非常淡的黑色边框 */
-	     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15) !important;
-	 }
-	 /* 【中文注释】为亮色主题（白色）设置深色字体，确保可读性 */
-	 .light .glass-card, 
-	 .light .glass-card .ant-card-head-title, 
-	 .light .glass-card .ant-statistic-title,
-	 .light .glass-card .ant-statistic-content .ant-statistic-content-value, /* 修正了选择器，确保数字颜色正确 */
-	 .light .glass-card b,
-	 .light .glass-card .ant-badge-status-text,
-	 .light .glass-card .ant-progress-text {
-	     color: #2c3e50 !important; /* 使用一种深蓝灰色，比纯黑更柔和 */
-	 }
-	 .light .glass-card .ant-card-actions {
-	     background: transparent;
-	     border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+    /* 【主题兼容：亮色-light】当主题为白色时... */
+    .light .glass-card {
+        background: rgba(255, 255, 255, 0.5) !important; /* 使用半透明的白色玻璃 */
+        border: 1px solid rgba(0, 0, 0, 0.1) !important; /* 使用非常淡的黑色边框 */
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15) !important;
+    }
+    /* 【中文注释】为亮色主题（白色）设置深色字体，确保可读性 */
+    .light .glass-card,
+    .light .glass-card .ant-card-head-title,
+    .light .glass-card .ant-statistic-title,
+    .light .glass-card .ant-statistic-content .ant-statistic-content-value, /* 修正了选择器，确保数字颜色正确 */
+    .light .glass-card b,
+    .light .glass-card .ant-badge-status-text,
+    .light .glass-card .ant-progress-text {
+        color: #2c3e50 !important; /* 使用一种深蓝灰色，比纯黑更柔和 */
+    }
+    .light .glass-card .ant-card-actions {
+        background: transparent;
+        border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
 
-	 }
-	 .light .glass-card .ant-card-actions > li {
-	     color: rgba(44, 62, 80, 0.75);
-	 }
-	 .light .glass-card .ant-card-actions > li:not(:last-child) {
-	      border-color: rgba(0, 0, 0, 0.1) !important;
-	 }
+    }
+    .light .glass-card .ant-card-actions > li {
+        color: rgba(44, 62, 80, 0.75);
+    }
+    .light .glass-card .ant-card-actions > li:not(:last-child) {
+        border-color: rgba(0, 0, 0, 0.1) !important;
+    }
 
-	 /* 【主题兼容：暗色-dark / 黑色-black】当主题为黑色或暗色时... */
-	 .dark .glass-card,
-	 .black .glass-card {
-	     background: rgba(0, 0, 0, 0.25) !important; /* 使用半透明的黑色玻璃 */
-	     border: 1px solid rgba(255, 255, 255, 0.15) !important; /* 使用精致的白色边框 */
-	     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+    /* 【主题兼容：暗色-dark / 黑色-black】当主题为黑色或暗色时... */
+    .dark .glass-card,
+    .black .glass-card {
+        background: rgba(0, 0, 0, 0.25) !important; /* 使用半透明的黑色玻璃 */
+        border: 1px solid rgba(255, 255, 255, 0.15) !important; /* 使用精致的白色边框 */
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
 
-	 }
-	 /* 【中文注释】为暗色/黑色主题设置浅色字体，确保可读性 */
-	 .dark .glass-card, 
-	 .dark .glass-card .ant-card-head-title, 
-	 .dark .glass-card .ant-statistic-title,
-	 .dark .glass-card .ant-statistic-content .ant-statistic-content-value,
-	 .dark .glass-card b,
-	 .dark .glass-card .ant-badge-status-text,
-	 .dark .glass-card .ant-progress-text,
-	 .black .glass-card,
-	 .black .glass-card .ant-card-head-title, 
-	 .black .glass-card .ant-statistic-title,
-	 .black .glass-card .ant-statistic-content .ant-statistic-content-value,
-	 .black .glass-card b,
-	 .black .glass-card .ant-badge-status-text,
-	 .black .glass-card .ant-progress-text {
-	     color: #ecf0f1 !important; /* 使用一种明亮的浅灰色，比纯白更护眼 */
-	 }
-	 .dark .glass-card .ant-card-actions,
-	 .black .glass-card .ant-card-actions {
-	     background: transparent;
-	     border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
+    }
+    /* 【中文注释】为暗色/黑色主题设置浅色字体，确保可读性 */
+    .dark .glass-card,
+    .dark .glass-card .ant-card-head-title,
+    .dark .glass-card .ant-statistic-title,
+    .dark .glass-card .ant-statistic-content .ant-statistic-content-value,
+    .dark .glass-card b,
+    .dark .glass-card .ant-badge-status-text,
+    .dark .glass-card .ant-progress-text,
+    .black .glass-card,
+    .black .glass-card .ant-card-head-title,
+    .black .glass-card .ant-statistic-title,
+    .black .glass-card .ant-statistic-content .ant-statistic-content-value,
+    .black .glass-card b,
+    .black .glass-card .ant-badge-status-text,
+    .black .glass-card .ant-progress-text {
+        color: #ecf0f1 !important; /* 使用一种明亮的浅灰色，比纯白更护眼 */
+    }
+    .dark .glass-card .ant-card-actions,
+    .black .glass-card .ant-card-actions {
+        background: transparent;
+        border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
 
-	 }
-	 .dark .glass-card .ant-card-actions > li,
-	 .black .glass-card .ant-card-actions > li {
-	     color: rgba(236, 240, 241, 0.75);
-	 }
-	 .dark .glass-card .ant-card-actions > li:not(:last-child),
-	 .black .glass-card .ant-card-actions > li:not(:last-child) {
-	     border-color: rgba(255, 255, 255, 0.15) !important;
-	 }
+    }
+    .dark .glass-card .ant-card-actions > li,
+    .black .glass-card .ant-card-actions > li {
+        color: rgba(236, 240, 241, 0.75);
+    }
+    .dark .glass-card .ant-card-actions > li:not(:last-child),
+    .black .glass-card .ant-card-actions > li:not(:last-child) {
+        border-color: rgba(255, 255, 255, 0.15) !important;
+    }
 
-	 /* 【通用】原始的必要样式保留 */
-	 .ip-hidden { filter: blur(10px); user-select: none; }
-	 .running-animation .ant-badge-status-dot { animation: runningAnimation 1.2s linear infinite; }
-	 @keyframes runningAnimation { 0%,50%,100% {transform: scale(1);opacity: 1;} 10% {transform: scale(1.5);opacity: .2;} }
+    /* 【通用】原始的必要样式保留 */
+    .ip-hidden { filter: blur(10px); user-select: none; }
+    .running-animation .ant-badge-status-dot { animation: runningAnimation 1.2s linear infinite; }
+    @keyframes runningAnimation { 0%,50%,100% {transform: scale(1);opacity: 1;} 10% {transform: scale(1.5);opacity: .2;} }
 
-	 /* === 1. X-Panel LOGO 炫酷效果样式 (Text Glow) === */
-	 @keyframes neonGlow {
-		 0%, 100% {
-			 text-shadow: 0 0 5px #00aaff, 0 0 10px #00aaff, 0 0 20px #00aaff, 0 0 40px #00aaff;
-		 }
-		 50% {
-			 text-shadow: 0 0 10px #ff0077, 0 0 20px #ff0077, 0 0 40px #ff0077, 0 0 80px #ff0077;
-		 }
-	 }
-	 .x-panel-logo {
-		 font-size: 2.5rem;
-		 font-weight: 900;
-		 margin: 0;
-		 color: #fff; /* 基础白色 */
-		 text-transform: uppercase;
-		 letter-spacing: 2px;
-		 animation: neonGlow 5s ease-in-out infinite alternate;
-		 text-align: center; /* 居中 */
-	 }    
-	 
-	 /* === 1. X-Panel LOGO 炫酷效果样式 (Card Glow) === */
-	 .x-panel-logo-card {
-		 animation: card-neon-glow 2s infinite alternate;
-	 }
-	 @keyframes card-neon-glow {
-		 from {
-			 box-shadow: 0 0 5px rgba(0, 170, 255, 0.5), 0 0 10px rgba(0, 170, 255, 0.4);
-			 opacity: 0.95;
-		 }
-		 to {
-			 box-shadow: 0 0 10px rgba(0, 170, 255, 0.8), 0 0 20px rgba(0, 170, 255, 0.6), 0 0 30px rgba(0, 170, 255, 0.4);
-			 opacity: 1;
-		 }
-	 }
+    /* === 1. X-Panel LOGO 炫酷效果样式 === */
+    @keyframes neonGlow {
+        0%, 100% {
+            text-shadow: 0 0 5px #00aaff, 0 0 10px #00aaff, 0 0 20px #00aaff, 0 0 40px #00aaff;
+        }
+        50% {
+            text-shadow: 0 0 10px #ff0077, 0 0 20px #ff0077, 0 0 40px #ff0077, 0 0 80px #ff0077;
+        }
+    }
 
-	 /* === 3. 恢复卡片内部渐变动画效果 (Add transition back) === */
-	 .glass-card,
-	 .glass-card .ant-card-head,
-	 .glass-card .ant-card-body,
-	 .glass-card .ant-card-actions,
-	 .x-panel-logo-card,
-	 .x-panel-logo-card .ant-card-head,
-	 .x-panel-logo-card .ant-card-body {
-		 transition: background-color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
-	 }
-	 /* 确保文字颜色也平滑过渡 */
-	 .glass-card .ant-card-head-title,
-	 .glass-card .ant-statistic-title,
-	 .glass-card .ant-statistic-content .ant-statistic-content-value {
-		 transition: color 0.5s ease;
-	 }
+    /* 优化 LOGO 样式，用于卡片内居中显示 */
+    .x-panel-logo-text {
+        font-size: 3rem; /* 增大字号 */
+        font-weight: 900;
+        margin: 0;
+        color: #fff; /* 基础白色 */
+        text-transform: capitalize; /* 确保只有 X 和 P 保持大写，如果需要精确控制，HTML 中要写成 X-Panel */
+        letter-spacing: 2px;
+        animation: neonGlow 5s ease-in-out infinite alternate;
+        text-align: center;
+        line-height: 1.2;
+    }
 
+    .x-panel-desc {
+        text-align: center;
+        margin-top: 10px;
+        font-size: 1rem;
+        color: inherit; /* 继承 glass-card 的字体颜色 */
+        line-height: 1.5;
+    }
+    .x-panel-desc b {
+        font-weight: normal; /* 描述文字不需要加粗 */
+    }
+	
 </style>
 {{ template "page/head_end" .}}
 
@@ -184,31 +166,18 @@
 							</a-card>
 						</a-row>
 						<a-row v-else>
-							
-							<a-col :sm="24" :lg="24" :style="{ marginBottom: '16px' }">
-								<a-card hoverable :bordered="true" class="glass-card x-panel-logo-card">
-									<div :style="{ textAlign: 'center' }">
-										<h1 class="x-panel-logo" :style="{ color: themeSwitcher.currentTheme === 'light' ? '#333' : '#fff' }">
-											X-Panel
-										</h1>
-										<a rel="noopener" href="https://github.com/xeefei/x-panel/releases" target="_blank">
-											<a-tag color="green"><span>v{{ .cur_ver }}</span></a-tag>
-										</a>
-										<a rel="noopener" href="https://t.me/is_Chat_Bot" target="_blank">
-											<a-tag color="green"><span>TG私聊交流</span></a-tag>
-										</a>
-										<a rel="noopener" href="https://t.me/XUI_CN" target="_blank">
-											<a-tag color="purple"><span>〔X-Panel面板〕交流群</span></a-tag>
-										</a>
-									</div>
-								</a-card>
-							</a-col>
-
 							<a-row :gutter="[isMobile ? 8 : 16, isMobile ? 8 : 16]">
-								
+
 								<a-col :sm="24" :lg="16">
-									
-									<a-card title='{{ i18n "pages.index.serverStatus" }}' hoverable :bordered="true" class="glass-card">
+									<a-card title='X-Panel' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
+										<div class="x-panel-logo-text">X-Panel</div>
+										<div class="x-panel-desc">
+											<b>一个更好的面板</b><br>
+											<b>基于 Xray Core 构建</b>
+										</div>
+									</a-card>
+
+									<a-card title='{{ i18n "pages.index.serverStatus" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
 										<a-row :gutter="[0, isMobile ? 16 : 0]">
 											<a-col :sm="24" :md="12">
 												<a-row>
@@ -260,7 +229,42 @@
 										</a-row>
 									</a-card>
 
-									<a-card title='{{ i18n "pages.index.xrayStatus" }}' hoverable :bordered="true" class="glass-card">
+									<a-row :gutter="[isMobile ? 8 : 16, 0]" :style="{ marginBottom: '16px' }">
+										<a-col :sm="24" :md="12">
+											<a-card title='{{ i18n "pages.index.totalData" }}' hoverable :bordered="true" class="glass-card">
+												<a-row :gutter="isMobile ? [8,8] : 0">
+													<a-col :span="12">
+														<a-custom-statistic title='{{ i18n "pages.index.sent" }}' :value="SizeFormatter.sizeFormat(status.netTraffic.sent)">
+															<template #prefix><a-icon type="cloud-upload" /></template>
+														</a-custom-statistic>
+													</a-col>
+													<a-col :span="12">
+														<a-custom-statistic title='{{ i18n "pages.index.received" }}' :value="SizeFormatter.sizeFormat(status.netTraffic.recv)">
+															<template #prefix><a-icon type="cloud-download" /></template>
+														</a-custom-statistic>
+													</a-col>
+												</a-row>
+											</a-card>
+										</a-col>
+										<a-col :sm="24" :md="12">
+											<a-card title='{{ i18n "pages.index.connectionCount" }}' hoverable :bordered="true" class="glass-card">
+												<a-row :gutter="isMobile ? [8,8] : 0">
+													<a-col :span="12">
+														<a-custom-statistic title="TCP" :value="status.tcpCount">
+															<template #prefix><a-icon type="swap" /></template>
+														</a-custom-statistic>
+													</a-col>
+													<a-col :span="12">
+														<a-custom-statistic title="UDP" :value="status.udpCount">
+															<template #prefix><a-icon type="swap" /></template>
+														</a-custom-statistic>
+													</a-col>
+												</a-row>
+											</a-card>
+										</a-col>
+									</a-row>
+
+									<a-card title='{{ i18n "pages.index.xrayStatus" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
 										<template #extra>
 											<template v-if="status.xray.state != 'error'">
 												<a-badge status="processing" class="running-animation" :text="status.xray.stateMsg" :color="status.xray.color"/>
@@ -310,52 +314,28 @@
 											</a-space>
 										</template>
 									</a-card>
-									
-									<a-row :gutter="[isMobile ? 8 : 16, 0]">
-										<a-col :sm="24" :md="12">
-											<a-card title='{{ i18n "pages.index.totalData" }}' hoverable :bordered="true" class="glass-card">
-												<a-row :gutter="isMobile ? [8,8] : 0">
-													<a-col :span="12">
-														<a-custom-statistic title='{{ i18n "pages.index.sent" }}' :value="SizeFormatter.sizeFormat(status.netTraffic.sent)">
-															<template #prefix><a-icon type="cloud-upload" /></template>
-														</a-custom-statistic>
-													</a-col>
-													<a-col :span="12">
-														<a-custom-statistic title='{{ i18n "pages.index.received" }}' :value="SizeFormatter.sizeFormat(status.netTraffic.recv)">
-															<template #prefix><a-icon type="cloud-download" /></template>
-														</a-custom-statistic>
-													</a-col>
-												</a-row>
-											</a-card>
-										</a-col>
-										<a-col :sm="24" :md="12">
-											<a-card title='{{ i18n "pages.index.connectionCount" }}' hoverable :bordered="true" class="glass-card">
-												<a-row :gutter="isMobile ? [8,8] : 0">
-													<a-col :span="12">
-														<a-custom-statistic title="TCP" :value="status.tcpCount">
-															<template #prefix><a-icon type="swap" /></template>
-														</a-custom-statistic>
-													</a-col>
-													<a-col :span="12">
-														<a-custom-statistic title="UDP" :value="status.udpCount">
-															<template #prefix><a-icon type="swap" /></template>
-														</a-custom-statistic>
-													</a-col>
-												</a-row>
-											</a-card>
-										</a-col>
-									</a-row>
 
 								</a-col>
 
 								<a-col :sm="24" :lg="8">
+									<a-card title='〔X-Panel面板〕' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
+										<a rel="noopener" href="https://github.com/xeefei/x-panel/releases" target="_blank">
+											<a-tag color="green"><span>v{{ .cur_ver }}</span></a-tag>
+										</a>
+										<a rel="noopener" href="https://t.me/is_Chat_Bot" target="_blank">
+											<a-tag color="green"><span>TG私聊交流</span></a-tag>
+										</a>
+										<a rel="noopener" href="https://t.me/XUI_CN" target="_blank">
+											<a-tag color="purple"><span>〔X-Panel面板〕交流群</span></a-tag>
+										</a>
+									</a-card>
 
-									<a-card title='{{ i18n "pages.index.operationHours" }}' hoverable :bordered="true" class="glass-card">
+									<a-card title='{{ i18n "pages.index.operationHours" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
 										<a-tag :color="status.xray.color">Xray: [[ TimeFormatter.formatSecond(status.appStats.uptime) ]]</a-tag>
 										<a-tag color="green">OS: [[ TimeFormatter.formatSecond(status.uptime) ]]</a-tag>
 									</a-card>
-									
-									<a-card title='{{ i18n "pages.index.systemLoad" }}' hoverable :bordered="true" class="glass-card">
+
+									<a-card title='{{ i18n "pages.index.systemLoad" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
 										<a-tag color="green">
 											<a-tooltip>
 												[[ status.loads[0] ]] | [[ status.loads[1] ]] | [[ status.loads[2] ]]
@@ -368,12 +348,12 @@
 										<a rel="noopener" href="https://www.speedtest.net" target="_blank"><a-tag color="green">网络测速</a-tag></a>
 									</a-card>
 
-									<a-card title='{{ i18n "usage"}}' hoverable :bordered="true" class="glass-card">
+									<a-card title='{{ i18n "usage"}}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
 										<a-tag color="green"> {{ i18n "pages.index.memory" }}: [[ SizeFormatter.sizeFormat(status.appStats.mem) ]] </a-tag>
 										<a-tag color="green"> {{ i18n "pages.index.threads" }}: [[ status.appStats.threads ]] </a-tag>
 									</a-card>
-									
-									<a-card title='{{ i18n "pages.index.overallSpeed" }}' hoverable :bordered="true" class="glass-card">
+
+									<a-card title='{{ i18n "pages.index.overallSpeed" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
 										<a-row :gutter="isMobile ? [8,8] : 0">
 											<a-col :span="12">
 												<a-custom-statistic title='{{ i18n "pages.index.upload" }}' :value="SizeFormatter.sizeFormat(status.netIO.up)">
@@ -413,7 +393,7 @@
 
 								</a-col>
 							</a-row>
-							
+
 
 						</a-row>
 						</template>
