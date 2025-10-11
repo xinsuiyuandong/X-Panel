@@ -27,10 +27,10 @@
     }
 
     /* ==================================================================
-       核心修正 2 & 3：卡片背景与动态四边线
+       核心修正 2：卡片背景 (取消所有边框效果 - 对应要求 1)
        ================================================================== */
     
-    /* 1. 卡片基础样式：作为容器，透明背景，并添加动态边框脉冲效果 */
+    /* 1. 卡片基础样式：作为容器，透明背景，**取消所有边框效果** */
     .glass-card {
         border-radius: 16px !important;
         transition: all 0.3s ease;
@@ -39,34 +39,14 @@
         background: transparent !important; /* 确保卡片本身透明，透出背景动画 */
         overflow: hidden; 
         z-index: 1; 
-        
-        /* 【边框动态效果】使用 box-shadow 模拟四条边的霓虹脉冲光晕 */
-        animation: neonPulse 3s ease infinite alternate;
+        box-shadow: none !important; /* 移除所有动态/静态边框阴影 */
+        animation: none !important; /* 移除所有边框动画 */
     }
     .glass-card:hover {
         transform: translateY(-5px); 
     }
 
-    /* 2. 边框光晕动画 */
-    @keyframes neonPulse {
-        0% {
-            /* 蓝色和粉色光晕的起点 */
-            box-shadow: 0 0 5px #00aaff, 
-                        0 0 10px #ff0077;
-        }
-        50% {
-            /* 光晕达到最强，形成流光闪烁感 */
-            box-shadow: 0 0 15px #00aaff, 
-                        0 0 25px #ff0077;
-        }
-        100% {
-            /* 返回起点 */
-            box-shadow: 0 0 5px #00aaff, 
-                        0 0 10px #ff0077;
-        }
-    }
-
-    /* 3. 玻璃背景层 (::before) - 负责玻璃模糊和半透明底色 */
+    /* 2. 玻璃背景层 (::before) - 负责玻璃模糊和半透明底色 */
     .glass-card::before {
         content: '';
         position: absolute;
@@ -80,29 +60,27 @@
         -webkit-backdrop-filter: blur(15px) !important;
     }
 
-    /* 4. 确保内容在最前面 */
+    /* 3. 确保内容在最前面 */
     .glass-card .ant-card-head,
     .glass-card .ant-card-body {
         position: relative;
         z-index: 1;
-        /* Ant Design 卡片头部和内容区域背景也要透明，让::before透上来 */
         background: transparent !important;
     }
 
-
     /* 【主题兼容：亮色-light】玻璃内背景，高度透明让主体渐变透出 */
     .light .glass-card::before {
-        background: rgba(255, 255, 255, 0.2) !important; /* 调整为 0.2，更透明 */
+        background: rgba(255, 255, 255, 0.2) !important; 
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15) !important;
     }
     /* 【主题兼容：暗色-dark / 黑色-black】玻璃内背景，高度透明让主体渐变透出 */
     .dark .glass-card::before,
     .black .glass-card::before {
-        background: rgba(0, 0, 0, 0.1) !important; /* 调整为 0.1，更透明 */
+        background: rgba(0, 0, 0, 0.1) !important; 
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
     }
 
-    /* 字体颜色覆盖 (修正确保在玻璃背景之上) */
+    /* 字体颜色覆盖 (保持不变) */
     .light .glass-card * {
         color: #2c3e50 !important;
     }
@@ -110,11 +88,54 @@
     .black .glass-card * {
         color: #ecf0f1 !important;
     }
-    /* 统计数字的特殊修正 */
     .light .glass-card .ant-statistic-content-value,
     .dark .glass-card .ant-statistic-content-value,
     .black .glass-card .ant-statistic-content-value {
         color: inherit !important;
+    }
+
+
+    /* ==================================================================
+       核心修正 3：底部严格对齐 (Flexbox Equal Height - 对应要求 2)
+       ================================================================== */
+    
+    /* 外层容器：确保内层 Ant-Row 可以被拉伸 */
+    .main-content-row {
+        display: flex;
+        flex-direction: column; 
+        flex-grow: 1;
+    }
+
+    /* 内层容器：Ant-Row 包含两列 Ant-Col */
+    .main-content-row > .ant-row { 
+        display: flex !important; /* 强制 Ant-Row 作为 Flex 容器 */
+        align-items: stretch; /* 关键：使 Ant-Col 子元素等高 */
+        flex-grow: 1;
+    }
+
+    /* 目标：两列 Ant-Col，将它们也设置为 Flex 容器 */
+    .main-content-row > .ant-row > .ant-col {
+        display: flex;
+        flex-direction: column; 
+        height: 100%; /* 确保列本身填充了其空间 */
+    }
+
+    /* 让【右侧】列的最后一个卡片（即 Ant-Col:nth-child(2)）自动伸长，以填补剩余的垂直空间 */
+    .main-content-row > .ant-row > .ant-col:nth-child(2) > .glass-card:last-child {
+        flex-grow: 1; 
+    }
+
+    /* 移除两个主列中，所有卡片或组件的最后一个元素的底部边距，以实现完美对齐 */
+    .main-content-row > .ant-row > .ant-col > *:last-child {
+        margin-bottom: 0 !important;
+    }
+
+    /* 确保被拉伸卡片的内容区域也跟着拉伸，并垂直居中（如果需要） */
+    .main-content-row > .ant-row > .ant-col:nth-child(2) > .glass-card:last-child .ant-card-body {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 
 
@@ -179,8 +200,8 @@
 								<a-spin tip='{{ i18n "loading" }}'></a-spin>
 							</a-card>
 						</a-row>
-						<a-row v-else>
-							<a-row :gutter="[isMobile ? 8 : 16, isMobile ? 8 : 16]">
+						<a-row v-else class="main-content-row">
+							<a-row :gutter="[isMobile ? 8 : 16, isMobile ? 8 : 16]" :style="{ flex: '1 1 100%' }">
 
 								<a-col :sm="24" :lg="16">
 									<a-card hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px', paddingBottom: '16px' }">
@@ -296,7 +317,7 @@
 										</template>
 									</a-card>
 
-									<a-row :gutter="[isMobile ? 8 : 16, 0]">
+									<a-row :gutter="[isMobile ? 8 : 16, 0]" :style="{ flexShrink: 0, width: '100%' }">
 										<a-col :sm="24" :md="12">
 											<a-card title='{{ i18n "pages.index.totalData" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: isMobile ? '16px' : '0' }">
 												<a-row :gutter="isMobile ? [8,8] : 0">
@@ -335,15 +356,17 @@
 
 								<a-col :sm="24" :lg="8">
 									<a-card title='〔X-Panel面板〕' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
-										<a rel="noopener" href="https://github.com/xeefei/x-panel/releases" target="_blank">
-											<a-tag color="green"><span>v{{ .cur_ver }}</span></a-tag>
-										</a>
-										<a rel="noopener" href="https://t.me/is_Chat_Bot" target="_blank">
-											<a-tag color="green"><span>TG私聊交流</span></a-tag>
-										</a>
-										<a rel="noopener" href="https://t.me/XUI_CN" target="_blank">
-											<a-tag color="purple"><span>〔X-Panel面板〕交流群</span></a-tag>
-										</a-tag>
+										<div style="white-space: nowrap; overflow-x: auto;">
+											<a rel="noopener" href="https://github.com/xeefei/x-panel/releases" target="_blank">
+												<a-tag color="green"><span>v{{ .cur_ver }}</span></a-tag>
+											</a>
+											<a rel="noopener" href="https://t.me/is_Chat_Bot" target="_blank">
+												<a-tag color="green"><span>TG私聊交流</span></a-tag>
+											</a>
+											<a rel="noopener" href="https://t.me/XUI_CN" target="_blank">
+												<a-tag color="purple"><span>〔X-Panel面板〕交流群</span></a-tag>
+											</a>
+										</div>
 									</a-card>
 
 									<a-card title='{{ i18n "pages.index.operationHours" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
@@ -352,16 +375,18 @@
 									</a-card>
 
 									<a-card title='{{ i18n "pages.index.systemLoad" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
-										<a-tag color="green">
-											<a-tooltip>
-												[[ status.loads[0] ]] | [[ status.loads[1] ]] | [[ status.loads[2] ]]
-												<template slot="title">
-													{{ i18n "pages.index.systemLoadDesc" }}
-												</template>
-											</a-tooltip>
-										</a-tag>
-										<a rel="noopener" href="https://ping.pe" target="_blank"><a-tag color="green">端口检测</a-tag></a>
-										<a rel="noopener" href="https://www.speedtest.net" target="_blank"><a-tag color="green">网络测速</a-tag></a>
+										<div style="white-space: nowrap; overflow-x: auto;"> 
+											<a-tag color="green">
+												<a-tooltip>
+													[[ status.loads[0] ]] | [[ status.loads[1] ]] | [[ status.loads[2] ]]
+													<template slot="title">
+														{{ i18n "pages.index.systemLoadDesc" }}
+													</template>
+												</a-tooltip>
+											</a-tag>
+											<a rel="noopener" href="https://ping.pe" target="_blank"><a-tag color="green">端口检测</a-tag></a>
+											<a rel="noopener" href="https://www.speedtest.net" target="_blank"><a-tag color="green">网络测速</a-tag></a>
+										</div>
 									</a-card>
 
 									<a-card title='{{ i18n "usage"}}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
