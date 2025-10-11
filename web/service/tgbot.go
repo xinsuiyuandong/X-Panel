@@ -2047,12 +2047,12 @@ func (t *Tgbot) SendMsgToTgbotAdmins(msg string, replyMarkup ...telego.ReplyMark
 	}
 }
 
-// 〔中文注释〕: 全新重构的 SendReport 函数，只发送您需要的趣味性内容。
+// 〔中文注释〕: 全新重构的 SendReport 函数，只发送四条趣味性内容。
 func (t *Tgbot) SendReport() {
-	// --- 第一条消息：发送问候与时间 ---
+	// --- 第一条消息：发送问候与时间 (顺序 1) ---
 	runTime, err := t.settingService.GetTgbotRuntime()
 	if err == nil && len(runTime) > 0 {
-		// 〔中文注释〕: 完全按照您指定的格式构建问候消息。
+		// 〔中文注释〕: 严格按照您指定的格式构建问候消息。
 		greetingMsg := fmt.Sprintf(
 			"☀️ **每日定时报告** (任务: `%s`)\n\n*美好的一天，从〔X-Panel 面板〕开始！*\n\n⏰ **当前时间**\n`%s`",
 			runTime,
@@ -2060,30 +2060,29 @@ func (t *Tgbot) SendReport() {
 		)
 		t.SendMsgToTgbotAdmins(greetingMsg)
 	}
-	// 〔中文注释〕: 延迟片刻，让消息接收更有序。
 	time.Sleep(1000 * time.Millisecond)
 
-	// --- 第二条消息：每日一语 ---
+	// --- 第二条消息：每日一语（完整版） (顺序 2) ---
 	if verse, err := t.getDailyVerse(); err == nil {
 		t.SendMsgToTgbotAdmins(verse)
 	} else {
-		// 〔中文注释〕: 如果获取失败，只记录日志，不影响后续流程。
 		logger.Warningf("获取每日诗词失败: %v", err)
 	}
 	time.Sleep(1000 * time.Millisecond)
 
-	// --- 第三条消息：今日美图 ---
-	// 〔中文注释〕: 此函数内部会处理图片发送，同样，失败不影响其他消息。
-	t.sendRandomAnimeImage()
+	// --- 第三条消息：今日美图（冗余来源，顺序 3) ---
+	// 〔中文注释〕: 尝试从3个来源获取图片并发送。即使失败，也不会中断后续流程。
+	t.sendRandomImageWithFallback()
 	time.Sleep(1000 * time.Millisecond)
 
-	// --- 第四条消息：IT/AI 资讯简报 ---
-	if news, err := t.getITNewsBriefing(); err == nil {
+	// --- 第四条消息：新闻资讯简报（国际冗余来源，顺序 4) ---
+	if news, err := t.getNewsBriefingWithFallback(); err == nil {
 		t.SendMsgToTgbotAdmins(news)
 	} else {
-		logger.Warningf("获取 IT 资讯失败: %v", err)
+		logger.Warningf("获取所有新闻资讯失败: %v", err)
 	}
 }
+
 
 func (t *Tgbot) SendBackupToAdmins() {
 	if !t.IsRunning() {
@@ -4029,115 +4028,213 @@ func (t *Tgbot) openPortWithUFW(port int) error {
     return nil
 }
 
-// 〔中文注释〕: 新增辅助函数，用于从“今日诗词”API 获取一句古诗词。
+// =========================================================================================
+// 辅助函数：每日一语 (稳定版)
+// =========================================================================================
+
+// 〔中文注释〕: 辅助函数：获取完整的古诗词。使用 v2 接口。
 func (t *Tgbot) getDailyVerse() (string, error) {
     client := &http.Client{Timeout: 5 * time.Second}
-    resp, err := client.Get("https://v1.jinrishici.com/all")
+    resp, err := client.Get("https://v2.jinrishici.com/sentence")
     if err != nil {
-        return "", fmt.Errorf("请求“今日诗词”API失败: %v", err)
+        return "", fmt.Errorf("请求“今日诗词”V2 API失败: %v", err)
     }
     defer resp.Body.Close()
 
     body, err := ioutil.ReadAll(resp.Body)
     if err != nil {
-        return "", fmt.Errorf("读取“今日诗词”响应失败: %v", err)
+        return "", fmt.Errorf("读取“今日诗词”V2响应失败: %v", err)
     }
 
     var result struct {
-        Content string `json:"content"`
-    }
-
-    if err := json.Unmarshal(body, &result); err != nil {
-        return "", fmt.Errorf("解析“今日诗词”JSON失败: %v", err)
-    }
-
-    // 〔中文注释〕: 按您的要求格式化输出。
-    return fmt.Sprintf("📜 **【每日一语】**\n\n> %s", result.Content), nil
-}
-
-// 〔中文注释〕: 新增辅助函数，用于发送一张随机动漫图片给所有管理员。
-func (t *Tgbot) sendRandomAnimeImage() {
-    // 〔中文注释〕: 这是一个稳定可靠的随机动漫图片API。
-    apiURL := "https://api.iw233.cn/api.php?sort=random"
-    client := &http.Client{Timeout: 10 * time.Second}
-
-    resp, err := client.Get(apiURL)
-    if err != nil {
-        logger.Warningf("请求随机动漫图片 API 失败: %v", err)
-        return
-    }
-    defer resp.Body.Close()
-
-	// 〔中文注释〕: 从响应头获取图片最终的URL，以兼容重定向。
-	finalURL := resp.Request.URL.String()
-	if finalURL == "" {
-		logger.Warning("获取到的动漫图片 URL 为空")
-		return
-	}
-
-    // 〔中文注释〕: 遍历所有管理员ID，并向他们分别发送图片。
-    for _, adminId := range adminIds {
-        // 〔中文注释〕: 使用 telego 的 tu.FileFromURL 从链接发送图片，这与您发送二维码的逻辑类似且可靠。
-        photo := tu.Photo(
-            tu.ID(adminId),
-            tu.FileFromURL(finalURL),
-        ).WithCaption("🎨 **【今日美图】**") // 〔中文注释〕: 为图片添加标题。
-
-        _, err := bot.SendPhoto(context.Background(), photo)
-        if err != nil {
-            logger.Warningf("发送动漫图片给管理员 %d 失败: %v", adminId, err)
-        }
-        // 〔中文注释〕: 稍作延迟，避免请求过于频繁。
-        time.Sleep(300 * time.Millisecond)
-    }
-}
-
-// 〔中文注释〕: 新增辅助函数，用于获取 IT 资讯简报。
-func (t *Tgbot) getITNewsBriefing() (string, error) {
-    // 〔中文注释〕: 这是一个提供每日IT资讯的免费API。
-    apiURL := "https://api.vvhan.com/api/itInfo"
-    client := &http.Client{Timeout: 5 * time.Second}
-
-    resp, err := client.Get(apiURL)
-    if err != nil {
-        return "", fmt.Errorf("请求 IT 资讯 API 失败: %v", err)
-    }
-    defer resp.Body.Close()
-
-    body, err := ioutil.ReadAll(resp.Body)
-    if err != nil {
-        return "", fmt.Errorf("读取 IT 资讯响应失败: %v", err)
-    }
-
-    var result struct {
-        Data []struct {
-            Title string `json:"title"`
+        Data struct {
+            Content string `json:"content"`
+            Origin  struct {
+                Title   string `json:"title"`
+                Author  string `json:"author"`
+            } `json:"origin"`
         } `json:"data"`
     }
 
     if err := json.Unmarshal(body, &result); err != nil {
-        // 〔中文注释〕: 这个API有时会返回非JSON的错误页，我们在这里做兼容处理。
-		if strings.Contains(string(body), " frequência de acesso") {
-			return "", errors.New("IT资讯API触发频率限制")
-		}
-        return "", fmt.Errorf("解析 IT 资讯 JSON 失败: %v", err)
+        return "", fmt.Errorf("解析“今日诗词”V2 JSON失败: %v", err)
     }
 
-    if len(result.Data) == 0 {
-        return "", errors.New("IT 资讯内容为空")
-    }
+    poemContent := strings.ReplaceAll(result.Data.Content, "，", "，\n")
+    return fmt.Sprintf("📜 **【每日一语】**\n\n%s\n\n`—— %s ·《%s》`", poemContent, result.Data.Origin.Author, result.Data.Origin.Title), nil
+}
 
-    // 〔中文注释〕: 使用 strings.Builder 高效拼接字符串。
-    var builder strings.Builder
-    builder.WriteString("📰 **【IT / AI 资讯简报】**\n")
 
-    // 〔中文注释〕: 遍历新闻列表，只取前5条。
-    for i, item := range result.Data {
-        if i >= 5 {
-            break
+// =========================================================================================
+// 辅助函数：图片发送 (高稳定性国际API，冗余机制)
+// =========================================================================================
+
+// 〔中文注释〕: 内部辅助函数：生成一个安全的随机数。
+func safeRandomInt(max int) int {
+	if max <= 0 { return 0 }
+	result, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
+	if err != nil {
+		// 备用方案，使用纳秒作为随机源
+		return time.Now().Nanosecond() % max
+	}
+	return int(result.Int64())
+}
+
+// 〔中文注释〕: 【最终重构】图片发送函数：按优先级尝试3个不同的图片源。
+func (t *Tgbot) sendRandomImageWithFallback() {
+    var imageURL string
+    var sourceName string
+    
+    // --- 来源 1: 动漫图 (waifu.pics) ---
+    sourceName = "waifu.pics"
+    apiURL1 := "https://api.waifu.pics/sfw/waifu"
+    if resp, e := http.Get(apiURL1); e == nil {
+        defer resp.Body.Close()
+        if body, e := ioutil.ReadAll(resp.Body); e == nil {
+            var res struct { URL string `json:"url"` }
+            if json.Unmarshal(body, &res) == nil && res.URL != "" {
+                imageURL = res.URL
+                goto SEND_IMAGE
+            }
         }
-        builder.WriteString(fmt.Sprintf("\n%d. %s", i+1, item.Title))
+    }
+    logger.Warningf("图片来源 1 (%s) 失败", sourceName)
+
+    // --- 来源 2: 风景/自然图 (Picsum Photos) ---
+    sourceName = "Picsum Photos"
+    // 〔中文注释〕: 获取前10页的图片列表，随机选择一张。
+    apiURL2 := fmt.Sprintf("https://picsum.photos/v2/list?page=%d&limit=100", safeRandomInt(10)+1)
+    if resp, e := http.Get(apiURL2); e == nil {
+        defer resp.Body.Close()
+        if body, e := ioutil.ReadAll(resp.Body); e == nil {
+            var list []struct { ID string `json:"id"` }
+            if json.Unmarshal(body, &list) == nil && len(list) > 0 {
+                randomIndex := safeRandomInt(len(list))
+                imageURL = fmt.Sprintf("https://picsum.photos/id/%s/1024/768", list[randomIndex].ID)
+                goto SEND_IMAGE
+            }
+        }
+    }
+    logger.Warningf("图片来源 2 (%s) 失败", sourceName)
+
+    // --- 来源 3: 每日高清大图 (Bing redirect) ---
+    sourceName = "Bing 每日图片"
+    apiURL3 := "https://api.adicw.cn/api/images/bing" // 这是一个稳定且持续维护的 Bing 聚合接口
+    if resp, e := http.Get(apiURL3); e == nil {
+        // 〔中文注释〕: 这个 API 会直接重定向到图片URL
+        imageURL = resp.Request.URL.String()
+        if imageURL != apiURL3 {
+            goto SEND_IMAGE
+        }
+    }
+    logger.Warningf("图片来源 3 (%s) 失败", sourceName)
+    
+    // 三个来源都失败
+    logger.Warning("所有图片来源均失败，跳过图片发送。")
+    return
+
+SEND_IMAGE:
+    // 〔中文注释〕: 只要获取到有效的 imageURL，就执行发送。
+    for _, adminId := range adminIds {
+        photo := tu.Photo(
+            tu.ID(adminId),
+            tu.FileFromURL(imageURL),
+        ).WithCaption(fmt.Sprintf("🎨 **【今日美图】**\n（来源：%s）", sourceName))
+
+        _, err := bot.SendPhoto(context.Background(), photo)
+        if err != nil {
+            logger.Warningf("发送图片给管理员 %d 失败: %v", adminId, err)
+        }
+        time.Sleep(300 * time.Millisecond)
+    }
+}
+
+
+// =========================================================================================
+// 辅助函数：新闻资讯 (完全基于国外/国际化媒体源，冗余机制)
+// =========================================================================================
+
+// 〔中文注释〕: 辅助函数：核心逻辑，从给定的 API 获取新闻简报。
+func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string, error) {
+    client := &http.Client{Timeout: 10 * time.Second}
+    resp, err := client.Get(apiURL)
+    if err != nil {
+        return "", fmt.Errorf("请求 %s API 失败: %v", sourceName, err)
+    }
+    defer resp.Body.Close()
+
+    body, err := ioutil.ReadAll(resp.Body)
+    if err != nil {
+        return "", fmt.Errorf("读取 %s 响应失败: %v", sourceName, err)
+    }
+    
+    var newsItems []struct{Title string}
+
+    // --- 解析逻辑：针对三种不同的 API 格式进行适配 ---
+    if strings.Contains(sourceName, "Google News") || strings.Contains(sourceName, "Reddit") {
+        // 适配 RSS-to-JSON 格式
+        var result struct {
+            Status string `json:"status"`
+            Items []struct { Title string `json:"title"` }
+        }
+        if err := json.Unmarshal(body, &result); err == nil && result.Status == "ok" {
+             for _, item := range result.Items { newsItems = append(newsItems, item) }
+        } else {
+             return "", fmt.Errorf("解析 %s JSON 失败或状态异常: %v", sourceName, err)
+        }
+    } else if sourceName == "币圈头条" {
+        // 适配 CoinMarketCap 格式
+        var result struct { Articles []struct { Title string `json:"title"` } }
+        if err := json.Unmarshal(body, &result); err == nil {
+             for _, item := range result.Articles { newsItems = append(newsItems, item) }
+        } else {
+             return "", fmt.Errorf("解析 CoinMarketCap JSON 失败: %v", err)
+        }
+    }
+    // --- 解析逻辑结束 ---
+    
+    if len(newsItems) == 0 {
+        return "", errors.New(sourceName + " 简报内容为空")
+    }
+    
+    var builder strings.Builder
+    builder.WriteString(fmt.Sprintf("📰 **【%s 简报】**\n", sourceName))
+
+    for i, item := range newsItems {
+        if i >= limit { break }
+        if item.Title != "" {
+            builder.WriteString(fmt.Sprintf("\n%d. %s", i+1, item.Title))
+        }
     }
 
     return builder.String(), nil
+}
+
+// 〔中文注释〕: 【最终重构】新闻资讯获取函数：按优先级尝试3个不同的国际资讯源，直到成功。
+func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
+    // --- 来源 1: IT/AI/时政 (Google News - 国际权威源) ---
+    // 〔中文注释〕: 获取 AI, IT, 科技的中文新闻，使用 Google News 台湾区域的 RSS 源。
+    rssURL1 := "https://news.google.com/rss/search?q=AI%2BIT%2B科技&hl=zh-TW&gl=TW&ceid=TW:zh-Hant"
+    apiURL1 := fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&api_key=your_test_key&count=5", url.QueryEscape(rssURL1))
+    
+    newsMsg, err := fetchNewsFromGlobalAPI(apiURL1, "Google News 科技中文版", 5)
+    if err == nil { return newsMsg, nil }
+    logger.Warningf("资讯来源 1 (Google News) 失败: %v", err)
+
+    // --- 来源 2: 区块链/币圈头条 (CoinMarketCap 聚合) ---
+    newsMsg, err = fetchNewsFromGlobalAPI("https://api.coinmarketcap.cn/v1/news/headlines?limit=5", "币圈头条", 5)
+    if err == nil { return newsMsg, nil }
+    logger.Warningf("资讯来源 2 (币圈头条) 失败: %v", err)
+    
+    // --- 来源 3: 国际时政热点 (Reddit /r/worldnews) ---
+    // 〔中文注释〕: 获取国际时事，内容为英文，但保证国际化和权威性。
+    rssURL3 := "https://www.reddit.com/r/worldnews/.rss"
+    apiURL3 := fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&api_key=your_test_key&count=5", url.QueryEscape(rssURL3))
+    
+    newsMsg, err = fetchNewsFromGlobalAPI(apiURL3, "Reddit 国际时政 (英文)", 5)
+    if err == nil { return newsMsg, nil }
+    logger.Warningf("资讯来源 3 (Reddit) 失败: %v", err)
+
+    // 所有来源都失败
+    return "", errors.New("所有国际新闻资讯来源均失败")
 }
