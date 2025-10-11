@@ -4038,7 +4038,7 @@ func (t *Tgbot) openPortWithUFW(port int) error {
 // 〔中文注释〕: 内部通用的新闻数据结构，用于避免类型不匹配错误。
 type NewsItem struct{
     Title string
-    Description string // 用于 GitHub 描述
+    Description string // 用于链接或 GitHub 描述
 }
 
 // 〔中文注释〕: 内部辅助函数：生成一个安全的随机数。
@@ -4205,10 +4205,10 @@ func (t *Tgbot) sendRandomImageWithFallback() {
 
 
 // =========================================================================================
-// 【辅助函数：新闻资讯】 (最终修复：使用 Google News 台湾版 RSS 源 + 稳定桥接服务)
+// 【辅助函数：新闻资讯核心抓取逻辑】
 // =========================================================================================
 
-// 〔中文注释〕: 辅助函数：核心逻辑，从给定的 API 获取新闻简报。
+// 〔中文注释〕: 辅助函数：核心逻辑，从给定的 API 获取新闻简报或视频列表。
 func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string, error) {
     client := &http.Client{Timeout: 15 * time.Second} // 增加超时时间应对国际连接
     resp, err := client.Get(apiURL)
@@ -4216,6 +4216,12 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
         return "", fmt.Errorf("请求 %s API 失败: %v", sourceName, err)
     }
     defer resp.Body.Close()
+
+    // 检查 HTTP 状态码，非 200 即为失败
+    if resp.StatusCode != http.StatusOK {
+        body, _ := ioutil.ReadAll(resp.Body)
+        return "", fmt.Errorf("请求 %s API 返回非 200 状态码: %d, 响应: %s", sourceName, resp.StatusCode, string(body))
+    }
 
     body, err := ioutil.ReadAll(resp.Body)
     if err != nil {
@@ -4225,21 +4231,28 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
     var newsItems []NewsItem 
 
     // --- 解析逻辑：针对 API 格式进行适配 ---
-    if strings.Contains(sourceName, "Google News") {
-        // 适配稳定 RSS-to-JSON 桥接服务格式
+    if strings.Contains(sourceName, "YouTube") || strings.Contains(sourceName, "Google News") {
+        // 适配 RSS-to-JSON 格式 (用于 YouTube RSS 和 Google News RSS)
         var result struct {
-            Feed struct { Title string `json:"title"` } `json:"feed"`
-            Items []struct { Title string `json:"title"` } `json:"items"`
+            Status string `json:"status"`
+            Items []struct { 
+                Title string `json:"title"` 
+                Link string `json:"link"`
+            } `json:"items"`
         }
-        if err := json.Unmarshal(body, &result); err == nil && len(result.Items) > 0 {
+        if err := json.Unmarshal(body, &result); err == nil && result.Status == "ok" && len(result.Items) > 0 {
              for _, item := range result.Items { 
-                 newsItems = append(newsItems, NewsItem{Title: item.Title}) 
+                 // 标题 + 链接 (链接用于Description)
+                 newsItems = append(newsItems, NewsItem{
+                     Title: item.Title,
+                     Description: item.Link,
+                 }) 
              }
         } else {
-             return "", fmt.Errorf("解析 %s JSON 失败或内容为空: %v", sourceName, err)
+             return "", fmt.Errorf("解析 %s RSS JSON 失败或状态异常: %v", sourceName, err)
         }
     } else if strings.Contains(sourceName, "GitHub") {
-        // 适配 GitHub Trending 聚合 API 格式（IT/AI 领域权威中文源）
+        // 适配 GitHub Trending 聚合 API 格式
         var result []struct {
             RepoName string `json:"repo_name"`
             Desc string `json:"desc"`
@@ -4278,7 +4291,8 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
         if i >= limit { break }
         if item.Title != "" {
             builder.WriteString(fmt.Sprintf("\n%d. %s", i+1, item.Title))
-            if strings.Contains(sourceName, "GitHub") && item.Description != "" {
+            // 链接/描述只有在 YouTube, Google News 或 GitHub 源时才显示
+            if item.Description != "" && (strings.Contains(sourceName, "YouTube") || strings.Contains(sourceName, "Google News") || strings.Contains(sourceName, "GitHub")) {
                  builder.WriteString(fmt.Sprintf("\n  `%s`", item.Description))
             }
         }
@@ -4287,24 +4301,34 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
     return builder.String(), nil
 }
 
+// =========================================================================================
+// 【核心函数：getNewsBriefingWithFallback】 (最终稳定版，三重冗余)
+// =========================================================================================
+
 // 〔中文注释〕: 【最终重构】新闻资讯获取函数：按优先级尝试3个不同的国际资讯源，直到成功。
 func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
-    // --- 来源 1 (主用，权威/中文): Google News 台湾科技/时事 ---
-    // 使用稳定 RSS-to-JSON 桥接服务：feedtopjson.com
-    // q=AI%2B科技%2B时事 (AI, 科技, 时事)
-    rssURL1 := "https://news.google.com/rss/search?q=AI%2B科技%2B时事%2B区块链&hl=zh-TW&gl=TW&ceid=TW:zh-Hant"
-    apiURL1 := fmt.Sprintf("https://feedtopjson.com/?feed=%s", url.QueryEscape(rssURL1))
+    // --- 来源 1 (主用，权威/中文/视频): YouTube 关键词搜索 (AI, IT, 旅游) ---
+    // 使用 YouTube 官方搜索 RSS 配合稳定的 RSS-to-JSON 桥接服务
+    searchQuery := url.QueryEscape("AI 绘画 IT 旅游 中文")
+    youtubeRss := fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?search_query=%s", searchQuery)
+    apiURL1 := fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(youtubeRss))
     
-    newsMsg, err := fetchNewsFromGlobalAPI(apiURL1, "Google News 台湾版", 5)
+    newsMsg, err := fetchNewsFromGlobalAPI(apiURL1, "YouTube 中文热搜 (AI/IT/旅游)", 5)
     if err == nil { return newsMsg, nil }
-    logger.Warningf("资讯来源 1 (Google News 台湾版) 失败: %v", err)
+    logger.Warningf("资讯来源 1 (YouTube 中文热搜) 失败: %v", err)
 
-    // --- 来源 2 (备用，垂直/中文): GitHub Trending 中文项目 (IT/AI) ---
-    newsMsg, err = fetchNewsFromGlobalAPI("https://api.gugubaba.com/api/github/trending?language=zh", "GitHub 中文热榜", 5)
+    // --- 来源 2 (备用，权威/中文): Google News RSS (AI/IT/时事) ---
+    // 使用 Google News 台湾版 RSS 源 + 稳定 RSS-to-JSON 桥接服务
+    rssQuery2 := url.QueryEscape("AI 科技 国际时事 区块链") // 扩大搜索范围
+    rssURL2 := fmt.Sprintf("https://news.google.com/rss/search?q=%s&hl=zh-TW&gl=TW&ceid=TW:zh-Hant", rssQuery2)
+    // 重新使用 api.rss2json.com，因为其是目前最广泛使用的公共桥接服务
+    apiURL2 := fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(rssURL2)) 
+    
+    newsMsg, err = fetchNewsFromGlobalAPI(apiURL2, "Google News 中文简报", 5)
     if err == nil { return newsMsg, nil }
-    logger.Warningf("资讯来源 2 (GitHub 中文热榜) 失败: %v", err)
+    logger.Warningf("资讯来源 2 (Google News 中文简报) 失败: %v", err)
 
-    // --- 来源 3 (备用，垂直/中文): 区块链/币圈头条 (CoinMarketCap 聚合) ---
+    // --- 来源 3 (最终备用，垂直/中文): 区块链/币圈头条 (CoinMarketCap 聚合) ---
     newsMsg, err = fetchNewsFromGlobalAPI("https://api.coinmarketcap.cn/v1/news/headlines?limit=5", "币圈头条", 5)
     if err == nil { return newsMsg, nil }
     logger.Warningf("资讯来源 3 (币圈头条) 失败: %v", err)
