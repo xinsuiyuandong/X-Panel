@@ -21,6 +21,7 @@ import (
     "os/exec"          // 新增：用于 exec.Command（getDomain 等）
     "path/filepath"    // 新增：用于 filepath.Base / Dir（getDomain 用到）
 	"io/ioutil" // 〔中文注释〕: 新增，用于读取 HTTP API 响应体。
+	"math/rand"    // 用于随机排列
 
 	"x-ui/config"
 	"x-ui/database"
@@ -4290,7 +4291,11 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
     for i, item := range newsItems {
         if i >= limit { break }
         if item.Title != "" {
-            builder.WriteString(fmt.Sprintf("\n%d. %s", i+1, item.Title))
+            // 移除 RSS 源标题中可能包含的来源信息，让内容更整洁
+            cleanTitle := strings.ReplaceAll(item.Title, " - YouTube", "")
+            cleanTitle = strings.ReplaceAll(cleanTitle, " | Google News", "")
+
+            builder.WriteString(fmt.Sprintf("\n%d. %s", i+1, cleanTitle))
             // 链接/描述只有在 YouTube, Google News 或 GitHub 源时才显示
             if item.Description != "" && (strings.Contains(sourceName, "YouTube") || strings.Contains(sourceName, "Google News") || strings.Contains(sourceName, "GitHub")) {
                  builder.WriteString(fmt.Sprintf("\n  `%s`", item.Description))
@@ -4302,37 +4307,53 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
 }
 
 // =========================================================================================
-// 【核心函数：getNewsBriefingWithFallback】 (最终稳定版，三重冗余)
+// 【核心函数：getNewsBriefingWithFallback】 (最终稳定版，随机+冗余尝试)
 // =========================================================================================
 
-// 〔中文注释〕: 【最终重构】新闻资讯获取函数：按优先级尝试3个不同的国际资讯源，直到成功。
+// 〔中文注释〕: 【最终重构】新闻资讯获取函数：随机排列源并逐个尝试，直到成功或全部失败。
 func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
-    // --- 来源 1 (主用，权威/中文/视频): YouTube 关键词搜索 (AI, IT, 旅游) ---
-    // 使用 YouTube 官方搜索 RSS 配合稳定的 RSS-to-JSON 桥接服务
-    searchQuery := url.QueryEscape("AI 绘画 IT 旅游 中文")
-    youtubeRss := fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?search_query=%s", searchQuery)
-    apiURL1 := fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(youtubeRss))
-    
-    newsMsg, err := fetchNewsFromGlobalAPI(apiURL1, "YouTube 中文热搜 (AI/IT/旅游)", 5)
-    if err == nil { return newsMsg, nil }
-    logger.Warningf("资讯来源 1 (YouTube 中文热搜) 失败: %v", err)
+    // 定义所有可用的新闻源
+    newsSources := []struct {
+        Name string
+        API  string
+    }{
+        {
+            Name: "YouTube 中文热搜 (AI/IT/旅游)",
+            API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?search_query=%s", url.QueryEscape("AI 绘画 IT 旅游 中文")))),
+        },
+        {
+            Name: "Google News 中文简报",
+            API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(fmt.Sprintf("https://news.google.com/rss/search?q=%s&hl=zh-TW&gl=TW&ceid=TW:zh-Hant", url.QueryEscape("AI 科技 国际时事 区块链")))),
+        },
+        {
+            Name: "币圈头条",
+            API:  "https://api.coinmarketcap.cn/v1/news/headlines?limit=5",
+        },
+    }
 
-    // --- 来源 2 (备用，权威/中文): Google News RSS (AI/IT/时事) ---
-    // 使用 Google News 台湾版 RSS 源 + 稳定 RSS-to-JSON 桥接服务
-    rssQuery2 := url.QueryEscape("AI 科技 国际时事 区块链") // 扩大搜索范围
-    rssURL2 := fmt.Sprintf("https://news.google.com/rss/search?q=%s&hl=zh-TW&gl=TW&ceid=TW:zh-Hant", rssQuery2)
-    // 重新使用 api.rss2json.com，因为其是目前最广泛使用的公共桥接服务
-    apiURL2 := fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(rssURL2)) 
+    // 随机打乱数组顺序，增加健壮性 (无需显式调用 rand.Seed，依赖 Go 默认随机源)
+    // 注意：需要确保您的文件顶部 import 列表中有 "math/rand"
+    rand.Shuffle(len(newsSources), func(i, j int) {
+        newsSources[i], newsSources[j] = newsSources[j], newsSources[i]
+    })
     
-    newsMsg, err = fetchNewsFromGlobalAPI(apiURL2, "Google News 中文简报", 5)
-    if err == nil { return newsMsg, nil }
-    logger.Warningf("资讯来源 2 (Google News 中文简报) 失败: %v", err)
-
-    // --- 来源 3 (最终备用，垂直/中文): 区块链/币圈头条 (CoinMarketCap 聚合) ---
-    newsMsg, err = fetchNewsFromGlobalAPI("https://api.coinmarketcap.cn/v1/news/headlines?limit=5", "币圈头条", 5)
-    if err == nil { return newsMsg, nil }
-    logger.Warningf("资讯来源 3 (币圈头条) 失败: %v", err)
+    // 逐个尝试所有来源，直到成功
+    for i, source := range newsSources {
+        logger.Infof("新闻资讯：开始尝试来源 [%d/%d]: %s", i+1, len(newsSources), source.Name)
+        
+        // 调用核心抓取逻辑
+        newsMsg, err := fetchNewsFromGlobalAPI(source.API, source.Name, 5)
+        
+        if err == nil && newsMsg != "" { 
+            // 成功获取到内容
+            logger.Infof("新闻资讯：来源 [%s] 成功获取内容。", source.Name)
+            return newsMsg, nil 
+        }
+        
+        // 失败，记录警告，继续尝试下一个
+        logger.Warningf("新闻资讯来源 [%s] 尝试失败: %v", source.Name, err)
+    }
     
-    // 所有来源都失败
-    return "", errors.New("所有国际新闻资讯来源均失败")
+    // 所有来源都失败，返回空字符串和 nil error，以确保不中断 SendReport 流程
+    return "", nil 
 }
