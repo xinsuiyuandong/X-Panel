@@ -4395,6 +4395,10 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
 
 // 〔中文注释〕: 【最终重构】新闻资讯获取函数：随机排列源并逐个尝试，直到成功或全部失败。
 func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
+	// 将 Google News 的 URL 计算移到数组定义外部
+    rssQuery2 := url.QueryEscape("AI 科技 国际时事 区块链 IT AI绘画") 
+    // 使用 hl=zh-CN (Host Language) 和 gl=CN (Geo-Location)
+    rssURL2 := fmt.Sprintf("https://news.google.com/rss/search?q=%s&hl=zh-CN&gl=CN", rssQuery2) 
     // 定义所有可用的新闻源
     newsSources := []struct {
         Name string
@@ -4406,9 +4410,7 @@ func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
         },
         {
             Name: "Google News 中文简报",
-			rssQuery2 := url.QueryEscape("AI 科技 国际时事 区块链 IT AI绘画"),    // 扩大搜索范围
-            rssURL2 := fmt.Sprintf("https://news.google.com/rss/search?q=%s&hl=zh-CN&gl=CN", rssQuery2), 
-            API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(rssURL2)),
+			API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(rssURL2)),
         },
         {
             Name: "币圈头条",
