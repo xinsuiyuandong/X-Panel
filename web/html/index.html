@@ -3,7 +3,7 @@
 
     /* 【通用】动态流光背景，作为所有主题的底色，增加炫酷感 */
     body {
-        background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+        background: linear-gradient(-45deg, #EB5C20, #ABA0D9, #23a6d5, #23d5ab, #F0C9CF, #A9CD71, #00ffff);
         background-size: 400% 400%;
         animation: gradientBG 15s ease infinite;
     }
@@ -19,58 +19,88 @@
         background: transparent !important;
     }
 
-    /* 【通用】卡片核心玻璃效果的基础样式 */
+    /* ==================================================================
+       核心修改点：动态边框效果 (New Feature)
+       ================================================================== */
+    
+    /* 1. 卡片基础样式：准备为动态边框腾出空间 */
     .glass-card {
         backdrop-filter: blur(15px) !important;
         -webkit-backdrop-filter: blur(15px) !important;
         border-radius: 16px !important;
         transition: all 0.3s ease;
+        position: relative !important; /* 必须设置，用于定位伪元素 */
+        border: 1px solid transparent !important; /* 去除原生边框，依靠特效 */
+        overflow: hidden; /* 隐藏溢出的渐变边框 */
+        z-index: 0; /* 确保卡片内容在特效之上 */
     }
     .glass-card:hover {
         transform: translateY(-5px); /* 【通用】悬浮动效 */
     }
 
-    /* ==================================================================
-       核心修改点：针对不同主题进行样式覆盖，确保兼容性
-       ================================================================== */
+    /* 2. 动态边框的旋转渐变体 (::before) */
+    .glass-card::before {
+        content: '';
+        position: absolute;
+        top: -100%;
+        left: -100%;
+        width: 300%;
+        height: 300%;
+        /* 锥形渐变模拟动态边框 */
+        background: conic-gradient(
+            transparent 0deg,
+            transparent 90deg,
+            #ff0077 120deg,
+            #00aaff 180deg,
+            #ff0077 240deg,
+            #00aaff 300deg,
+            transparent 360deg
+        );
+        animation: borderSpin 6s linear infinite;
+        z-index: -2; /* 放在最底层 */
+    }
 
-    /* 【主题兼容：亮色-light】当主题为白色时... */
-    .light .glass-card {
-        background: rgba(255, 255, 255, 0.5) !important; /* 使用半透明的白色玻璃 */
-        border: 1px solid rgba(0, 0, 0, 0.1) !important; /* 使用非常淡的黑色边框 */
+    @keyframes borderSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* 3. 玻璃背景的内层覆盖体 (::after) */
+    /* 用于覆盖掉 ::before 旋转渐变的大部分区域，只留下一条边缝作为“边框” */
+    .glass-card::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        right: 2px;
+        bottom: 2px;
+        border-radius: 14px; /* 略小于卡片圆角，露出动态边框 */
+        z-index: -1; /* 位于内容和旋转渐变之间 */
+    }
+
+    /* 【主题兼容：亮色-light】内层背景 */
+    .light .glass-card::after {
+        background: rgba(255, 255, 255, 0.5) !important;
+        /* 原来的 box-shadow 可以保留，但边框已移除 */
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15) !important;
     }
-    /* 【中文注释】为亮色主题（白色）设置深色字体，确保可读性 */
+    /* 【主题兼容：暗色-dark / 黑色-black】内层背景 */
+    .dark .glass-card::after,
+    .black .glass-card::after {
+        background: rgba(0, 0, 0, 0.25) !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+    }
+
+    /* 字体颜色覆盖 (保持不变) */
     .light .glass-card,
     .light .glass-card .ant-card-head-title,
     .light .glass-card .ant-statistic-title,
-    .light .glass-card .ant-statistic-content .ant-statistic-content-value, /* 修正了选择器，确保数字颜色正确 */
+    .light .glass-card .ant-statistic-content .ant-statistic-content-value,
     .light .glass-card b,
     .light .glass-card .ant-badge-status-text,
     .light .glass-card .ant-progress-text {
-        color: #2c3e50 !important; /* 使用一种深蓝灰色，比纯黑更柔和 */
+        color: #2c3e50 !important;
     }
-    .light .glass-card .ant-card-actions {
-        background: transparent;
-        border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
-
-    }
-    .light .glass-card .ant-card-actions > li {
-        color: rgba(44, 62, 80, 0.75);
-    }
-    .light .glass-card .ant-card-actions > li:not(:last-child) {
-        border-color: rgba(0, 0, 0, 0.1) !important;
-    }
-
-    /* 【主题兼容：暗色-dark / 黑色-black】当主题为黑色或暗色时... */
-    .dark .glass-card,
-    .black .glass-card {
-        background: rgba(0, 0, 0, 0.25) !important; /* 使用半透明的黑色玻璃 */
-        border: 1px solid rgba(255, 255, 255, 0.15) !important; /* 使用精致的白色边框 */
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
-
-    }
-    /* 【中文注释】为暗色/黑色主题设置浅色字体，确保可读性 */
     .dark .glass-card,
     .dark .glass-card .ant-card-head-title,
     .dark .glass-card .ant-statistic-title,
@@ -85,21 +115,7 @@
     .black .glass-card b,
     .black .glass-card .ant-badge-status-text,
     .black .glass-card .ant-progress-text {
-        color: #ecf0f1 !important; /* 使用一种明亮的浅灰色，比纯白更护眼 */
-    }
-    .dark .glass-card .ant-card-actions,
-    .black .glass-card .ant-card-actions {
-        background: transparent;
-        border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
-
-    }
-    .dark .glass-card .ant-card-actions > li,
-    .black .glass-card .ant-card-actions > li {
-        color: rgba(236, 240, 241, 0.75);
-    }
-    .dark .glass-card .ant-card-actions > li:not(:last-child),
-    .black .glass-card .ant-card-actions > li:not(:last-child) {
-        border-color: rgba(255, 255, 255, 0.15) !important;
+        color: #ecf0f1 !important;
     }
 
     /* 【通用】原始的必要样式保留 */
@@ -107,7 +123,7 @@
     .running-animation .ant-badge-status-dot { animation: runningAnimation 1.2s linear infinite; }
     @keyframes runningAnimation { 0%,50%,100% {transform: scale(1);opacity: 1;} 10% {transform: scale(1.5);opacity: .2;} }
 
-    /* === 1. X-Panel LOGO 炫酷效果样式 === */
+    /* === 4. X-Panel LOGO 炫酷效果样式 === */
     @keyframes neonGlow {
         0%, 100% {
             text-shadow: 0 0 5px #00aaff, 0 0 10px #00aaff, 0 0 20px #00aaff, 0 0 40px #00aaff;
@@ -117,13 +133,12 @@
         }
     }
 
-    /* 优化 LOGO 样式，用于卡片内居中显示 */
     .x-panel-logo-text {
         font-size: 3rem; /* 增大字号 */
         font-weight: 900;
         margin: 0;
         color: #fff; /* 基础白色 */
-        text-transform: capitalize; /* 确保只有 X 和 P 保持大写，如果需要精确控制，HTML 中要写成 X-Panel */
+        text-transform: capitalize;
         letter-spacing: 2px;
         animation: neonGlow 5s ease-in-out infinite alternate;
         text-align: center;
@@ -132,13 +147,13 @@
 
     .x-panel-desc {
         text-align: center;
-        margin-top: 10px;
         font-size: 1rem;
-        color: inherit; /* 继承 glass-card 的字体颜色 */
+        color: inherit;
         line-height: 1.5;
     }
+    /* 确保描述文字不加粗 */
     .x-panel-desc b {
-        font-weight: normal; /* 描述文字不需要加粗 */
+        font-weight: normal;
     }
 	
 </style>
@@ -169,10 +184,12 @@
 							<a-row :gutter="[isMobile ? 8 : 16, isMobile ? 8 : 16]">
 
 								<a-col :sm="24" :lg="16">
-									<a-card title='X-Panel' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
+									<a-card hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px', paddingBottom: '16px' }">
 										<div class="x-panel-logo-text">X-Panel</div>
+										<br>
 										<div class="x-panel-desc">
-											<b>一个更好的面板</b><br>
+											<b>一个更好的面板</b>
+											<br><br>
 											<b>基于 Xray Core 构建</b>
 										</div>
 									</a-card>
@@ -229,41 +246,6 @@
 										</a-row>
 									</a-card>
 
-									<a-row :gutter="[isMobile ? 8 : 16, 0]" :style="{ marginBottom: '16px' }">
-										<a-col :sm="24" :md="12">
-											<a-card title='{{ i18n "pages.index.totalData" }}' hoverable :bordered="true" class="glass-card">
-												<a-row :gutter="isMobile ? [8,8] : 0">
-													<a-col :span="12">
-														<a-custom-statistic title='{{ i18n "pages.index.sent" }}' :value="SizeFormatter.sizeFormat(status.netTraffic.sent)">
-															<template #prefix><a-icon type="cloud-upload" /></template>
-														</a-custom-statistic>
-													</a-col>
-													<a-col :span="12">
-														<a-custom-statistic title='{{ i18n "pages.index.received" }}' :value="SizeFormatter.sizeFormat(status.netTraffic.recv)">
-															<template #prefix><a-icon type="cloud-download" /></template>
-														</a-custom-statistic>
-													</a-col>
-												</a-row>
-											</a-card>
-										</a-col>
-										<a-col :sm="24" :md="12">
-											<a-card title='{{ i18n "pages.index.connectionCount" }}' hoverable :bordered="true" class="glass-card">
-												<a-row :gutter="isMobile ? [8,8] : 0">
-													<a-col :span="12">
-														<a-custom-statistic title="TCP" :value="status.tcpCount">
-															<template #prefix><a-icon type="swap" /></template>
-														</a-custom-statistic>
-													</a-col>
-													<a-col :span="12">
-														<a-custom-statistic title="UDP" :value="status.udpCount">
-															<template #prefix><a-icon type="swap" /></template>
-														</a-custom-statistic>
-													</a-col>
-												</a-row>
-											</a-card>
-										</a-col>
-									</a-row>
-
 									<a-card title='{{ i18n "pages.index.xrayStatus" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
 										<template #extra>
 											<template v-if="status.xray.state != 'error'">
@@ -301,7 +283,7 @@
 										</template>
 									</a-card>
 
-									<a-card title='{{ i18n "menu.link" }}' hoverable :bordered="true" class="glass-card">
+									<a-card title='{{ i18n "menu.link" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
 										<template #actions>
 											<a-space direction="horizontal" @click="openLogs()" :style="{ justifyContent: 'center' }">
 												<a-icon type="bars"></a-icon><span v-if="!isMobile">{{ i18n "pages.index.logs" }}</span>
@@ -314,6 +296,41 @@
 											</a-space>
 										</template>
 									</a-card>
+
+									<a-row :gutter="[isMobile ? 8 : 16, 0]">
+										<a-col :sm="24" :md="12">
+											<a-card title='{{ i18n "pages.index.totalData" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: isMobile ? '16px' : '0' }">
+												<a-row :gutter="isMobile ? [8,8] : 0">
+													<a-col :span="12">
+														<a-custom-statistic title='{{ i18n "pages.index.sent" }}' :value="SizeFormatter.sizeFormat(status.netTraffic.sent)">
+															<template #prefix><a-icon type="cloud-upload" /></template>
+														</a-custom-statistic>
+													</a-col>
+													<a-col :span="12">
+														<a-custom-statistic title='{{ i18n "pages.index.received" }}' :value="SizeFormatter.sizeFormat(status.netTraffic.recv)">
+															<template #prefix><a-icon type="cloud-download" /></template>
+														</a-custom-statistic>
+													</a-col>
+												</a-row>
+											</a-card>
+										</a-col>
+										<a-col :sm="24" :md="12">
+											<a-card title='{{ i18n "pages.index.connectionCount" }}' hoverable :bordered="true" class="glass-card">
+												<a-row :gutter="isMobile ? [8,8] : 0">
+													<a-col :span="12">
+														<a-custom-statistic title="TCP" :value="status.tcpCount">
+															<template #prefix><a-icon type="swap" /></template>
+														</a-custom-statistic>
+													</a-col>
+													<a-col :span="12">
+														<a-custom-statistic title="UDP" :value="status.udpCount">
+															<template #prefix><a-icon type="swap" /></template>
+														</a-custom-statistic>
+													</a-col>
+												</a-row>
+											</a-card>
+										</a-col>
+									</a-row>
 
 								</a-col>
 
