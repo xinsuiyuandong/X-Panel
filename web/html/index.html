@@ -42,7 +42,7 @@
     overflow-x: hidden;
   }
   
-  /* 2. Ant Design 核心组件文字/图标覆盖 */
+  /* 2. Ant Design 核心组件文字/图标覆盖 (确保白色主题可读) */
   #app:not(.dark):not(.black) {
     /* 通用文字颜色 */
     color: var(--ant-text-color) !important;
@@ -167,7 +167,6 @@
     display: inline-block;
     padding: 5px 10px;
     margin: 4px;
-    /* 调整默认背景，确保白色主题下的标签不会是透明白 */
     background: var(--hud-module-bg); 
     border: 1px solid var(--hud-secondary-color);
     color: var(--hud-secondary-color);
@@ -299,8 +298,8 @@
                   <div class="hud-progress-bar-container"><div class="hud-progress-bar" :style="{ width: status.swap.percent + '%', backgroundColor: status.swap.color }"></div></div>
                   <div class="hud-stat-detail">Swap: [[ status.swap.percent ]]%</div>
                   <div class="hud-stat-detail" style="margin-top: 5px; opacity: 1;">
-                      <span :style="{ color: var(--hud-secondary-color) }">[[ status.loads[1] ]] / </span> 
-                      <span :style="{ color: var(--hud-glow-color) }">[[ status.loads[2] ]]</span>
+                      <span :style="{ color: 'var(--hud-secondary-color)' }">[[ status.loads[1] ]] / </span> 
+                      <span :style="{ color: 'var(--hud-glow-color)' }">[[ status.loads[2] ]]</span>
                   </div>
                 </a-col>
               </a-row>
@@ -315,14 +314,14 @@
                   <div class="hud-title"><a-icon type="global" />{{ i18n "pages.index.overallSpeed" }} / {{ i18n "pages.index.totalData" }}</div>
                   <a-row :gutter="[16, 8]">
                     <a-col :span="12" :style="{ textAlign: 'center', borderRight: '1px dashed var(--hud-border-color)' }">
-                      <a-icon type="arrow-up" :style="{ color: var(--hud-secondary-color), fontSize: '1.2rem' }" />
-                      <div :style="{ color: var(--hud-secondary-color), fontSize: '1.8rem', fontWeight: 700 }">[[ SizeFormatter.sizeFormat(status.netIO.up) ]]/s</div>
+                      <a-icon type="arrow-up" :style="{ color: 'var(--hud-secondary-color)', fontSize: '1.2rem' }" />
+                      <div :style="{ color: 'var(--hud-secondary-color)', fontSize: '1.8rem', fontWeight: 700 }">[[ SizeFormatter.sizeFormat(status.netIO.up) ]]/s</div>
                       <span class="hud-stat-label">{{ i18n "pages.index.upload" }}</span>
                       <div class="hud-stat-detail">{{ i18n "pages.index.sent" }}: [[ SizeFormatter.sizeFormat(status.netTraffic.sent) ]]</div>
                     </a-col>
                     <a-col :span="12" :style="{ textAlign: 'center' }">
-                      <a-icon type="arrow-down" :style="{ color: var(--hud-glow-color), fontSize: '1.2rem' }" />
-                      <div :style="{ color: var(--hud-glow-color), fontSize: '1.8rem', fontWeight: 700 }">[[ SizeFormatter.sizeFormat(status.netIO.down) ]]/s</div>
+                      <a-icon type="arrow-down" :style="{ color: 'var(--hud-glow-color)', fontSize: '1.2rem' }" />
+                      <div :style="{ color: 'var(--hud-glow-color)', fontSize: '1.8rem', fontWeight: 700 }">[[ SizeFormatter.sizeFormat(status.netIO.down) ]]/s</div>
                       <span class="hud-stat-label">{{ i18n "pages.index.download" }}</span>
                       <div class="hud-stat-detail">{{ i18n "pages.index.received" }}: [[ SizeFormatter.sizeFormat(status.netTraffic.recv) ]]</div>
                     </a-col>
@@ -353,11 +352,11 @@
                        <a-divider style="margin: 10px 0; border-color: var(--hud-border-color);" />
                     </a-col>
                     <a-col :span="12" :class="showIp ? '' : 'ip-hidden'" :style="{ textAlign: 'center' }">
-                      <div :style="{ color: var(--hud-secondary-color), fontSize: '0.9rem' }">[[ status.publicIP.ipv4 ]]</div>
+                      <div :style="{ color: 'var(--hud-secondary-color)', fontSize: '0.9rem' }">[[ status.publicIP.ipv4 ]]</div>
                       <span class="hud-stat-detail">Public IPv4</span>
                     </a-col>
                     <a-col :span="12" :class="showIp ? '' : 'ip-hidden'" :style="{ textAlign: 'center' }">
-                      <div :style="{ color: var(--hud-glow-color), fontSize: '0.9rem' }">[[ status.publicIP.ipv6 ]]</div>
+                      <div :style="{ color: 'var(--hud-glow-color)', fontSize: '0.9rem' }">[[ status.publicIP.ipv6 ]]</div>
                       <span class="hud-stat-detail">Public IPv6</span>
                     </a-col>
                   </a-row>
@@ -369,7 +368,8 @@
                   <div class="hud-title"><a-icon type="team" /> Panel Info / Community Links</div>
                   <a-space direction="horizontal" :size="'middle'" :wrap="true">
                     <a rel="noopener" href="https://github.com/xeefei/x-panel/releases" target="_blank">
-                      <div class="hud-link-tag" :style="{ background: 'var(--hud-module-bg)', borderColor: var(--hud-secondary-color), color: var(--hud-secondary-color) }">
+                      <div class="hud-link-tag" 
+                           :style="{ background: 'var(--hud-module-bg)', borderColor: 'var(--hud-secondary-color)', color: 'var(--hud-secondary-color)' }">
                         <a-icon type="github" /> <span>v{{ .cur_ver }} (Releases)</span>
                       </div>
                     </a>
@@ -379,7 +379,8 @@
                       </div>
                     </a>
                     <a rel="noopener" href="https://t.me/XUI_CN" target="_blank">
-                      <div class="hud-link-tag" :style="{ background: 'var(--hud-module-bg)', borderColor: var(--hud-glow-color), color: var(--hud-glow-color) }">
+                      <div class="hud-link-tag" 
+                           :style="{ background: 'var(--hud-module-bg)', borderColor: 'var(--hud-glow-color)', color: 'var(--hud-glow-color)' }">
                         <a-icon type="team" /> <span>交流群</span>
                       </div>
                     </a>
@@ -454,7 +455,8 @@
                         <span :style="{ color: 'var(--hud-text-primary)', fontWeight: 700 }">[[ TimeFormatter.formatSecond(status.appStats.uptime) ]]</span>
                     </div>
                     <div class="hud-stat-detail" :style="{ opacity: 1 }">
-                        <span class="hud-link-tag" :style="{ background: 'var(--hud-module-bg)', borderColor: var(--hud-glow-color), color: var(--hud-glow-color), clipPath: 'polygon(0 0, 90% 0, 100% 100%, 10% 100%)' }">
+                        <span class="hud-link-tag" 
+                              :style="{ background: 'var(--hud-module-bg)', borderColor: 'var(--hud-glow-color)', color: 'var(--hud-glow-color)', clipPath: 'polygon(0 0, 90% 0, 100% 100%, 10% 100%)' }">
                             OS Uptime:
                         </span> 
                         <span :style="{ color: 'var(--hud-text-primary)', fontWeight: 700 }">[[ TimeFormatter.formatSecond(status.uptime) ]]</span>
