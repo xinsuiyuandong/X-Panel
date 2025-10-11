@@ -2060,7 +2060,7 @@ func (t *Tgbot) SendReport() {
     }
 
 	greetingMsg := fmt.Sprintf(
-		"☀️ **每日定时报告** (任务: `%s`)\n\n*美好的一天，从〔X-Panel 面板〕开始！*\n\n⏰ **当前时间**\n`%s`",
+		"☀️ **每日定时报告** (任务: `%s`)\n\n* 美好的一天，从〔X-Panel 面板〕开始！*\n\n⏰ **当前时间**：`%s`",
 		taskName,
 		time.Now().Format("2006-01-02 15:04:05"),
 	)
@@ -4404,7 +4404,7 @@ func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
             API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?search_query=%s", url.QueryEscape("AI 绘画 IT 旅游 中文")))),
         },
         {
-            Name: "Google News 中文简报",
+            Name: "Google News 中文资讯",
 			API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(rssURL2)),
         },
         {
