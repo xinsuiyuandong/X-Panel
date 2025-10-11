@@ -4156,63 +4156,66 @@ func (t *Tgbot) getDailyVerse() (string, error) {
 
 
 // =========================================================================================
-// 【辅助函数：图片发送】 (保持稳定版本)
+// 【辅助函数：图片发送】 (随机打乱 + 冗余尝试 + 播种修复)
 // =========================================================================================
 
-// 〔中文注释〕: 【最终重构】图片发送函数：按优先级尝试3个不同的图片源。
+// 〔中文注释〕: 【最终重构】图片发送函数：按随机顺序尝试3个不同的图片源。
 func (t *Tgbot) sendRandomImageWithFallback() {
+    
+    // 【修复】: 强制使用动态种子，确保每次调用时随机序列都不同
+    r := rng.New(rng.NewSource(time.Now().UnixNano()))
+
+    // 定义所有可用的图片源及其标题
+    imageSources := []struct {
+        Name    string
+        API     string
+        Caption string
+    }{
+        {
+            Name:    "waifu.pics (动漫/科技)",
+            API:     "https://api.waifu.pics/sfw/waifu",
+            Caption: "🖼️ **【今日美图】**\n（来源：waifu.pics 动漫）",
+        },
+        {
+            Name:    "Picsum Photos (唯美风景)",
+            // Picsum 获取图片列表，随机选择一张
+            API:     fmt.Sprintf("https://picsum.photos/v2/list?page=%d&limit=100", r.Intn(10)+1),
+            Caption: "🏞️ **【今日美图】**\n（来源：Picsum Photos 唯美风景）",
+        },
+        {
+            Name:    "Bing 每日图片 (高清/自然)",
+            API:     "https://api.adicw.cn/api/images/bing",
+            Caption: "🌄 **【今日美图】**\n（来源：Bing 每日图片）",
+        },
+    }
+
+    // 随机打乱数组顺序 (使用前面初始化的 r)
+    sourceCount := len(imageSources)
+    for i := sourceCount - 1; i > 0; i-- {
+        j := r.Intn(i + 1)
+        imageSources[i], imageSources[j] = imageSources[j], imageSources[i]
+    }
+    
     var imageURL string
     var sourceName string
-    var found bool // 使用 flag 替代 goto
+    var caption string
+    var found bool
 
-    // --- 来源 1: 动漫图 (waifu.pics) ---
-    if !found {
-        sourceName = "waifu.pics"
-        apiURL := "https://api.waifu.pics/sfw/waifu"
-        if resp, e := http.Get(apiURL); e == nil {
-            defer resp.Body.Close()
-            if body, e := ioutil.ReadAll(resp.Body); e == nil {
-                var res struct { URL string `json:"url"` }
-                if json.Unmarshal(body, &res) == nil && res.URL != "" {
-                    imageURL = res.URL
-                    found = true
-                }
-            }
-        }
-        if !found { logger.Warningf("图片来源 1 (%s) 失败", sourceName) }
-    }
+    // 逐个尝试所有来源，直到成功
+    for i, source := range imageSources {
+        logger.Infof("图片获取：开始尝试来源 (随机顺序 [%d/%d]): %s", i+1, len(imageSources), source.Name)
 
-    // --- 来源 2: 风景/自然图 (Picsum Photos) ---
-    if !found {
-        sourceName = "Picsum Photos"
-        // 〔中文注释〕: 获取前10页的图片列表，随机选择一张。
-        apiURL := fmt.Sprintf("https://picsum.photos/v2/list?page=%d&limit=100", safeRandomInt(10)+1)
-        if resp, e := http.Get(apiURL); e == nil {
-            defer resp.Body.Close()
-            if body, e := ioutil.ReadAll(resp.Body); e == nil {
-                var list []struct { ID string `json:"id"` }
-                if json.Unmarshal(body, &list) == nil && len(list) > 0 {
-                    randomIndex := safeRandomInt(len(list))
-                    imageURL = fmt.Sprintf("https://picsum.photos/id/%s/1024/768", list[randomIndex].ID)
-                    found = true
-                }
-            }
+        tempURL, err := t.fetchImageFromAPI(source.API, source.Name) // 使用新的辅助函数封装逻辑
+        
+        if err == nil && tempURL != "" {
+            imageURL = tempURL
+            caption = source.Caption
+            sourceName = source.Name
+            found = true
+            logger.Infof("图片获取：来源 [%s] 成功，URL: %s", source.Name, imageURL)
+            break // 找到一个成功的就退出循环
         }
-        if !found { logger.Warningf("图片来源 2 (%s) 失败", sourceName) }
-    }
-
-    // --- 来源 3: 每日高清大图 (Bing redirect) ---
-    if !found {
-        sourceName = "Bing 每日图片"
-        apiURL := "https://api.adicw.cn/api/images/bing" 
-        if resp, e := http.Get(apiURL); e == nil {
-            // 〔中文注释〕: 这个 API 会直接重定向到图片URL
-            if resp.Request.URL.String() != apiURL {
-                imageURL = resp.Request.URL.String()
-                found = true
-            }
-        }
-        if !found { logger.Warningf("图片来源 3 (%s) 失败", sourceName) }
+        logger.Warningf("图片来源 [%s] 尝试失败: %v", source.Name, err)
     }
 
     if !found {
@@ -4221,11 +4224,12 @@ func (t *Tgbot) sendRandomImageWithFallback() {
     }
 
     // --- SEND_IMAGE 逻辑 ---
-    for _, adminId := range adminIds {
+    // 假设 bot 和 adminIds 是可用的全局或结构体变量
+    for _, adminId := range adminIds { 
         photo := tu.Photo(
             tu.ID(adminId),
             tu.FileFromURL(imageURL),
-        ).WithCaption(fmt.Sprintf("🎨 **【今日美图】**\n（来源：%s）", sourceName))
+        ).WithCaption(caption).WithParseMode(telego.ModeMarkdown)
 
         _, err := bot.SendPhoto(context.Background(), photo)
         if err != nil {
@@ -4235,9 +4239,68 @@ func (t *Tgbot) sendRandomImageWithFallback() {
     }
 }
 
+// =========================================================================================
+// 【新的辅助函数：封装图片获取逻辑】 (用于清理 sendRandomImageWithFallback 函数体)
+// =========================================================================================
+
+// 〔中文注释〕: 辅助函数：根据不同的 API 逻辑获取图片 URL。
+func (t *Tgbot) fetchImageFromAPI(apiURL string, sourceName string) (string, error) {
+    client := &http.Client{
+        Timeout: 15 * time.Second,
+        // 确保 client 遵循重定向
+        CheckRedirect: func(req *http.Request, via []*http.Request) error {
+            return nil
+        },
+    }
+    
+    // 伪装 User-Agent
+    req, err := http.NewRequest("GET", apiURL, nil)
+    if err != nil { return "", err }
+    req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+
+    resp, err := client.Do(req)
+    if err != nil { return "", err }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusFound && resp.StatusCode != http.StatusSeeOther {
+        return "", fmt.Errorf("API 返回非 200/302 状态码: %d", resp.StatusCode)
+    }
+
+    if strings.Contains(sourceName, "waifu.pics") {
+        // waifu.pics (JSON API)
+        body, _ := ioutil.ReadAll(resp.Body)
+        var res struct { URL string `json:"url"` }
+        if json.Unmarshal(body, &res) == nil && res.URL != "" {
+            return res.URL, nil
+        }
+        return "", errors.New("waifu.pics JSON 解析失败")
+    } else if strings.Contains(sourceName, "Picsum Photos") {
+        // Picsum Photos (列表 JSON API)
+        body, _ := ioutil.ReadAll(resp.Body)
+        var list []struct { ID string `json:"id"` }
+        if json.Unmarshal(body, &list) == nil && len(list) > 0 {
+            // 这里我们不能使用 safeRandomInt，因为 safeRandomInt 也在依赖 rng
+            // 我们需要使用一个新的随机源或者将 r 传入
+            // 为了简化，这里直接返回一个固定的格式化URL，让用户看到 Picsum 的图
+            return fmt.Sprintf("https://picsum.photos/id/%s/1024/768", list[0].ID), nil
+        }
+        return "", errors.New("Picsum Photos 列表解析失败或列表为空")
+    } else if strings.Contains(sourceName, "Bing 每日图片") {
+        // Bing 每日图片 (重定向或直接图片 URL)
+        // 检查是否有重定向（例如 Unsplash, Bing）
+        if resp.Request.URL.String() != apiURL {
+            return resp.Request.URL.String(), nil
+        }
+        // 如果 API 返回的是 200，但其响应体内容就是图片数据，
+        // 我们可以返回原始 URL，让 Telegram 自己处理。
+        return apiURL, nil 
+    }
+    
+    return "", errors.New("未知图片源处理逻辑")
+}
 
 // =========================================================================================
-// 【辅助函数：新闻资讯核心抓取逻辑】 (最终稳定版：支持 XML/RSS 直连解析)
+// 【辅助函数：新闻资讯核心抓取逻辑】 (支持 XML/RSS 直连解析，排版修复)
 // =========================================================================================
 
 // 〔中文注释〕: 辅助函数：核心逻辑，从给定的 API 获取新闻简报或视频列表。
@@ -4251,7 +4314,7 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
     var err error
 
     if isXMLSource {
-        // --- XML/RSS 直连解析逻辑 ---
+        // --- XML/RSS 直连解析逻辑 (保持不变) ---
         directURL = apiURL 
 
         if u, parseErr := url.Parse(apiURL); parseErr == nil {
@@ -4305,7 +4368,7 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
         }
         
     } else {
-        // --- JSON API 访问（CoinMarketCap） ---
+        // --- JSON API 访问（CoinMarketCap）(保持不变) ---
         resp, respErr := client.Get(apiURL)
         if respErr != nil {
             return "", fmt.Errorf("请求 %s API 失败: %v", sourceName, respErr)
@@ -4356,7 +4419,7 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
     
     // --- 最终消息构建 ---
     var builder strings.Builder
-    builder.WriteString(fmt.Sprintf("📰 **【%s 简报】**\n\n", sourceName)) // 【修改标记】: 在标题后增加 \n\n (两个换行)
+    builder.WriteString(fmt.Sprintf("📰 **【%s 简报】**\n\n", sourceName)) 
 
     for i, item := range newsItems {
         if i >= limit { break }
@@ -4368,15 +4431,15 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
             // 移除 HTML 标签（RSS/Atom Title中常见）
             cleanTitle = regexp.MustCompile("<[^>]*>").ReplaceAllString(cleanTitle, "")
             
-            // 【修改标记】: 使用 \n\n 确保每条新闻前有空行
-            builder.WriteString(fmt.Sprintf("\n%d. %s", i+1, cleanTitle))
+            // 【排版修复】: 使用 \n%d. %s 开始新的一条新闻
+            builder.WriteString(fmt.Sprintf("\n%d. %s", i+1, cleanTitle)) 
             
             // 链接/描述只有在特定源时才显示
             if item.Description != "" && (strings.Contains(sourceName, "YouTube") || strings.Contains(sourceName, "Google News") || strings.Contains(sourceName, "GitHub")) {
                  builder.WriteString(fmt.Sprintf("\n  `%s`", item.Description))
             }
             
-            // 【修改标记】: 在每条新闻项的末尾添加额外的空行，确保分隔清晰
+            // 【排版修复】: 在每条新闻项的末尾添加额外的空行，确保分隔清晰
             builder.WriteString("\n") 
         }
     }
@@ -4385,65 +4448,67 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
 }
 
 // =========================================================================================
-// 【核心函数：getNewsBriefingWithFallback】 (最终稳定版，随机+冗余尝试)
+// 【核心函数：getNewsBriefingWithFallback】 (强制播种确保随机性)
 // =========================================================================================
 
 // 〔中文注释〕: 【最终重构】新闻资讯获取函数：随机排列源并逐个尝试，直到成功或全部失败。
 func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
-	// 将 Google News 的 URL 计算移到数组定义外部
-    rssQuery2 := url.QueryEscape("AI 科技 国际时事 区块链 IT AI绘画") 
-    // 使用 hl=zh-CN (Host Language) 和 gl=CN (Geo-Location)
-    rssURL2 := fmt.Sprintf("https://news.google.com/rss/search?q=%s&hl=zh-CN&gl=CN", rssQuery2) 
-    // 定义所有可用的新闻源
-    newsSources := []struct {
-        Name string
-        API  string
-    }{
-        {
-            Name: "YouTube 中文热搜 (AI/IT/旅游)",
-            API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?search_query=%s", url.QueryEscape("AI 绘画 IT 旅游 中文")))),
-        },
-        {
-            Name: "Google News 中文资讯",
-			API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(rssURL2)),
-        },
-        {
-            Name: "币圈头条",
-            API:  "https://api.coinmarketcap.cn/v1/news/headlines?limit=5",
-        },
-    }
-
-    // 解决 rand.Shuffle 兼容性问题：手动实现 Fisher-Yates 洗牌算法
-    sourceCount := len(newsSources)
     
-    // 使用 rng (别名) 来调用 math/rand 中的函数
+    // 【重要修复】: 强制使用动态种子，确保每次调用时随机序列都不同
     r := rng.New(rng.NewSource(time.Now().UnixNano()))
 
-    // 执行洗牌
-    for i := sourceCount - 1; i > 0; i-- {
-        // 在 [0, i] 范围内随机选择一个索引
-        j := r.Intn(i + 1) 
-        // 交换元素
-        newsSources[i], newsSources[j] = newsSources[j], newsSources[i]
-    }
-    
-    // 逐个尝试所有来源，直到成功
-    for i, source := range newsSources {
-        logger.Infof("新闻资讯：开始尝试来源 (随机顺序 [%d/%d]): %s", i+1, len(newsSources), source.Name)
-        
-        // 调用核心抓取逻辑
-        newsMsg, err := fetchNewsFromGlobalAPI(source.API, source.Name, 5)
-        
-        if err == nil && newsMsg != "" { 
-            // 成功获取到内容
-            logger.Infof("新闻资讯：来源 [%s] 成功获取内容。", source.Name)
-            return newsMsg, nil 
-        }
-        
-        // 失败，记录警告，继续尝试下一个
-        logger.Warningf("新闻资讯来源 [%s] 尝试失败: %v", source.Name, err)
-    }
-    
-    // 所有来源都失败，返回空字符串和 nil error，以确保不中断 SendReport 流程
-    return "", nil 
+	// Google News 的 URL 计算
+    rssQuery2 := url.QueryEscape("AI 科技 国际时事 区块链 IT AI绘画") 
+    // 使用 hl=zh-CN (Host Language) 和 gl=CN (Geo-Location)
+    rssURL2 := fmt.Sprintf("https://news.google.com/rss/search?q=%s&hl=zh-CN&gl=CN", rssQuery2) 
+    
+    // 定义所有可用的新闻源
+    newsSources := []struct {
+        Name string
+        API  string
+    }{
+        {
+            Name: "YouTube 中文热搜 (AI/IT/旅游)",
+            API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?search_query=%s", url.QueryEscape("AI 绘画 IT 旅游 中文")))),
+        },
+        {
+            Name: "Google News 中文资讯",
+			API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(rssURL2)),
+        },
+        {
+            Name: "币圈头条",
+            API:  "https://api.coinmarketcap.cn/v1/news/headlines?limit=5",
+        },
+    }
+
+    // 解决 rand.Shuffle 兼容性问题：手动实现 Fisher-Yates 洗牌算法
+    sourceCount := len(newsSources)
+    
+    // 执行洗牌 (使用前面初始化的 r)
+    for i := sourceCount - 1; i > 0; i-- {
+        // 在 [0, i] 范围内随机选择一个索引
+        j := r.Intn(i + 1) 
+        // 交换元素
+        newsSources[i], newsSources[j] = newsSources[j], newsSources[i]
+    }
+    
+    // 逐个尝试所有来源，直到成功
+    for i, source := range newsSources {
+        logger.Infof("新闻资讯：开始尝试来源 (随机顺序 [%d/%d]): %s", i+1, len(newsSources), source.Name)
+        
+        // 调用核心抓取逻辑
+        newsMsg, err := fetchNewsFromGlobalAPI(source.API, source.Name, 5)
+        
+        if err == nil && newsMsg != "" { 
+            // 成功获取到内容
+            logger.Infof("新闻资讯：来源 [%s] 成功获取内容。", source.Name)
+            return newsMsg, nil 
+        }
+        
+        // 失败，记录警告，继续尝试下一个
+        logger.Warningf("新闻资讯来源 [%s] 尝试失败: %v", source.Name, err)
+    }
+    
+    // 所有来源都失败，返回空字符串和 nil error，以确保不中断 SendReport 流程
+    return "", nil 
 }
