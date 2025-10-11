@@ -20,14 +20,14 @@
     }
 
     /* ==================================================================
-       核心修正 1：顶部间距 (10px)
+       核心修正 1：顶部间距 (10px) - (保持不变)
        ================================================================== */
     .ant-layout-content {
         padding-top: 10px !important; 
     }
 
     /* ==================================================================
-       核心修正 2：卡片背景 (取消所有边框效果 - 对应要求 1)
+       核心修正 2：卡片背景 
        ================================================================== */
     
     /* 1. 卡片基础样式：作为容器，透明背景，**取消所有边框效果** */
@@ -94,30 +94,70 @@
         color: inherit !important;
     }
 
+    /* ==================================================================
+       ★ 新增修正：解决问题 1, 2, 3
+       ================================================================== */
+
+    /* 解决问题 3: 移除【X-Panel面板】卡片标题下方的“下划线” (实际是边框) */
+    .glass-card .ant-card-head {
+        border-bottom: none !important;
+    }
+
+    /* 解决问题 1 & 2: 修正【Xray】和【管理】卡片底部操作文字的颜色，使其在所有主题下都清晰可见 */
+    /* 同时移除操作栏顶部的分割线，保持玻璃效果的纯粹性 */
+    .glass-card .ant-card-actions {
+        border-top: none !important;
+        background: transparent !important; /* 确保操作栏背景也透明 */
+    }
+
+    /* 为亮色主题设置深色文字和交互效果 */
+    .light .glass-card .ant-card-actions span {
+        color: rgba(0, 0, 0, 0.65) !important;
+        transition: color 0.3s;
+    }
+    .light .glass-card .ant-card-actions > li > span:hover span,
+    .light .glass-card .ant-card-actions > li > span:hover .anticon {
+        color: #1890ff !important; /* Ant Design 默认的悬停蓝色 */
+    }
+
+    /* 为暗色/黑色主题设置亮色文字和交互效果 */
+    .dark .glass-card .ant-card-actions span,
+    .black .glass-card .ant-card-actions span {
+        color: rgba(255, 255, 255, 0.85) !important; /* 使用半透明白色以获得更好的视觉效果 */
+        transition: color 0.3s;
+    }
+    .dark .glass-card .ant-card-actions > li > span:hover span,
+    .black .glass-card .ant-card-actions > li > span:hover span,
+    .dark .glass-card .ant-card-actions > li > span:hover .anticon,
+    .black .glass-card .ant-card-actions > li > span:hover .anticon {
+        color: #40a9ff !important; /* Ant Design 暗色主题下的悬停亮蓝色 */
+    }
+
 
     /* ==================================================================
-       核心修正 3：底部严格对齐 (Flexbox Equal Height - 对应要求 2)
+       ★ 核心修正 4：底部严格对齐 (Flexbox Equal Height)
        ================================================================== */
     
-    /* 外层容器：确保内层 Ant-Row 可以被拉伸 */
+    /* 外层容器：确保内层 Ant-Row 可以被拉伸 (保持不变) */
     .main-content-row {
         display: flex;
         flex-direction: column; 
         flex-grow: 1;
     }
 
-    /* 内层容器：Ant-Row 包含两列 Ant-Col */
+    /* 内层容器：包含两列的 Ant-Row，强制其为 flex 布局并拉伸子项 */
     .main-content-row > .ant-row { 
-        display: flex !important; /* 强制 Ant-Row 作为 Flex 容器 */
-        align-items: stretch; /* 关键：使 Ant-Col 子元素等高 */
+        display: flex !important;
+        align-items: stretch !important; /* 核心：使所有列（Ant-Col）等高 */
         flex-grow: 1;
+        flex-wrap: wrap; /* 确保在移动设备上可以正常换行 */
     }
 
-    /* 目标：两列 Ant-Col，将它们也设置为 Flex 容器 */
+    /* 目标列（Ant-Col）：设置为 flex 布局，以便控制其内部卡片的排列 */
     .main-content-row > .ant-row > .ant-col {
         display: flex;
         flex-direction: column; 
-        height: 100%; /* 确保列本身填充了其空间 */
+        /* 移除了 height: 100%，因为 align-items: stretch 已经处理了高度，这样更可靠 */
     }
 
     /* 让【右侧】列的最后一个卡片（即 Ant-Col:nth-child(2)）自动伸长，以填补剩余的垂直空间 */
