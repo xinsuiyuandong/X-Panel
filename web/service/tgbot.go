@@ -2060,7 +2060,7 @@ func (t *Tgbot) SendReport() {
     }
 
 	greetingMsg := fmt.Sprintf(
-		"☀️ **每日定时报告** (任务: `%s`)\n\n* 美好的一天，从〔X-Panel 面板〕开始！*\n\n⏰ **当前时间**：`%s`",
+		"☀️ **每日定时报告** (任务: `%s`)\n\n*  美好的一天，从〔X-Panel 面板〕开始！*\n\n⏰ **当前时间**：`%s`",
 		taskName,
 		time.Now().Format("2006-01-02 15:04:05"),
 	)
