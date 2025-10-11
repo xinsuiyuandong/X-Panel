@@ -4154,7 +4154,6 @@ func (t *Tgbot) getDailyVerse() (string, error) {
     return fmt.Sprintf("📜 **【每日一语】**\n\n%s\n\n`—— %s ·《%s》`", poemContent, result.Data.Origin.Author, result.Data.Origin.Title), nil
 }
 
-
 // =========================================================================================
 // 【辅助函数：图片发送】 (随机打乱 + 冗余尝试 + 播种修复)
 // =========================================================================================
@@ -4162,7 +4161,7 @@ func (t *Tgbot) getDailyVerse() (string, error) {
 // 〔中文注释〕: 【最终重构】图片发送函数：按随机顺序尝试3个不同的图片源。
 func (t *Tgbot) sendRandomImageWithFallback() {
     
-    // 【修复】: 强制使用动态种子，确保每次调用时随机序列都不同
+    // 强制使用动态种子，确保每次调用时随机序列都不同
     r := rng.New(rng.NewSource(time.Now().UnixNano()))
 
     // 定义所有可用的图片源及其标题
@@ -4178,7 +4177,7 @@ func (t *Tgbot) sendRandomImageWithFallback() {
         },
         {
             Name:    "Picsum Photos (唯美风景)",
-            // Picsum 获取图片列表，随机选择一张
+            // Picsum 获取图片列表，随机选择一张。r.Intn(10)+1 用于随机选择页码。
             API:     fmt.Sprintf("https://picsum.photos/v2/list?page=%d&limit=100", r.Intn(10)+1),
             Caption: "🏞️ **【今日美图】**\n（来源：Picsum Photos 唯美风景）",
         },
@@ -4189,7 +4188,7 @@ func (t *Tgbot) sendRandomImageWithFallback() {
         },
     }
 
-    // 随机打乱数组顺序 (使用前面初始化的 r)
+    // 随机打乱数组顺序
     sourceCount := len(imageSources)
     for i := sourceCount - 1; i > 0; i-- {
         j := r.Intn(i + 1)
@@ -4197,22 +4196,21 @@ func (t *Tgbot) sendRandomImageWithFallback() {
     }
     
     var imageURL string
-    var sourceName string
     var caption string
-    var found bool
+    var found bool 
 
     // 逐个尝试所有来源，直到成功
     for i, source := range imageSources {
         logger.Infof("图片获取：开始尝试来源 (随机顺序 [%d/%d]): %s", i+1, len(imageSources), source.Name)
 
-        tempURL, err := t.fetchImageFromAPI(source.API, source.Name) // 使用新的辅助函数封装逻辑
+        tempURL, err := t.fetchImageFromAPI(source.API, source.Name)
         
         if err == nil && tempURL != "" {
             imageURL = tempURL
             caption = source.Caption
-            sourceName = source.Name
             found = true
-            logger.Infof("图片获取：来源 [%s] 成功，URL: %s", source.Name, imageURL)
+            // 日志直接使用 source.Name
+            logger.Infof("图片获取：来源 [%s] 成功，URL: %s", source.Name, imageURL) 
             break // 找到一个成功的就退出循环
         }
         logger.Warningf("图片来源 [%s] 尝试失败: %v", source.Name, err)
