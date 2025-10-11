@@ -82,7 +82,7 @@
 "settings" = "面板设置"
 "xray" = "Xray设置"
 "logout" = "退出登录"
-"link" = "管理"
+"link" = "管理/配置数据库"
 "navigation" = "实用导航"
 
 [pages.login]
@@ -108,7 +108,7 @@
 "memory" = "内存"
 "hard" = "磁盘"
 "threads" = "线程"
-"xrayStatus" = "Xray"
+"xrayStatus" = "Xray 运行状态"
 "stopXray" = "停止"
 "restartXray" = "重启"
 "xraySwitch" = "版本"
