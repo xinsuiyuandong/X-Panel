@@ -4028,6 +4028,7 @@ func (t *Tgbot) openPortWithUFW(port int) error {
     return nil
 }
 
+
 // =========================================================================================
 // 辅助函数：每日一语 (稳定版)
 // =========================================================================================
@@ -4066,7 +4067,7 @@ func (t *Tgbot) getDailyVerse() (string, error) {
 
 
 // =========================================================================================
-// 辅助函数：图片发送 (高稳定性国际API，冗余机制)
+// 辅助函数：图片发送 (修复 goto 错误，使用 if/else 结构)
 // =========================================================================================
 
 // 〔中文注释〕: 内部辅助函数：生成一个安全的随机数。
@@ -4074,7 +4075,6 @@ func safeRandomInt(max int) int {
 	if max <= 0 { return 0 }
 	result, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
 	if err != nil {
-		// 备用方案，使用纳秒作为随机源
 		return time.Now().Nanosecond() % max
 	}
 	return int(result.Int64())
@@ -4084,57 +4084,64 @@ func safeRandomInt(max int) int {
 func (t *Tgbot) sendRandomImageWithFallback() {
     var imageURL string
     var sourceName string
-    
+    var found bool // 使用 flag 替代 goto
+
     // --- 来源 1: 动漫图 (waifu.pics) ---
-    sourceName = "waifu.pics"
-    apiURL1 := "https://api.waifu.pics/sfw/waifu"
-    if resp, e := http.Get(apiURL1); e == nil {
-        defer resp.Body.Close()
-        if body, e := ioutil.ReadAll(resp.Body); e == nil {
-            var res struct { URL string `json:"url"` }
-            if json.Unmarshal(body, &res) == nil && res.URL != "" {
-                imageURL = res.URL
-                goto SEND_IMAGE
+    if !found {
+        sourceName = "waifu.pics"
+        apiURL := "https://api.waifu.pics/sfw/waifu"
+        if resp, e := http.Get(apiURL); e == nil {
+            defer resp.Body.Close()
+            if body, e := ioutil.ReadAll(resp.Body); e == nil {
+                var res struct { URL string `json:"url"` }
+                if json.Unmarshal(body, &res) == nil && res.URL != "" {
+                    imageURL = res.URL
+                    found = true
+                }
             }
         }
+        if !found { logger.Warningf("图片来源 1 (%s) 失败", sourceName) }
     }
-    logger.Warningf("图片来源 1 (%s) 失败", sourceName)
 
     // --- 来源 2: 风景/自然图 (Picsum Photos) ---
-    sourceName = "Picsum Photos"
-    // 〔中文注释〕: 获取前10页的图片列表，随机选择一张。
-    apiURL2 := fmt.Sprintf("https://picsum.photos/v2/list?page=%d&limit=100", safeRandomInt(10)+1)
-    if resp, e := http.Get(apiURL2); e == nil {
-        defer resp.Body.Close()
-        if body, e := ioutil.ReadAll(resp.Body); e == nil {
-            var list []struct { ID string `json:"id"` }
-            if json.Unmarshal(body, &list) == nil && len(list) > 0 {
-                randomIndex := safeRandomInt(len(list))
-                imageURL = fmt.Sprintf("https://picsum.photos/id/%s/1024/768", list[randomIndex].ID)
-                goto SEND_IMAGE
+    if !found {
+        sourceName = "Picsum Photos"
+        // 〔中文注释〕: 获取前10页的图片列表，随机选择一张。
+        apiURL := fmt.Sprintf("https://picsum.photos/v2/list?page=%d&limit=100", safeRandomInt(10)+1)
+        if resp, e := http.Get(apiURL); e == nil {
+            defer resp.Body.Close()
+            if body, e := ioutil.ReadAll(resp.Body); e == nil {
+                var list []struct { ID string `json:"id"` }
+                if json.Unmarshal(body, &list) == nil && len(list) > 0 {
+                    randomIndex := safeRandomInt(len(list))
+                    imageURL = fmt.Sprintf("https://picsum.photos/id/%s/1024/768", list[randomIndex].ID)
+                    found = true
+                }
             }
         }
+        if !found { logger.Warningf("图片来源 2 (%s) 失败", sourceName) }
     }
-    logger.Warningf("图片来源 2 (%s) 失败", sourceName)
 
     // --- 来源 3: 每日高清大图 (Bing redirect) ---
-    sourceName = "Bing 每日图片"
-    apiURL3 := "https://api.adicw.cn/api/images/bing" // 这是一个稳定且持续维护的 Bing 聚合接口
-    if resp, e := http.Get(apiURL3); e == nil {
-        // 〔中文注释〕: 这个 API 会直接重定向到图片URL
-        imageURL = resp.Request.URL.String()
-        if imageURL != apiURL3 {
-            goto SEND_IMAGE
+    if !found {
+        sourceName = "Bing 每日图片"
+        apiURL := "https://api.adicw.cn/api/images/bing" 
+        if resp, e := http.Get(apiURL); e == nil {
+            // 〔中文注释〕: 这个 API 会直接重定向到图片URL
+            if resp.Request.URL.String() != apiURL {
+                imageURL = resp.Request.URL.String()
+                found = true
+            }
         }
+        if !found { logger.Warningf("图片来源 3 (%s) 失败", sourceName) }
     }
-    logger.Warningf("图片来源 3 (%s) 失败", sourceName)
-    
-    // 三个来源都失败
-    logger.Warning("所有图片来源均失败，跳过图片发送。")
-    return
 
-SEND_IMAGE:
-    // 〔中文注释〕: 只要获取到有效的 imageURL，就执行发送。
+    if !found {
+        logger.Warning("所有图片来源均失败，跳过图片发送。")
+        return
+    }
+
+    // --- SEND_IMAGE 逻辑 ---
     for _, adminId := range adminIds {
         photo := tu.Photo(
             tu.ID(adminId),
@@ -4151,8 +4158,13 @@ SEND_IMAGE:
 
 
 // =========================================================================================
-// 辅助函数：新闻资讯 (完全基于国外/国际化媒体源，冗余机制)
+// 辅助函数：新闻资讯 (修复 append 类型错误，使用国际化媒体源)
 // =========================================================================================
+
+// 〔中文注释〕: 内部通用的新闻数据结构，用于避免类型不匹配错误。
+type NewsItem struct{
+    Title string
+}
 
 // 〔中文注释〕: 辅助函数：核心逻辑，从给定的 API 获取新闻简报。
 func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string, error) {
@@ -4168,25 +4180,31 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
         return "", fmt.Errorf("读取 %s 响应失败: %v", sourceName, err)
     }
     
-    var newsItems []struct{Title string}
+    var newsItems []NewsItem // 使用定义的类型
 
     // --- 解析逻辑：针对三种不同的 API 格式进行适配 ---
     if strings.Contains(sourceName, "Google News") || strings.Contains(sourceName, "Reddit") {
         // 适配 RSS-to-JSON 格式
         var result struct {
             Status string `json:"status"`
-            Items []struct { Title string `json:"title"` }
+            Items []struct { Title string `json:"title"` } `json:"items"`
         }
         if err := json.Unmarshal(body, &result); err == nil && result.Status == "ok" {
-             for _, item := range result.Items { newsItems = append(newsItems, item) }
+             for _, item := range result.Items { 
+                 // 修正编译错误：手动创建结构体值，避免类型不匹配
+                 newsItems = append(newsItems, NewsItem{Title: item.Title}) 
+             }
         } else {
              return "", fmt.Errorf("解析 %s JSON 失败或状态异常: %v", sourceName, err)
         }
     } else if sourceName == "币圈头条" {
         // 适配 CoinMarketCap 格式
-        var result struct { Articles []struct { Title string `json:"title"` } }
+        var result struct { Articles []struct { Title string `json:"title"` } `json:"articles"` }
         if err := json.Unmarshal(body, &result); err == nil {
-             for _, item := range result.Articles { newsItems = append(newsItems, item) }
+             for _, item := range result.Articles { 
+                 // 修正编译错误：手动创建结构体值，避免类型不匹配
+                 newsItems = append(newsItems, NewsItem{Title: item.Title}) 
+             }
         } else {
              return "", fmt.Errorf("解析 CoinMarketCap JSON 失败: %v", err)
         }
@@ -4212,8 +4230,7 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
 
 // 〔中文注释〕: 【最终重构】新闻资讯获取函数：按优先级尝试3个不同的国际资讯源，直到成功。
 func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
-    // --- 来源 1: IT/AI/时政 (Google News - 国际权威源) ---
-    // 〔中文注释〕: 获取 AI, IT, 科技的中文新闻，使用 Google News 台湾区域的 RSS 源。
+    // --- 来源 1: IT/AI/时政 (Google News - 国际权威源，中文内容) ---
     rssURL1 := "https://news.google.com/rss/search?q=AI%2BIT%2B科技&hl=zh-TW&gl=TW&ceid=TW:zh-Hant"
     apiURL1 := fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&api_key=your_test_key&count=5", url.QueryEscape(rssURL1))
     
@@ -4221,13 +4238,12 @@ func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
     if err == nil { return newsMsg, nil }
     logger.Warningf("资讯来源 1 (Google News) 失败: %v", err)
 
-    // --- 来源 2: 区块链/币圈头条 (CoinMarketCap 聚合) ---
+    // --- 来源 2: 区块链/币圈头条 (CoinMarketCap 聚合，国际稳定) ---
     newsMsg, err = fetchNewsFromGlobalAPI("https://api.coinmarketcap.cn/v1/news/headlines?limit=5", "币圈头条", 5)
     if err == nil { return newsMsg, nil }
     logger.Warningf("资讯来源 2 (币圈头条) 失败: %v", err)
     
-    // --- 来源 3: 国际时政热点 (Reddit /r/worldnews) ---
-    // 〔中文注释〕: 获取国际时事，内容为英文，但保证国际化和权威性。
+    // --- 来源 3: 国际时政热点 (Reddit /r/worldnews，跨国平台) ---
     rssURL3 := "https://www.reddit.com/r/worldnews/.rss"
     apiURL3 := fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&api_key=your_test_key&count=5", url.QueryEscape(rssURL3))
     
