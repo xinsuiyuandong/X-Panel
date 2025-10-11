@@ -21,7 +21,7 @@ import (
     "os/exec"          // 新增：用于 exec.Command（getDomain 等）
     "path/filepath"    // 新增：用于 filepath.Base / Dir（getDomain 用到）
 	"io/ioutil" // 〔中文注释〕: 新增，用于读取 HTTP API 响应体。
-	"math/rand"    // 用于随机排列
+	rng "math/rand"    // 用于随机排列
 
 	"x-ui/config"
 	"x-ui/database"
@@ -4036,7 +4036,7 @@ func (t *Tgbot) openPortWithUFW(port int) error {
 // 【核心数据结构和辅助函数】
 // =========================================================================================
 
-// 〔中文注释〕: 内部通用的新闻数据结构，用于避免类型不匹配错误。
+// 〔中文注释〕: 内部通用的新闻数据结构，用于避免类型不匹配错误。（如果您的文件顶部已有，请跳过）
 type NewsItem struct{
     Title string
     Description string // 用于链接或 GitHub 描述
@@ -4331,15 +4331,23 @@ func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
         },
     }
 
-    // 随机打乱数组顺序，增加健壮性 (无需显式调用 rand.Seed，依赖 Go 默认随机源)
-    // 注意：需要确保您的文件顶部 import 列表中有 "math/rand"
-    rand.Shuffle(len(newsSources), func(i, j int) {
+    // 解决 rand.Shuffle 兼容性问题：手动实现 Fisher-Yates 洗牌算法
+    sourceCount := len(newsSources)
+    
+    // 使用 rng (别名) 来调用 math/rand 中的函数
+    r := rng.New(rng.NewSource(time.Now().UnixNano()))
+
+    // 执行洗牌
+    for i := sourceCount - 1; i > 0; i-- {
+        // 在 [0, i] 范围内随机选择一个索引
+        j := r.Intn(i + 1) 
+        // 交换元素
         newsSources[i], newsSources[j] = newsSources[j], newsSources[i]
-    })
+    }
     
     // 逐个尝试所有来源，直到成功
     for i, source := range newsSources {
-        logger.Infof("新闻资讯：开始尝试来源 [%d/%d]: %s", i+1, len(newsSources), source.Name)
+        logger.Infof("新闻资讯：开始尝试来源 (随机顺序 [%d/%d]): %s", i+1, len(newsSources), source.Name)
         
         // 调用核心抓取逻辑
         newsMsg, err := fetchNewsFromGlobalAPI(source.API, source.Name, 5)
