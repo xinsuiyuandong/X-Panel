@@ -4454,61 +4454,61 @@ func fetchNewsFromGlobalAPI(apiURL string, sourceName string, limit int) (string
 // 〔中文注释〕: 【最终重构】新闻资讯获取函数：随机排列源并逐个尝试，直到成功或全部失败。
 func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
     
-    // 【重要修复】: 强制使用动态种子，确保每次调用时随机序列都不同
+    // 强制使用动态种子，确保每次调用时随机序列都不同
     r := rng.New(rng.NewSource(time.Now().UnixNano()))
 
 	// Google News 的 URL 计算
-	rssQuery2 := url.QueryEscape("AI 科技 国际时事 区块链 IT AI绘画") 
-	// 使用 hl=zh-CN (Host Language) 和 gl=CN (Geo-Location)
-	rssURL2 := fmt.Sprintf("https://news.google.com/rss/search?q=%s&hl=zh-CN&gl=CN", rssQuery2) 
-	
-	// 定义所有可用的新闻源
+    // rssQuery2 变量声明不能放在数组内部
+	rssQuery2 := url.QueryEscape("AI 科技 国际时事 区块链 IT AI绘画") 
+	rssURL2 := fmt.Sprintf("https://news.google.com/rss/search?q=%s&hl=zh-CN&gl=CN", rssQuery2) 
+    
+    // 定义所有可用的新闻源
 	newsSources := []struct {
 		Name string
-		API  string
+		API	 string
 	}{
 		{
 			Name: "YouTube 中文热搜 (AI/IT/旅游)",
-            API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?search_query=%s", url.QueryEscape("AI 绘画 IT 旅游 中文")))),
-        },
-        {
-            Name: "Google News 中文资讯",
-			API:  fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(rssURL2)),
-        },
-        {
-            Name: "币圈头条",
-            API:  "https://api.coinmarketcap.cn/v1/news/headlines?limit=5",
-        },
-    }
+			API:	fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?search_query=%s", url.QueryEscape("AI 绘画 IT 旅游 中文")))),
+		},
+		{
+			Name: "Google News 中文资讯",
+			API:	fmt.Sprintf("https://api.rss2json.com/v1/api.json?rss_url=%s&count=5", url.QueryEscape(rssURL2)),
+		},
+		{
+			Name: "币圈头条",
+			API:	"https://api.coinmarketcap.cn/v1/news/headlines?limit=5",
+		},
+	}
 
-    // 解决 rand.Shuffle 兼容性问题：手动实现 Fisher-Yates 洗牌算法
-    sourceCount := len(newsSources)
-    
-    // 执行洗牌 (使用前面初始化的 r)
-    for i := sourceCount - 1; i > 0; i-- {
-        // 在 [0, i] 范围内随机选择一个索引
-        j := r.Intn(i + 1) 
-        // 交换元素
-        newsSources[i], newsSources[j] = newsSources[j], newsSources[i]
-    }
-    
-    // 逐个尝试所有来源，直到成功
-    for i, source := range newsSources {
-        logger.Infof("新闻资讯：开始尝试来源 (随机顺序 [%d/%d]): %s", i+1, len(newsSources), source.Name)
-        
-        // 调用核心抓取逻辑
-        newsMsg, err := fetchNewsFromGlobalAPI(source.API, source.Name, 5)
-        
-        if err == nil && newsMsg != "" { 
-            // 成功获取到内容
-            logger.Infof("新闻资讯：来源 [%s] 成功获取内容。", source.Name)
-            return newsMsg, nil 
-        }
-        
-        // 失败，记录警告，继续尝试下一个
-        logger.Warningf("新闻资讯来源 [%s] 尝试失败: %v", source.Name, err)
-    }
-    
-    // 所有来源都失败，返回空字符串和 nil error，以确保不中断 SendReport 流程
-    return "", nil 
+    // 解决 rand.Shuffle 兼容性问题：手动实现 Fisher-Yates 洗牌算法
+    sourceCount := len(newsSources)
+    
+    // 执行洗牌 (使用前面初始化的 r)
+    for i := sourceCount - 1; i > 0; i-- {
+        // 在 [0, i] 范围内随机选择一个索引
+        j := r.Intn(i + 1)
+        // 交换元素
+        newsSources[i], newsSources[j] = newsSources[j], newsSources[i]
+    }
+    
+    // 逐个尝试所有来源，直到成功
+    for i, source := range newsSources {
+        logger.Infof("新闻资讯：开始尝试来源 (随机顺序 [%d/%d]): %s", i+1, len(newsSources), source.Name)
+        
+        // 调用核心抓取逻辑
+        newsMsg, err := fetchNewsFromGlobalAPI(source.API, source.Name, 5)
+        
+        if err == nil && newsMsg != "" { 
+            // 成功获取到内容
+            logger.Infof("新闻资讯：来源 [%s] 成功获取内容。", source.Name)
+            return newsMsg, nil 
+        }
+        
+        // 失败，记录警告，继续尝试下一个
+        logger.Warningf("新闻资讯来源 [%s] 尝试失败: %v", source.Name, err)
+    }
+    
+    // 所有来源都失败，返回空字符串和 nil error，以确保不中断 SendReport 流程
+    return "", nil 
 }
