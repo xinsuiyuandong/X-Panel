@@ -4,130 +4,100 @@
   /* 【核心视觉重构 - 赛博中控台风格 (Cyber-Control-Panel) 】 */
   /* ========================================================================= */
   
-  /* --- 颜色变量定义：深色模式 (默认和 .dark, .black) --- */
+  /* --- 颜色变量定义：HUD 科技感主题 --- */
   :root, .dark, .black {
-    --hud-base-bg: #0a0e16; /* 基础背景：极深蓝 */
-    --hud-module-bg: rgba(0, 255, 255, 0.04); /* 模块背景：极浅透明青色 */
-    --hud-border-color: rgba(0, 255, 255, 0.2); /* 边框：透明青色 */
+    --hud-base-bg: #030308; /* 基础背景：极深黑蓝 */
+    --hud-console-bg: rgba(0, 255, 255, 0.04); /* 中控台背景：极浅透明青色 */
+    --hud-border-color: rgba(0, 255, 255, 0.3); /* 边框：半透明青色 */
     --hud-text-primary: white; /* 主文本：白色 */
     --hud-text-dim: rgba(255, 255, 255, 0.6); /* 次要文本：灰色 */
     --hud-glow-color: #00ffff; /* 主辉光：青色 */
     --hud-secondary-color: #ff00ff; /* 次要颜色：品红 */
     --ant-text-color: white; /* 覆盖 Ant 默认文本色 */
+    --clip-angle: 2%; /* 剪裁角度控制 */
   }
 
-  /* --- 颜色变量定义：浅色模式 (适配 .white 主题) --- */
+  /* 浅色模式（保留兼容，但视觉效果会减弱） */
   #app:not(.dark):not(.black) {
-    --hud-base-bg: #f0f2f5; /* 基础背景：浅灰色 */
-    --hud-module-bg: #ffffff; /* 模块背景：白色 */
-    --hud-border-color: rgba(0, 0, 0, 0.15); /* 边框：浅灰黑 */
-    --hud-text-primary: #262626; /* 主文本：深灰（高对比度） */
-    --hud-text-dim: #595959; /* 次要文本：中灰 */
-    --hud-glow-color: #1890ff; /* 主强调色：Ant Blue */
-    --hud-secondary-color: #faad14; /* 次要颜色：Ant Yellow */
-    --ant-text-color: #262626; /* 覆盖 Ant 默认文本色 */
+    --hud-base-bg: #f0f2f5; 
+    --hud-console-bg: #ffffff; 
+    --hud-border-color: rgba(0, 0, 0, 0.15); 
+    --hud-text-primary: #262626; 
+    --hud-text-dim: #595959; 
+    --hud-glow-color: #1890ff; 
+    --hud-secondary-color: #faad14; 
+    --ant-text-color: #262626; 
   }
 
   /* ==================================================== */
-  /* 全局可读性修复：确保所有文字/图标高对比度 */
+  /* 布局与中控台容器 */
   /* ==================================================== */
 
-  /* 1. 基础布局和字体 */
   #content-layout, .ant-layout-content {
     background-color: var(--hud-base-bg) !important;
     position: relative;
-    color: var(--hud-text-primary); /* 继承主文本色 */
+    overflow: hidden; 
+    color: var(--hud-text-primary); 
     font-family: 'Consolas', 'Monaco', monospace; 
     padding: 16px; 
-    overflow-x: hidden;
   }
   
-  /* 2. Ant Design 核心组件文字/图标覆盖 (确保白色主题可读) */
-  #app:not(.dark):not(.black) {
-    /* 通用文字颜色 */
-    color: var(--ant-text-color) !important;
-    
-    /* 图标颜色 */
-    .anticon {
-      color: var(--ant-text-color) !important;
-    }
-    /* Modal 标题/内容文字 */
-    .ant-modal-title, .ant-modal-body, .ant-list-item-meta-title, .ant-list-item-meta-description {
-      color: var(--ant-text-color) !important;
-    }
-    /* Log 区域文字输入框 */
-    .ant-input {
-      color: var(--ant-text-color) !important;
-      background-color: rgba(0, 0, 0, 0.03) !important;
-      border-color: var(--hud-border-color) !important;
-    }
-    /* Checkbox/Select 字体 */
-    .ant-checkbox-wrapper, .ant-select-selection-selected-value, .ant-select-arrow .anticon {
-      color: var(--ant-text-color) !important;
-    }
-  }
-
-  /* ==================================================== */
-  /* 模块样式（棱角化） */
-  /* ==================================================== */
-
-  /* 核心模块样式：棱角化边框 (替代 Ant Card) */
-  .hud-module {
-    background-color: var(--hud-module-bg);
+  /* 核心：单一六边形中控台容器 */
+  #main-hud-console {
+    background-color: var(--hud-console-bg);
     border: 1px solid var(--hud-border-color);
-    padding: 20px;
-    margin-bottom: 16px; 
+    padding: 30px; 
     position: relative;
     z-index: 2;
     overflow: hidden;
-    clip-path: polygon(0 15px, 15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+    /* 复杂的六边形/棱角化剪裁路径 */
+    clip-path: polygon(
+      var(--clip-angle) 0%, calc(100% - var(--clip-angle)) 0%, 
+      100% var(--clip-angle), 100% calc(100% - var(--clip-angle)), 
+      calc(100% - var(--clip-angle)) 100%, var(--clip-angle) 100%,
+      0% calc(100% - var(--clip-angle)), 0% var(--clip-angle)
+    );
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
     transition: all 0.3s ease;
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.05);
-  }
-  
-  /* 深色主题模块特效 */
-  .dark .hud-module, .black .hud-module {
-    box-shadow: 0 0 5px rgba(0, 255, 255, 0.1);
+    min-height: 85vh; /* 确保它足够高 */
   }
 
-  /* 模块标题 */
-  .hud-title {
-    color: var(--hud-glow-color); /* 标题使用强调色 */
+  /* 标题和分割线 */
+  .hud-section-title {
+    color: var(--hud-glow-color); 
     text-transform: uppercase;
-    letter-spacing: 2px;
-    font-size: 1.1rem;
-    margin-bottom: 15px;
-    border-bottom: 1px dashed var(--hud-border-color); 
+    letter-spacing: 3px;
+    font-size: 1.2rem;
+    margin: 30px 0 15px 0;
     padding-bottom: 8px;
+    border-bottom: 2px solid var(--hud-border-color); /* 内部使用更粗的分割线 */
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.6); /* 标题强辉光 */
   }
-  
-  /* 深色主题标题辉光 */
-  .dark .hud-title, .black .hud-title {
-    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+  .hud-section-title:first-child {
+    margin-top: 0; /* 顶部标题无需上边距 */
   }
-  .hud-title svg {
-    font-size: 1.2rem;
-    color: var(--hud-secondary-color); /* 图标使用次要强调色 */
+  .hud-section-title svg {
+    color: var(--hud-secondary-color);
   }
 
+  /* ==================================================== */
+  /* 数据展示和组件样式 */
+  /* ==================================================== */
+  
   /* 核心数据展示 */
   .hud-stat-large {
-    font-size: 3.5rem; 
+    font-size: 3rem; 
     font-weight: 900;
-    color: var(--hud-text-primary); /* 使用主文本色，浅色模式下为深色，深色模式下为白色 */
+    color: white; 
     line-height: 1.1;
-  }
-  
-  /* 深色主题大字辉光 */
-  .dark .hud-stat-large, .black .hud-stat-large {
-    text-shadow: 0 0 15px var(--hud-glow-color);
+    text-shadow: 0 0 15px var(--hud-glow-color); /* 大数字强辉光 */
   }
   .hud-stat-label {
     font-size: 0.8rem;
-    color: var(--hud-glow-color); /* 标签使用主强调色 */
+    color: var(--hud-secondary-color); 
     letter-spacing: 1px;
     display: block;
     margin-top: 5px;
@@ -136,103 +106,104 @@
   .hud-stat-detail {
     font-size: 0.75rem;
     opacity: 0.8;
-    color: var(--hud-text-dim); /* 详情使用次要文本色 */
+    color: var(--hud-text-dim);
     margin-top: 5px;
   }
   
-  /* 操作/链接按钮 (保留 Ant Design Button) */
-  .ant-btn {
-    background: transparent !important;
-    border-color: var(--hud-glow-color) !important;
-    color: var(--hud-text-primary) !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    transition: all 0.3s;
-    font-size: 0.9rem;
-  }
-  
-  /* 深色主题按钮特效 */
-  .dark .ant-btn, .black .ant-btn {
-    background: rgba(0, 255, 255, 0.1) !important;
-    text-shadow: 0 0 5px var(--hud-glow-color);
-  }
-  .ant-btn:hover {
-    background: var(--hud-glow-color) !important;
-    color: var(--hud-base-bg) !important; /* 悬停时文本颜色切换到背景色（确保高对比度） */
-    border-color: var(--hud-glow-color) !important;
-  }
-
-  /* 特殊链接标签 */
-  .hud-link-tag {
-    display: inline-block;
-    padding: 5px 10px;
-    margin: 4px;
-    background: var(--hud-module-bg); 
-    border: 1px solid var(--hud-secondary-color);
-    color: var(--hud-secondary-color);
-    font-size: 0.8rem;
-    clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%); 
-  }
-  
-  /* 统一 Ant Modal/Log 容器的背景和边框 */
-  .ant-modal-content {
-      background: var(--hud-base-bg) !important;
-      border: 1px solid var(--hud-border-color);
-  }
-  .ant-modal-header {
-      background: var(--hud-base-bg) !important;
-      border-bottom-color: var(--hud-border-color) !important;
-  }
-  .ant-modal-title {
-      color: var(--hud-glow-color) !important;
-  }
-  
-  /* Ant Badge 状态文字 */
-  .ant-badge-status-text {
-    color: var(--ant-text-color) !important;
-    font-weight: bold;
-  }
-  
-  /* 深色主题状态文字辉光 */
-  .dark .ant-badge-status-text, .black .ant-badge-status-text {
-    color: white !important; /* 确保深色模式下状态文字是白色 */
-    text-shadow: 0 0 5px var(--hud-glow-color);
-  }
-
-  /* 进度条样式 (不变) */
-  .hud-progress-bar-container {
+  /* 自定义进度条 (用于替代 Ant Progres Dashboard) */
+  .hud-progress {
     background-color: var(--hud-border-color); 
-    height: 4px; 
+    height: 6px; 
     width: 100%;
-    margin-top: 5px;
+    margin: 10px auto;
   }
   .hud-progress-bar {
     height: 100%;
     background-color: var(--hud-glow-color);
     transition: width 0.3s ease-out;
-  }
-  .dark .hud-progress-bar, .black .hud-progress-bar {
     box-shadow: 0 0 8px var(--hud-glow-color);
   }
   
-  /* IP 隐藏特效 (不变) */
+  /* HUD 动作按钮 (科技感风格) */
+  .hud-actions .ant-btn {
+    background: rgba(0, 255, 255, 0.1) !important;
+    border: 1px solid var(--hud-glow-color) !important;
+    color: var(--hud-text-primary) !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s;
+    font-size: 0.9rem;
+    clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%); 
+    height: auto;
+    padding: 6px 15px;
+  }
+  .hud-actions .ant-btn:hover {
+    background: var(--hud-glow-color) !important;
+    color: var(--hud-base-bg) !important; 
+    box-shadow: 0 0 10px var(--hud-glow-color);
+    transform: translateY(-2px);
+  }
+  .hud-actions .ant-btn span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* 标签样式 (Panel/Community) */
+  .hud-tag-panel {
+    display: inline-block;
+    padding: 4px 10px;
+    margin: 4px 8px 4px 0;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: var(--hud-glow-color);
+    border: 1px solid var(--hud-glow-color);
+    background-color: rgba(0, 255, 255, 0.05);
+    clip-path: polygon(0% 0%, 100% 0%, 90% 100%, 10% 100%);
+  }
+  /* Ant Tag 覆盖为默认样式，用于兼容其他地方的 Tag */
+  .ant-tag {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: var(--hud-text-dim) !important;
+  }
+
+  /* Ant Design 通用覆盖 */
+  .ant-input, .ant-select-selection, .ant-checkbox-inner {
+      background-color: rgba(255, 255, 255, 0.05) !important;
+      border-color: var(--hud-border-color) !important;
+      color: var(--hud-text-primary) !important;
+  }
+  .ant-divider-horizontal {
+      border-top: 1px solid var(--hud-border-color) !important;
+  }
+
+  /* IP 隐藏特效 (保留) */
   .ip-hidden {
     -webkit-user-select: none;
     -moz-user-select: none;
     user-select: none;
-    filter: blur(10px);
+    filter: blur(8px);
     transition: filter 0.5s ease;
   }
   .ip-hidden:hover {
     filter: blur(0px);
   }
-
-  @media (min-width: 769px) {
-    .ant-layout-content {
-      margin: 24px 16px;
-    }
+  
+  /* 强制 a-custom-statistic 保持简洁，并调整颜色 */
+  .ant-statistic-content {
+      font-size: 1.8em !important; 
+      font-weight: 700;
+      color: var(--hud-glow-color) !important;
   }
-
+  .ant-statistic-title {
+      color: var(--hud-text-dim) !important;
+      font-size: 0.9em !important;
+  }
+  .ant-statistic-content-prefix, .ant-statistic-content-suffix {
+      color: var(--hud-secondary-color) !important;
+  }
+  
 </style>
 {{ template "page/head_end" .}}
 
@@ -253,221 +224,208 @@
         </transition>
 
         <a-row v-if="!loadingStates.fetched">
-          <div :style="{ textAlign: 'center', padding: '30px 0', marginTop: '10px', color: 'var(--hud-glow-color)' }">
-            <a-spin tip='{{ i18n "loading" }}'></a-spin>
-          </div>
+            <div :style="{ textAlign: 'center', padding: '30px 0', marginTop: '10px', color: 'var(--hud-glow-color)' }">
+              <a-spin tip='{{ i18n "loading" }}'></a-spin>
+            </div>
         </a-row>
 
-        <a-row :gutter="[16, 16]" v-else>
-
-          <a-col :span="24">
-            <div class="hud-module" :style="{ padding: '30px 20px', backgroundColor: 'var(--hud-module-bg)' }">
-              <div class="hud-title" :style="{ borderBottom: '1px solid var(--hud-border-color)', marginBottom: '20px', fontSize: '1.2rem' }">
-                <a-icon type="dashboard" />
-                SYSTEM CORE METRICS & LOAD REPORT
+        <div id="main-hud-console" v-else>
+          
+          <div class="hud-section-title"><a-icon type="dashboard" /> SYSTEM CORE METRICS</div>
+          <a-row :gutter="[24, 24]" type="flex" justify="space-around" align="top">
+            
+            <a-col :xs="12" :sm="6" :style="{ textAlign: 'center' }">
+              <div class="hud-stat-large" :style="{ color: status.cpu.color }">[[ status.cpu.percent ]]%</div>
+              <span class="hud-stat-label">{{ i18n "pages.index.cpu" }}</span>
+              <div class="hud-progress"><div class="hud-progress-bar" :style="{ width: status.cpu.percent + '%', backgroundColor: status.cpu.color }"></div></div>
+              <a-tooltip>
+                <div class="hud-stat-detail">Cores: [[ CPUFormatter.cpuCoreFormat(status.cpuCores) ]]</div>
+                <template slot="title">
+                   <div><b>{{ i18n "pages.index.logicalProcessors" }}:</b> [[ (status.logicalPro) ]]</div>
+                   <div><b>{{ i18n "pages.index.frequency" }}:</b> [[ CPUFormatter.cpuSpeedFormat(status.cpuSpeedMhz) ]]</div>
+                </template>
+              </a-tooltip>
+            </a-col>
+            
+            <a-col :xs="12" :sm="6" :style="{ textAlign: 'center' }">
+              <div class="hud-stat-large" :style="{ color: status.mem.color }">[[ status.mem.percent ]]%</div>
+              <span class="hud-stat-label">{{ i18n "pages.index.memory" }}</span>
+              <div class="hud-progress"><div class="hud-progress-bar" :style="{ width: status.mem.percent + '%', backgroundColor: status.mem.color }"></div></div>
+              <div class="hud-stat-detail">[[ SizeFormatter.sizeFormat(status.mem.current) ]] / [[ SizeFormatter.sizeFormat(status.mem.total) ]]</div>
+            </a-col>
+            
+            <a-col :xs="12" :sm="6" :style="{ textAlign: 'center' }">
+              <div class="hud-stat-large" :style="{ color: status.disk.color }">[[ status.disk.percent ]]%</div>
+              <span class="hud-stat-label">{{ i18n "pages.index.storage" }}</span>
+              <div class="hud-progress"><div class="hud-progress-bar" :style="{ width: status.disk.percent + '%', backgroundColor: status.disk.color }"></div></div>
+              <div class="hud-stat-detail">[[ SizeFormatter.sizeFormat(status.disk.current) ]] / [[ SizeFormatter.sizeFormat(status.disk.total) ]]</div>
+            </a-col>
+            
+            <a-col :xs="12" :sm="6" :style="{ textAlign: 'center' }">
+              <div class="hud-stat-large" :style="{ color: status.swap.color }">[[ status.loads[0] ]]</div>
+              <span class="hud-stat-label">Load (1m)</span>
+              <div class="hud-progress"><div class="hud-progress-bar" :style="{ width: status.swap.percent + '%', backgroundColor: status.swap.color }"></div></div>
+              <div class="hud-stat-detail">Swap: [[ status.swap.percent ]]%</div>
+              <div class="hud-stat-detail" style="margin-top: 5px; opacity: 1;">
+                  5m: <span :style="{ color: 'var(--hud-secondary-color)', fontWeight: 'bold' }">[[ status.loads[1] ]]</span> | 
+                  15m: <span :style="{ color: 'var(--hud-glow-color)', fontWeight: 'bold' }">[[ status.loads[2] ]]</span>
               </div>
-              <a-row :gutter="[24, 24]">
-                <a-col :xs="12" :sm="6" :style="{ textAlign: 'center' }">
-                  <div class="hud-stat-large" :style="{ color: status.cpu.color }">[[ status.cpu.percent ]]%</div>
-                  <span class="hud-stat-label">{{ i18n "pages.index.cpu" }}</span>
-                  <div class="hud-progress-bar-container"><div class="hud-progress-bar" :style="{ width: status.cpu.percent + '%', backgroundColor: status.cpu.color }"></div></div>
-                  <a-tooltip>
-                    <div class="hud-stat-detail">Cores: [[ CPUFormatter.cpuCoreFormat(status.cpuCores) ]]</div>
-                    <template slot="title">
-                       <b>{{ i18n "pages.index.logicalProcessors" }}:</b> [[ (status.logicalPro) ]]
-                       <br>
-                       <b>{{ i18n "pages.index.frequency" }}:</b> [[ CPUFormatter.cpuSpeedFormat(status.cpuSpeedMhz) ]]
-                    </template>
+            </a-col>
+          </a-row>
+
+          <div class="hud-section-title"><a-icon type="global" /> NETWORK & CONNECTIVITY</div>
+          <a-row :gutter="[24, 24]" type="flex" align="top">
+            
+            <a-col :xs="12" :sm="6" :lg="3">
+              <a-custom-statistic title='{{ i18n "pages.index.upload" }}' :value="SizeFormatter.sizeFormat(status.netIO.up)" :style="{ textAlign: 'center' }">
+                <template #prefix><a-icon type="arrow-up" /></template>
+                <template #suffix>/s</template>
+              </a-custom-statistic>
+            </a-col>
+            
+            <a-col :xs="12" :sm="6" :lg="3">
+              <a-custom-statistic title='{{ i18n "pages.index.download" }}' :value="SizeFormatter.sizeFormat(status.netIO.down)" :style="{ textAlign: 'center' }">
+                <template #prefix><a-icon type="arrow-down" /></template>
+                <template #suffix>/s</template>
+              </a-custom-statistic>
+            </a-col>
+            
+            <a-col :xs="12" :sm="6" :lg="3">
+              <a-custom-statistic title='{{ i18n "pages.index.sent" }}' :value="SizeFormatter.sizeFormat(status.netTraffic.sent)" :style="{ textAlign: 'center' }">
+                <template #prefix><a-icon type="cloud-upload" /></template>
+              </a-custom-statistic>
+            </a-col>
+            
+            <a-col :xs="12" :sm="6" :lg="3">
+              <a-custom-statistic title='{{ i18n "pages.index.received" }}' :value="SizeFormatter.sizeFormat(status.netTraffic.recv)" :style="{ textAlign: 'center' }">
+                <template #prefix><a-icon type="cloud-download" /></template>
+              </a-custom-statistic>
+            </a-col>
+            
+            <a-col :xs="12" :sm="6" :lg="3">
+              <a-custom-statistic title="TCP Conns" :value="status.tcpCount" :style="{ textAlign: 'center' }">
+                <template #prefix><a-icon type="swap" /></template>
+              </a-custom-statistic>
+            </a-col>
+            <a-col :xs="12" :sm="6" :lg="3">
+              <a-custom-statistic title="UDP Conns" :value="status.udpCount" :style="{ textAlign: 'center' }">
+                <template #prefix><a-icon type="swap" /></template>
+              </a-custom-statistic>
+            </a-col>
+
+            <a-col :xs="24" :lg="6">
+              <div :style="{ paddingLeft: '10px', marginTop: '10px' }">
+                <div class="hud-stat-detail" :style="{ opacity: 1 }">
+                  Public IPv4: 
+                  <a-tooltip :placement="'top'">
+                    <template #title>{{ i18n "pages.index.toggleIpVisibility" }}</template>
+                    <a-icon :type="showIp ? 'eye' : 'eye-invisible'" :style="{ fontSize: '0.9rem', cursor: 'pointer', color: 'var(--hud-text-dim)' }" @click="showIp = !showIp"></a-icon>
                   </a-tooltip>
-                </a-col>
-                <a-col :xs="12" :sm="6" :style="{ textAlign: 'center' }">
-                  <div class="hud-stat-large" :style="{ color: status.mem.color }">[[ status.mem.percent ]]%</div>
-                  <span class="hud-stat-label">{{ i18n "pages.index.memory" }}</span>
-                  <div class="hud-progress-bar-container"><div class="hud-progress-bar" :style="{ width: status.mem.percent + '%', backgroundColor: status.mem.color }"></div></div>
-                  <div class="hud-stat-detail">[[ SizeFormatter.sizeFormat(status.mem.current) ]] / [[ SizeFormatter.sizeFormat(status.mem.total) ]]</div>
-                </a-col>
-                <a-col :xs="12" :sm="6" :style="{ textAlign: 'center' }">
-                  <div class="hud-stat-large" :style="{ color: status.disk.color }">[[ status.disk.percent ]]%</div>
-                  <span class="hud-stat-label">{{ i18n "pages.index.storage" }}</span>
-                  <div class="hud-progress-bar-container"><div class="hud-progress-bar" :style="{ width: status.disk.percent + '%', backgroundColor: status.disk.color }"></div></div>
-                  <div class="hud-stat-detail">[[ SizeFormatter.sizeFormat(status.disk.current) ]] / [[ SizeFormatter.sizeFormat(status.disk.total) ]]</div>
-                </a-col>
-                <a-col :xs="12" :sm="6" :style="{ textAlign: 'center' }">
-                  <div class="hud-stat-large" :style="{ color: status.swap.color }">[[ status.loads[0] ]]</div>
-                  <span class="hud-stat-label">Load (1m)</span>
-                  <div class="hud-progress-bar-container"><div class="hud-progress-bar" :style="{ width: status.swap.percent + '%', backgroundColor: status.swap.color }"></div></div>
-                  <div class="hud-stat-detail">Swap: [[ status.swap.percent ]]%</div>
-                  <div class="hud-stat-detail" style="margin-top: 5px; opacity: 1;">
-                      <span :style="{ color: 'var(--hud-secondary-color)' }">[[ status.loads[1] ]] / </span> 
-                      <span :style="{ color: 'var(--hud-glow-color)' }">[[ status.loads[2] ]]</span>
-                  </div>
-                </a-col>
-              </a-row>
-            </div>
-          </a-col>
-
-          <a-col :sm="24" :lg="16">
-            <a-row :gutter="[16, 16]">
-              
-              <a-col :sm="24" :md="12">
-                <div class="hud-module" :style="{ minHeight: '180px' }">
-                  <div class="hud-title"><a-icon type="global" />{{ i18n "pages.index.overallSpeed" }} / {{ i18n "pages.index.totalData" }}</div>
-                  <a-row :gutter="[16, 8]">
-                    <a-col :span="12" :style="{ textAlign: 'center', borderRight: '1px dashed var(--hud-border-color)' }">
-                      <a-icon type="arrow-up" :style="{ color: 'var(--hud-secondary-color)', fontSize: '1.2rem' }" />
-                      <div :style="{ color: 'var(--hud-secondary-color)', fontSize: '1.8rem', fontWeight: 700 }">[[ SizeFormatter.sizeFormat(status.netIO.up) ]]/s</div>
-                      <span class="hud-stat-label">{{ i18n "pages.index.upload" }}</span>
-                      <div class="hud-stat-detail">{{ i18n "pages.index.sent" }}: [[ SizeFormatter.sizeFormat(status.netTraffic.sent) ]]</div>
-                    </a-col>
-                    <a-col :span="12" :style="{ textAlign: 'center' }">
-                      <a-icon type="arrow-down" :style="{ color: 'var(--hud-glow-color)', fontSize: '1.2rem' }" />
-                      <div :style="{ color: 'var(--hud-glow-color)', fontSize: '1.8rem', fontWeight: 700 }">[[ SizeFormatter.sizeFormat(status.netIO.down) ]]/s</div>
-                      <span class="hud-stat-label">{{ i18n "pages.index.download" }}</span>
-                      <div class="hud-stat-detail">{{ i18n "pages.index.received" }}: [[ SizeFormatter.sizeFormat(status.netTraffic.recv) ]]</div>
-                    </a-col>
-                  </a-row>
+                  <span :class="showIp ? 'ip-visible' : 'ip-hidden'" :style="{ color: 'var(--hud-secondary-color)', marginLeft: '5px', display: 'inline-block' }">[[ status.publicIP.ipv4 ]]</span>
                 </div>
-              </a-col>
-
-              <a-col :sm="24" :md="12">
-                <div class="hud-module" :style="{ minHeight: '180px' }">
-                  <div class="hud-title">
-                    <a-icon type="link" />
-                    CONNECTION COUNT & IP
-                    <a-tooltip :placement="'top'">
-                      <template #title>{{ i18n "pages.index.toggleIpVisibility" }}</template>
-                      <a-icon :type="showIp ? 'eye' : 'eye-invisible'" :style="{ fontSize: '1rem', cursor: 'pointer', color: 'var(--ant-text-color)' }" @click="showIp = !showIp"></a-icon>
-                    </a-tooltip>
-                  </div>
-                  <a-row :gutter="[16, 8]">
-                    <a-col :span="12" :style="{ textAlign: 'center' }">
-                      <div :style="{ color: 'var(--hud-text-primary)', fontSize: '1.5rem', fontWeight: 700 }">[[ status.tcpCount ]]</div>
-                      <span class="hud-stat-label">TCP Connections</span>
-                    </a-col>
-                    <a-col :span="12" :style="{ textAlign: 'center' }">
-                      <div :style="{ color: 'var(--hud-text-primary)', fontSize: '1.5rem', fontWeight: 700 }">[[ status.udpCount ]]</div>
-                      <span class="hud-stat-label">UDP Connections</span>
-                    </a-col>
-                    <a-col :span="24">
-                       <a-divider style="margin: 10px 0; border-color: var(--hud-border-color);" />
-                    </a-col>
-                    <a-col :span="12" :class="showIp ? '' : 'ip-hidden'" :style="{ textAlign: 'center' }">
-                      <div :style="{ color: 'var(--hud-secondary-color)', fontSize: '0.9rem' }">[[ status.publicIP.ipv4 ]]</div>
-                      <span class="hud-stat-detail">Public IPv4</span>
-                    </a-col>
-                    <a-col :span="12" :class="showIp ? '' : 'ip-hidden'" :style="{ textAlign: 'center' }">
-                      <div :style="{ color: 'var(--hud-glow-color)', fontSize: '0.9rem' }">[[ status.publicIP.ipv6 ]]</div>
-                      <span class="hud-stat-detail">Public IPv6</span>
-                    </a-col>
-                  </a-row>
+                <div class="hud-stat-detail" :style="{ opacity: 1, marginTop: '10px' }">
+                  Public IPv6: 
+                  <span :class="showIp ? 'ip-visible' : 'ip-hidden'" :style="{ color: 'var(--hud-glow-color)', marginLeft: '5px', display: 'inline-block' }">[[ status.publicIP.ipv6 ]]</span>
                 </div>
-              </a-col>
+              </div>
+            </a-col>
+          </a-row>
 
-              <a-col :span="24">
-                <div class="hud-module">
-                  <div class="hud-title"><a-icon type="team" /> Panel Info / Community Links</div>
-                  <a-space direction="horizontal" :size="'middle'" :wrap="true">
-                    <a rel="noopener" href="https://github.com/xeefei/x-panel/releases" target="_blank">
-                      <div class="hud-link-tag" 
-                           :style="{ background: 'var(--hud-module-bg)', borderColor: 'var(--hud-secondary-color)', color: 'var(--hud-secondary-color)' }">
-                        <a-icon type="github" /> <span>v{{ .cur_ver }} (Releases)</span>
-                      </div>
-                    </a>
-                    <a rel="noopener" href="https://t.me/is_Chat_Bot" target="_blank">
-                      <div class="hud-link-tag" :style="{ background: 'var(--hud-module-bg)', borderColor: '#00cc00', color: '#00cc00' }">
-                        <a-icon type="message" /> <span>TG 私聊交流</span>
-                      </div>
-                    </a>
-                    <a rel="noopener" href="https://t.me/XUI_CN" target="_blank">
-                      <div class="hud-link-tag" 
-                           :style="{ background: 'var(--hud-module-bg)', borderColor: 'var(--hud-glow-color)', color: 'var(--hud-glow-color)' }">
-                        <a-icon type="team" /> <span>交流群</span>
-                      </div>
-                    </a>
-                    <a rel="noopener" href="https://ping.pe" target="_blank">
-                      <div class="hud-link-tag" :style="{ background: 'var(--hud-module-bg)', borderColor: '#ff6600', color: '#ff6600' }">
-                        <a-icon type="global" /> <span>端口检测</span>
-                      </div>
-                    </a>
-                  </a-space>
-                </div>
-              </a-col>
-              
-            </a-row>
-          </a-col>
 
-          <a-col :sm="24" :lg="8">
-            <a-row :gutter="[0, 16]">
-              
-              <a-col :span="24">
-                <div class="hud-module">
-                  <div class="hud-title"><a-icon type="api" /> Xray Service Control</div>
-                  
-                  <div class="xray-status-bar">
+          <div class="hud-section-title"><a-icon type="api" /> XRAY SERVICE & PANEL CONTROL</div>
+          <a-row :gutter="[24, 24]" type="flex" align="top">
+
+            <a-col :xs="24" :md="12" :lg="8">
+              <div :style="{ padding: '10px', border: '1px solid var(--hud-border-color)', minHeight: '140px' }">
+                 <div :style="{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }">
                     <div>
+                      <div :style="{ fontSize: '1.1rem', marginBottom: '8px' }">{{ i18n "pages.index.xrayStatus" }}</div>
                       <template v-if="status.xray.state != 'error'">
                         <a-badge status="processing" class="running-animation" :text="status.xray.stateMsg" :color="status.xray.color"/>
                       </template>
                       <template v-else>
                         <a-popover :overlay-class-name="themeSwitcher.currentTheme">
                           <span slot="title">
-                            <a-row type="flex" align="middle" justify="space-between">
-                              <a-col><span>{{ i18n "pages.index.xrayErrorPopoverTitle" }}</span></a-col>
-                              <a-col><a-icon type="bars" :style="{ cursor: 'pointer', float: 'right' }" @click="openLogs()"></a-icon></a-col>
-                            </a-row>
+                              <a-row type="flex" align="middle" justify="space-between">
+                                  <a-col><span>{{ i18n "pages.index.xrayErrorPopoverTitle" }}</span></a-col>
+                                  <a-col><a-icon type="bars" :style="{ cursor: 'pointer', float: 'right' }" @click="openLogs()"></a-icon></a-col>
+                              </a-row>
                           </span>
                           <template slot="content"><span :style="{ maxWidth: '300px' }" v-for="line in status.xray.errorMsg.split('\n')">[[ line ]]</span></template>
                           <a-badge :text="status.xray.stateMsg" :color="status.xray.color"/>
                         </a-popover>
                       </template>
                     </div>
-                    <a-tag :color="status.xray.color">v[[ status.xray.version ]]</a-tag>
-                  </div>
-                  
-                  <div :style="{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', gap: '8px' }">
+                    <div :style="{ textAlign: 'right' }">
+                       <span class="hud-tag-panel" :style="{ borderColor: status.xray.color, color: status.xray.color, clipPath: 'none' }">Xray v[[ status.xray.version ]]</span>
+                       <div class="hud-stat-detail">Xray Uptime: <a-tag :color="status.xray.color">[[ TimeFormatter.formatSecond(status.appStats.uptime) ]]</a-tag></div>
+                       <div class="hud-stat-detail">OS Uptime: <a-tag color="green">[[ TimeFormatter.formatSecond(status.uptime) ]]</a-tag></div>
+                    </div>
+                 </div>
+                 
+                 <div class="hud-actions" :style="{ marginTop: '15px', display: 'flex', justifyContent: 'space-between', gap: '8px' }">
                     <a-button @click="stopXrayService" icon="poweroff" size="small">{{ i18n "pages.index.stopXray" }}</a-button>
                     <a-button @click="restartXrayService" icon="reload" size="small">{{ i18n "pages.index.restartXray" }}</a-button>
-                    <a-button @click="openSelectV2rayVersion" icon="tool" size="small">{{ i18n "pages.index.xraySwitch" }}</a-button>
-                  </div>
-                </div>
-              </a-col>
+                    <a-button @click="openSelectV2rayVersion" icon="tool" size="small">
+                        [[ status.xray.version != 'Unknown' ? `v${status.xray.version}` : '{{ i18n "pages.index.xraySwitch" }}' ]]
+                    </a-button>
+                 </div>
+              </div>
+            </a-col>
 
-              <a-col :span="24">
-                <div class="hud-module">
-                  <div class="hud-title"><a-icon type="control" /> Management Operations</div>
-                  <div :style="{ display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }">
-                    <a-button @click="openLogs" icon="bars">{{ i18n "pages.index.logs" }}</a-button>
-                    <a-button v-if="app.ipLimitEnable" @click="openXrayLogs" icon="bars">{{ i18n "pages.index.xrayLogs" }}</a-button> 
+            <a-col :xs="24" :md="12" :lg="8">
+              <div :style="{ padding: '10px', border: '1px solid var(--hud-border-color)', minHeight: '140px' }">
+                <div :style="{ fontSize: '1.1rem', marginBottom: '15px', color: 'var(--hud-text-primary)' }">{{ i18n "menu.link" }}</div>
+                <div class="hud-actions" :style="{ display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }">
+                    <a-button @click="openLogs()" icon="bars">{{ i18n "pages.index.logs" }}</a-button>
+                    <a-button v-if="app.ipLimitEnable" @click="openXrayLogs()" icon="bars">{{ i18n "pages.index.xrayLogs" }}</a-button> 
                     <a-button @click="openConfig" icon="file-text">{{ i18n "pages.index.config" }}</a-button>
                     <a-button @click="openBackup" icon="cloud-server">{{ i18n "pages.index.backup" }}</a-button>
-                  </div>
                 </div>
-              </a-col>
-
-              <a-col :span="24">
-                <div class="hud-module">
-                  <div class="hud-title"><a-icon type="clock-circle" /> Uptime Statistics</div>
-                  <div :style="{ display: 'flex', flexDirection: 'column', gap: '10px' }">
-                    <div class="hud-stat-detail" :style="{ opacity: 1 }">
-                        <span class="hud-link-tag" :style="{ background: 'var(--hud-module-bg)', borderColor: status.xray.color, color: status.xray.color, clipPath: 'polygon(0 0, 90% 0, 100% 100%, 10% 100%)' }">
-                            Xray Uptime:
-                        </span> 
-                        <span :style="{ color: 'var(--hud-text-primary)', fontWeight: 700 }">[[ TimeFormatter.formatSecond(status.appStats.uptime) ]]</span>
-                    </div>
-                    <div class="hud-stat-detail" :style="{ opacity: 1 }">
-                        <span class="hud-link-tag" 
-                              :style="{ background: 'var(--hud-module-bg)', borderColor: 'var(--hud-glow-color)', color: 'var(--hud-glow-color)', clipPath: 'polygon(0 0, 90% 0, 100% 100%, 10% 100%)' }">
-                            OS Uptime:
-                        </span> 
-                        <span :style="{ color: 'var(--hud-text-primary)', fontWeight: 700 }">[[ TimeFormatter.formatSecond(status.uptime) ]]</span>
-                    </div>
-                  </div>
+                <div :style="{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', flexWrap: 'wrap', marginTop: '10px', gap: '8px' }">
+                   <a rel="noopener" href="https://ping.pe" target="_blank"><a-tag color="green">端口检测</a-tag></a>
+                    <a rel="noopener" href="https://www.speedtest.net" target="_blank"><a-tag color="green">网络测速</a-tag></a>
                 </div>
-              </a-col>
+              </div>
+            </a-col>
 
-            </a-row>
-          </a-col>
-        </a-row>
+            <a-col :xs="24" :lg="8">
+              <div :style="{ padding: '10px', border: '1px solid var(--hud-border-color)', minHeight: '140px' }">
+                <div :style="{ fontSize: '1.1rem', marginBottom: '15px', color: 'var(--hud-text-primary)' }">〔X-Panel面板〕</div>
+                
+                <div :style="{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }">
+                    <a rel="noopener" href="https://github.com/xeefei/x-panel/releases" target="_blank">
+                      <span class="hud-tag-panel" :style="{ borderColor: 'var(--hud-secondary-color)', color: 'var(--hud-secondary-color)', clipPath: 'none' }">
+                        Panel v{{ .cur_ver }}
+                      </span>
+                    </a>
+                    <a rel="noopener" href="https://t.me/is_Chat_Bot" target="_blank">
+                      <span class="hud-tag-panel" :style="{ borderColor: 'orange', color: 'orange', clipPath: 'none' }">
+                        TG私聊交流
+                      </span>
+                    </a>
+                    <a rel="noopener" href="https://t.me/XUI_CN" target="_blank">
+                      <span class="hud-tag-panel" :style="{ borderColor: 'purple', color: 'purple', clipPath: 'none' }">
+                        〔X-Panel面板〕交流群
+                      </span>
+                    </a>
+                </div>
+
+                <div :style="{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', flexWrap: 'wrap', marginTop: '10px', gap: '8px' }">
+                    <div class="hud-stat-detail">
+                        {{ i18n "pages.index.memory" }}: <a-tag color="green"> [[ SizeFormatter.sizeFormat(status.appStats.mem) ]] </a-tag>
+                    </div>
+                    <div class="hud-stat-detail">
+                        {{ i18n "pages.index.threads" }}: <a-tag color="green"> [[ status.appStats.threads ]] </a-tag>
+                    </div>
+                </div>
+
+              </div>
+            </a-col>
+
+          </a-row>
+          
+        </div>
         </a-spin>
     </a-layout-content>
   </a-layout>
@@ -498,7 +456,6 @@
     </a-collapse>
   </a-modal>
   <a-modal id="log-modal" v-model="logModal.visible"
-    title='{{ i18n "pages.index.logs" }}'
     :closable="true" @cancel="() => logModal.visible = false"
     :class="themeSwitcher.currentTheme"
     width="800px" footer="">
