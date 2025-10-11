@@ -142,14 +142,14 @@
        ★★★★★  最终对齐方案：实现底部严格对齐  ★★★★★
        ================================================================== */
     
-    /* 1. 外层容器，使用 flex 布局 */
+    /* 外层容器：确保内层 Ant-Row 可以被拉伸 (保持不变) */
     .main-content-row {
         display: flex;
         flex-direction: column; 
         flex-grow: 1;
     }
 
-    /* 2. 包含两列的 Ant-Row，设置为 flex 容器，并拉伸子项（列） */
+    /* 内层容器：包含两列的 Ant-Row，强制其为 flex 布局并拉伸子项 */
     .main-content-row > .ant-row { 
         display: flex !important;
         align-items: stretch !important; /* 核心：使所有列（Ant-Col）等高 */
@@ -157,31 +157,30 @@
         flex-wrap: wrap; /* 确保在移动设备上可以正常换行 */
     }
 
-    /* 3. 目标列（Ant-Col），设置为 flex 容器，以便控制其内部卡片的排列 */
+    /* 目标列（Ant-Col）：设置为 flex 布局，以便控制其内部卡片的排列 */
     .main-content-row > .ant-row > .ant-col {
         display: flex;
         flex-direction: column; 
+        /* 移除了 height: 100%，因为 align-items: stretch 已经处理了高度，这样更可靠 */
     }
-    
-    /* 4. 【关键修复】让【左右两列】的【最后一个元素】都自动伸展，填满剩余空间 */
+
+    /* 让【右侧】列的最后一个卡片（即 Ant-Col:nth-child(2)）自动伸长，以填补剩余的垂直空间 */
+    .main-content-row > .ant-row > .ant-col:nth-child(2) > .glass-card:last-child {
+        flex-grow: 1; 
+    }
+
+    /* 移除两个主列中，所有卡片或组件的最后一个元素的底部边距，以实现完美对齐 */
     .main-content-row > .ant-row > .ant-col > *:last-child {
-        flex-grow: 1;
-        margin-bottom: 0 !important; /* 同时移除最后一个元素的下边距 */
+        margin-bottom: 0 !important;
     }
-    
-    /* 5. 确保被拉伸的卡片（或Row）内部也正确地拉伸 */
-    .main-content-row > .ant-row > .ant-col > *:last-child,
-    .main-content-row > .ant-row > .ant-col > *:last-child .ant-card-body {
+
+    /* 确保被拉伸卡片的内容区域也跟着拉伸，并垂直居中（如果需要） */
+    .main-content-row > .ant-row > .ant-col:nth-child(2) > .glass-card:last-child .ant-card-body {
+        flex-grow: 1;
         display: flex;
         flex-direction: column;
-        flex-grow: 1;
-    }
-    
-    /* 6. (可选，美化) 如果希望拉伸的卡片内容垂直居中，可以加上这个 */
-     .main-content-row > .ant-row > .ant-col > *:last-child .ant-card-body {
         justify-content: center;
-     }
-
+    }
 
     /* 【通用】原始的必要样式保留 */
     .ip-hidden { filter: blur(10px); user-select: none; }
