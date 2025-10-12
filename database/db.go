@@ -38,6 +38,7 @@ func initModels() error {
 		&model.HistoryOfSeeders{},
 		&LinkHistory{},   // 把 LinkHistory 表也迁移
 		&ShortLink{},     // 新增 ShortLink 模型
+		&model.LotteryWin{}, 
 	}
 	for _, model := range models {
 		if err := db.AutoMigrate(model); err != nil {
