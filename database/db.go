@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"slices"
+	"time"
 
 	"x-ui/config"
 	"x-ui/database/model"
@@ -186,4 +187,32 @@ func Checkpoint() error {
 		return err
 	}
 	return nil
+}
+
+// HasUserWonToday 检查指定用户今天是否已经中过奖
+// 〔中文注释〕: gorm.DB() 需要替换为您项目中获取数据库实例的实际方法
+func HasUserWonToday(userID int64) (bool, error) {
+	now := time.Now()
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	endOfDay := startOfDay.Add(24 * time.Hour)
+
+	var count int64
+	// 在 lottery_wins 表中查找符合条件（用户ID匹配且中奖日期在今天之内）的记录数量
+	err := gorm.DB().Model(&model.LotteryWin{}).Where("user_id = ? AND win_date >= ? AND win_date < ?", userID, startOfDay, endOfDay).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// RecordUserWin 记录用户的中奖信息
+// 〔中文注释〕: gorm.DB() 需要替换为您项目中获取数据库实例的实际方法
+func RecordUserWin(userID int64, prize string) error {
+	winRecord := &model.LotteryWin{
+		UserID:  userID,
+		Prize:   prize,
+		WinDate: time.Now(),
+	}
+	// 在 lottery_wins 表中创建一条新的记录
+	return gorm.DB().Create(winRecord).Error
 }
