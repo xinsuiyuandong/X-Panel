@@ -154,6 +154,13 @@
 "readDatabaseError" = "读取数据库时出错"
 "getDatabaseError" = "检索数据库时出错"
 "getConfigError" = "检索配置文件时出错"
+"betterPanel" = "一个更好的面板"
+"builtOnXray" = "基于 Xray Core 构建"
+"xpanelTitle" = "〔X-Panel面板〕"
+"tgPrivateChat" = "TG私聊交流"
+"tgGroupChat" = "〔X-Panel面板〕交流群"
+"portCheck" = "端口检测"
+"speedTest" = "网络测速"
 
 [pages.inbounds]
 "allTimeTraffic" = "累计总流量"
