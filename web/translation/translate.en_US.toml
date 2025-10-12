@@ -152,6 +152,13 @@
 "readDatabaseError" = "An error occurred while reading the database."
 "getDatabaseError" = "An error occurred while retrieving the database."
 "getConfigError" = "An error occurred while retrieving the config file."
+"betterPanel" = "A Better Panel"
+"builtOnXray" = "Built On Xray Core"
+"xpanelTitle" = "〔X-Panel〕Dashboard"
+"tgPrivateChat" = "TG Private Chat"
+"tgGroupChat" = "〔X-Panel〕Group Chat"
+"portCheck" = "Port Check"
+"speedTest" = "Speed Test"
 
 [pages.inbounds]
 "allTimeTraffic" = "All-time Traffic"
@@ -317,6 +324,7 @@
 
 [pages.inbounds.oneClick.preset]
 "vless_reality" = "VLESS + TCP + Reality + Vision"
+"vless_xhttp_reality" = "VLESS + XHTTP + Reality"
 "vless_tls_encryption" = "VLESS Encryption + TLS (CDN optional)"
 "switch_vision_seed_dev" = "Switch + Vision Seed (in development)"
 
