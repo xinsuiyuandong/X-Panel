@@ -1733,7 +1733,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	// 〔中文注释〕: 新增 - 处理用户点击 "玩" 抽奖游戏
 	case "lottery_play":
 		// 〔中文注释〕: 首先，回应 TG 的回调请求，告诉用户机器人已收到操作。
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在为您摇奖...")
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "〔X-Panel 小白哥〕正在为您摇奖......")
 		
 		userID := callbackQuery.From.ID
 		
@@ -1757,7 +1757,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			// 〔中文注释〕: 如果中奖了（不是 "未中奖" 或 "错误"）。
 			if prize != "未中奖" && prize != "错误" {
 			// 〔中文注释〕: 拼接最终的中奖消息，包含兑奖说明。
-			finalMessage := resultMessage + "\n\n**兑奖说明**：请截图此消息，并联系 [X-Panel 交流群](https://t.me/XUI_CN) 内的管理员进行兑奖。"
+			finalMessage := resultMessage + "\n\n**兑奖说明**：请截图此消息，并联系管理员进行兑奖。\n\n〔X-Panel 面板〕交流群：https://t.me/XUI_CN"
 					
 			// 〔中文注释〕: 记录中奖结果 (调用您在 database 中实现的函数)。
 			err := database.RecordUserWin(userID, prize)
@@ -2167,13 +2167,13 @@ func (t *Tgbot) runLotteryDraw() (prize string, message string) {
     // 二等奖: 10/1000 (1%)
 	if roll < 11 { 
 		prize = "二等奖"
-		message = "🎊 **欧气满满！恭喜您抽中【二等奖】！** 🎊\n\n请联系管理员兑换精美奖品！"
+		message = "🎊 **欧气满满！恭喜您抽中【二等奖】！** 🎊\n\n请联系管理员兑换牛逼奖品！"
 		return
 	}
     // 三等奖: 50/1000 (5%)
 	if roll < 61 { 
 		prize = "三等奖"
-		message = "🎁 **运气不错！恭喜您抽中【三等奖】！** 🎁\n\n请联系管理员兑换小礼品！"
+		message = "🎁 **运气不错！恭喜您抽中【三等奖】！** 🎁\n\n请联系管理员兑换小惊喜！"
 		return
 	}
     // 安慰奖: 200/1000 (20%)
@@ -2197,10 +2197,10 @@ func (t *Tgbot) sendLotteryGameInvitation() {
 	// 〔中文注释〕: "lottery_play" 和 "lottery_skip" 将作为回调数据，用于后续处理。
 	inlineKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("玩，我要赢奖品/萝莉").WithCallbackData(t.encodeQuery("lottery_play")),
+			tu.InlineKeyboardButton("玩，我要赢奖品/萝莉！！！").WithCallbackData(t.encodeQuery("lottery_play")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("劳资不玩，我要看美图").WithCallbackData(t.encodeQuery("lottery_skip")),
+			tu.InlineKeyboardButton("劳资不玩，我要看美图......").WithCallbackData(t.encodeQuery("lottery_skip")),
 		),
 	)
 
