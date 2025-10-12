@@ -251,13 +251,13 @@
 										<div class="x-panel-logo-text">X-Panel</div>
 										<br>
 										<div class="x-panel-desc">
-											<b>一个更好的面板</b>
+											<b>{{ i18n "pages.index.betterPanel" }}</b>
 											<br><br>
-											<b>基于 Xray Core 构建</b>
+											<b>{{ i18n "pages.index.builtOnXray" }}</b>
 										</div>
 									</a-card>
 
-									<a-card title='{{ i18n "pages.index.serverStatus" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
+									<a-card title='{{ i18n "pages.index.title" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
 										<a-row :gutter="[0, isMobile ? 16 : 0]">
 											<a-col :sm="24" :md="12">
 												<a-row>
@@ -398,16 +398,16 @@
 								</a-col>
 
 								<a-col :sm="24" :lg="8">
-									<a-card title='〔X-Panel面板〕' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
+									<a-card title='{{ i18n "pages.index.xpanelTitle" }}' hoverable :bordered="true" class="glass-card" :style="{ marginBottom: '16px' }">
 										<div style="white-space: nowrap; overflow-x: auto;">
 											<a rel="noopener" href="https://github.com/xeefei/x-panel/releases" target="_blank">
 												<a-tag color="green"><span>v{{ .cur_ver }}</span></a-tag>
 											</a>
 											<a rel="noopener" href="https://t.me/is_Chat_Bot" target="_blank">
-												<a-tag color="green"><span>TG私聊交流</span></a-tag>
+												<a-tag color="green"><span>{{ i18n "pages.index.tgPrivateChat" }}</span></a-tag>
 											</a>
 											<a rel="noopener" href="https://t.me/XUI_CN" target="_blank">
-												<a-tag color="purple"><span>〔X-Panel面板〕交流群</span></a-tag>
+												<a-tag color="purple"><span>{{ i18n "pages.index.tgGroupChat" }}</span></a-tag>
 											</a>
 										</div>
 									</a-card>
@@ -427,8 +427,8 @@
 													</template>
 												</a-tooltip>
 											</a-tag>
-											<a rel="noopener" href="https://ping.pe" target="_blank"><a-tag color="green">端口检测</a-tag></a>
-											<a rel="noopener" href="https://www.speedtest.net" target="_blank"><a-tag color="green">网络测速</a-tag></a>
+											<a rel="noopener" href="https://ping.pe" target="_blank"><a-tag color="green">{{ i18n "pages.index.portCheck" }}</a-tag></a>
+											<a rel="noopener" href="https://www.speedtest.net" target="_blank"><a-tag color="green">{{ i18n "pages.index.speedTest" }}</a-tag></a>
 										</div>
 									</a-card>
 
@@ -590,7 +590,7 @@
 				<a-checkbox v-model="xraylogModal.showProxy" @change="openXrayLogs()">Proxy</a-checkbox>
 			</a-form-item>
 			<a-form-item :style="{ float: 'right' }">
-				<a-button type="primary" icon="download" @click="FileManager.downloadTextFile(xraylogModal.logs?.join('\n'), 'x-ui.log')"></a-button>
+				<a-button type="primary" icon="download" @click="FileManager.downloadTextFile(xraylogModal.logs?.join('\n'), 'x-ui.log')"></button>
 			</a-form-item>
 		</a-form>
 		<div class="ant-input" :style="{ height: 'auto', maxHeight: '500px', overflow: 'auto', marginTop: '0.5rem' }" v-html="xraylogModal.formattedLogs"></div>
