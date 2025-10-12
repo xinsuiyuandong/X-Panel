@@ -154,6 +154,13 @@
 "readDatabaseError" = "讀取資料庫時發生錯誤"
 "getDatabaseError" = "擷取資料庫時發生錯誤"
 "getConfigError" = "擷取設定檔時發生錯誤"
+"betterPanel" = "一個更好的面板"
+"builtOnXray" = "基於 Xray Core 建置"
+"xpanelTitle" = "〔X-Panel面板〕"
+"tgPrivateChat" = "TG私聊交流"
+"tgGroupChat" = "〔X-Panel面板〕交流群"
+"portCheck" = "連接埠偵測"
+"speedTest" = "網路測速"
 
 [pages.inbounds]
 "allTimeTraffic" = "累計總流量"
@@ -322,6 +329,7 @@
 
 [pages.inbounds.oneClick.preset]
 "vless_reality" = "VLESS + TCP + Reality + Vision"
+"vless_xhttp_reality" = "VLESS + XHTTP + Reality"
 "vless_tls_encryption" = "VLESS Encryption + TLS（可選套CDN）"
 "switch_vision_seed_dev" = "Switch + Vision Seed (開發中)"
 
