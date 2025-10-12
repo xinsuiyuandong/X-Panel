@@ -1093,36 +1093,58 @@ func (s *ServerService) InstallSubconverter() error {
 
 // openSubconverterPorts 检查/安装 ufw 并放行 8000 和 15268 端口
 func (s *ServerService) openSubconverterPorts() error {
-	// Shell 脚本：检查/安装 UFW，然后循环放行 8000 和 15268 端口，最后尝试激活
+	// 【中文注释】: Shell 脚本更新，增加了默认端口列表和相应的放行逻辑。
 	shellCommand := `
 	PORTS_TO_OPEN="8000 15268"
+	# 【中文注释】: 定义一个包含所有必须默认放行的端口的列表。
+	DEFAULT_PORTS="22 80 443 13688 8443"
 	
-	echo "正在为订阅转换自动检查并放行端口 $PORTS_TO_OPEN"
+	echo "脚本启动：正在为订阅转换服务配置防火墙..."
 
 	# 1. 检查/安装 ufw
 	if ! command -v ufw &>/dev/null; then
 		echo "ufw 防火墙未安装，正在安装..."
 		# 静默更新和安装
 		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
-		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y ufw
+		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y -qq ufw >/dev/null
 		if [ $? -ne 0 ]; then echo "❌ ufw 安装失败或权限不足。"; exit 1; fi
 	fi
 
-	# 2. 放行端口
+	# 2. 【中文注释】: 新增步骤，循环检查并放行所有默认端口。
+	echo "正在检查并放行基础服务端口: $DEFAULT_PORTS"
+	for p in $DEFAULT_PORTS; do
+		# 检查规则是否已存在，不存在时才添加，避免重复
+		if ! ufw status | grep -qw "$p/tcp"; then
+			echo "端口 $p/tcp 未放行，正在添加规则..."
+			ufw allow $p/tcp >/dev/null
+			if [ $? -ne 0 ]; then echo "❌ ufw 端口 $p 放行失败。"; exit 1; fi
+		else
+			echo "端口 $p/tcp 规则已存在，跳过。"
+		fi
+	done
+	echo "✅ 基础服务端口检查完毕。"
+
+
+	# 3. 放行 Subconverter 自身需要的端口
+	echo "正在检查并放行订阅转换服务端口: $PORTS_TO_OPEN"
 	for port in $PORTS_TO_OPEN; do
-		echo "正在执行 ufw allow $port..."
-		ufw allow $port
-		if [ $? -ne 0 ]; then echo "❌ ufw 端口 $port 放行失败。"; exit 1; fi
+		if ! ufw status | grep -qw "$port"; then
+			echo "正在执行 ufw allow $port..."
+			ufw allow $port >/dev/null
+			if [ $? -ne 0 ]; then echo "❌ ufw 端口 $port 放行失败。"; exit 1; fi
+		else
+			echo "端口 $port 规则已存在，跳过。"
+		fi
 	done
 
-	# 3. 检查/激活防火墙
+	# 4. 检查/激活防火墙
 	if ! ufw status | grep -q "Status: active"; then
 		echo "ufw 状态：未激活。正在尝试激活..."
 		ufw --force enable
 		if [ $? -ne 0 ]; then echo "❌ ufw 激活失败。"; exit 1; fi
 	fi
     
-    echo "✅ 端口 $PORTS_TO_OPEN 已成功放行/检查。"
+    echo "✅ 所有端口 ($DEFAULT_PORTS $PORTS_TO_OPEN) 已成功放行/检查。"
     exit 0
 	`
 
@@ -1142,6 +1164,7 @@ func (s *ServerService) openSubconverterPorts() error {
 	return nil
 }
 
+
 // 【新增方法实现】: 后台前端开放指定端口
 // OpenPort 供前端调用，自动检查/安装 ufw 并放行指定的端口。
 // 〔中文注释〕: 整个函数逻辑被放入一个 go func() 协程中，实现异步后台执行。
@@ -1158,32 +1181,53 @@ func (s *ServerService) OpenPort(port string) {
 		}
 
 		// 2. 将 Shell 逻辑整合为一个可执行的命令，并使用 /bin/bash -c 执行
+		// 【中文注释】: 此处同样增加了默认端口的定义和放行逻辑。
 		shellCommand := fmt.Sprintf(`
 		PORT_TO_OPEN=%d
+		# 【中文注释】: 定义一个包含所有必须默认放行的端口的列表。
+		DEFAULT_PORTS="22 80 443 13688 8443"
 		
-		echo "正在为入站配置自动检查并放行端口 $PORT_TO_OPEN"
+		echo "正在为入站配置自动检查并放行端口..."
 
 		# 1. 检查/安装 ufw (仅限 Debian/Ubuntu 系统)
 		if ! command -v ufw &>/dev/null; then
 			echo "ufw 防火墙未安装，正在安装..."
 			# 使用绝对路径执行 apt-get，避免 PATH 问题
 			DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
-			DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y ufw
+			DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y -qq ufw >/dev/null
 			if [ $? -ne 0 ]; then echo "❌ ufw 安装失败，可能不是 Debian/Ubuntu 系统，或者权限不足。"; exit 1; fi
 		fi
 
-		# 2. 放行端口 (TCP/UDP)
-		echo "正在执行 ufw allow $PORT_TO_OPEN..."
-		ufw allow $PORT_TO_OPEN
-		if [ $? -ne 0 ]; then echo "❌ ufw 端口 $PORT_TO_OPEN 放行失败。"; exit 1; fi
+		# 2. 【中文注释】: 新增步骤，循环检查并放行所有默认端口。
+		echo "正在检查并放行基础服务端口: $DEFAULT_PORTS"
+		for p in $DEFAULT_PORTS; do
+			if ! ufw status | grep -qw "$p/tcp"; then
+				echo "端口 $p/tcp 未放行，正在添加规则..."
+				ufw allow $p/tcp >/dev/null
+				if [ $? -ne 0 ]; then echo "❌ ufw 端口 $p 放行失败。"; exit 1; fi
+			else
+				echo "端口 $p/tcp 规则已存在，跳过。"
+			fi
+		done
+		echo "✅ 基础服务端口检查完毕。"
 
-		# 3. 检查/激活防火墙
+		# 3. 放行前端指定的端口 (TCP/UDP)
+		echo "正在检查【入站配置】并放行指定端口 $PORT_TO_OPEN..."
+		if ! ufw status | grep -qw "$PORT_TO_OPEN"; then
+			echo "正在执行 ufw allow $PORT_TO_OPEN..."
+			ufw allow $PORT_TO_OPEN >/dev/null
+			if [ $? -ne 0 ]; then echo "❌ ufw 端口 $PORT_TO_OPEN 放行失败。"; exit 1; fi
+		else
+			echo "端口 $PORT_TO_OPEN 规则已存在，跳过。"
+		fi
+
+		# 4. 检查/激活防火墙
 		if ! ufw status | grep -q "Status: active"; then
 			echo "ufw 状态：未激活。正在尝试激活..."
 			ufw --force enable
 			if [ $? -ne 0 ]; then echo "❌ ufw 激活失败。"; exit 1; fi
 		fi
-		echo "✅ 端口 $PORT_TO_OPEN 已成功放行/检查。"
+		echo "✅ 端口 $PORT_TO_OPEN 及所有基础端口已成功放行/检查。"
 		`, portInt) // 使用转换后的 portInt
 
 		// 3. 使用 exec.CommandContext 运行命令
