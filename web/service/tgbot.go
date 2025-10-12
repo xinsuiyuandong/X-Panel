@@ -1733,8 +1733,20 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	// 〔中文注释〕: 新增 - 处理用户点击 "玩" 抽奖游戏
 	case "lottery_play":
 		// 〔中文注释〕: 首先，回应 TG 的回调请求，告诉用户机器人已收到操作。
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "〔X-Panel 小白哥〕正在为您摇奖......")
-		
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "〔X-Panel 小白哥〕正在为您摇奖，请稍后......")
+
+		// 这条消息会永久停留在聊天窗口，作为等待提示。
+        t.editMessageTgBot(
+            callbackQuery.Message.GetChat().ID, 
+            callbackQuery.Message.GetMessageID(), 
+        "⏳ **抽奖结果生成中...**\n\n请耐心等待 5 秒......\n\n〔X-Panel 小白哥〕马上为您揭晓！",
+        // 【关键】: 不传入键盘参数，自动移除旧键盘
+        )
+    
+        // 【保持】: 程序在此处暂停 5 秒
+        time.Sleep(5000 * time.Millisecond) 
+    
+        // 程序将在 5 秒后，继续执行下面的逻辑：
 		userID := callbackQuery.From.ID
 		
 		// 〔中文注释〕: 检查用户今天是否已经中过奖 (调用您在 database 中实现的函数)。
