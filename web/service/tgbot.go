@@ -1756,8 +1756,8 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 	 case "oneclick_switch_vision":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🌀 Switch + vision Seed 协议组合的功能还在开发中 ...........")
-		 t.SendMsgToTgbot(chatId, "🌀 Switch + vision Seed 协议组合的功能还在开发中 ........，暂不可用...")
+		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ...........")
+		 t.SendMsgToTgbot(chatId, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ........，暂不可用...")
 		 t.remoteCreateOneClickInbound("switch_vision", chatId)	
 
 	 case "subconverter_install":
@@ -3148,9 +3148,9 @@ func (t *Tgbot) sendOneClickOptions(chatId int64) {
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🛡️ Vless Encryption + XHTTP + TLS").WithCallbackData(t.encodeQuery("oneclick_tls")),
 		),
-		// 【新增占位按钮】: 为未来的 Switch + vision Seed 预留位置
+		// 【新增占位按钮】: 为未来的 Switch + Vision Seed 预留位置
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🌀 Switch + vision Seed (开发中)").WithCallbackData(t.encodeQuery("oneclick_switch_vision")),
+			tu.InlineKeyboardButton("🌀 Switch + Vision Seed (开发中)").WithCallbackData(t.encodeQuery("oneclick_switch_vision")),
 		),
 	)
 	t.SendMsgToTgbot(chatId, "请选择您要创建的【一键配置】类型：\n（以下最前面两种适合优化线路去直连）", optionsKeyboard)
@@ -3985,51 +3985,82 @@ func (t *Tgbot) GetDomain() (string, error) {
     return t.getDomain()
 }
 
-// openPortWithUFW 检查/安装 ufw 并放行指定的端口
+// openPortWithUFW 检查/安装 ufw，放行一系列默认端口，并放行指定的端口
 func (t *Tgbot) openPortWithUFW(port int) error {
-	// 将 Shell 逻辑整合为一个可执行的命令，并使用 /bin/bash -c 执行
+	// 【中文注释】: 将所有 Shell 逻辑整合为一个命令。
+	// 新增了对默认端口列表 (22, 80, 443, 13688, 8443) 的放行逻辑。
 	shellCommand := fmt.Sprintf(`
+	# 定义需要放行的指定端口和一系列默认端口
 	PORT_TO_OPEN=%d
-	
-	echo "正在为入站配置自动检查并放行端口 $PORT_TO_OPEN"
+	DEFAULT_PORTS="22 80 443 13688 8443"
+
+	echo "脚本开始：准备配置 ufw 防火墙..."
 
 	# 1. 检查/安装 ufw
-	if ! command -v ufw &>/dev/null; then
-		echo "ufw 防火墙未安装，正在安装..."
-		# 使用绝对路径执行 apt-get，避免 PATH 问题
+	if ! command -v ufw &> /dev/null; then
+		echo "ufw 防火墙未安装，正在自动安装..."
+		# 使用绝对路径执行 apt-get，避免 PATH 问题，并抑制不必要的输出
 		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update -qq >/dev/null
-		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y ufw
+		DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y -qq ufw >/dev/null
 		if [ $? -ne 0 ]; then echo "❌ ufw 安装失败。"; exit 1; fi
+		echo "✅ ufw 安装成功。"
 	fi
 
-	# 2. 放行端口
-	echo "正在执行 ufw allow $PORT_TO_OPEN..."
-	ufw allow $PORT_TO_OPEN
-	if [ $? -ne 0 ]; then echo "❌ ufw 端口放行失败。"; exit 1; fi
+	# 2. 【新增】循环放行所有默认端口
+	echo "正在检查并放行基础服务端口: $DEFAULT_PORTS"
+	for p in $DEFAULT_PORTS; do
+		# 使用静默模式检查规则是否存在，如果不存在则添加
+		if ! ufw status | grep -qw "$p/tcp"; then
+			echo "端口 $p/tcp 未放行，正在执行 ufw allow $p/tcp..."
+			ufw allow $p/tcp >/dev/null
+			if [ $? -ne 0 ]; then echo "❌ ufw 端口 $p 放行失败。"; exit 1; fi
+		else
+			echo "端口 $p/tcp 规则已存在，跳过。"
+		fi
+	done
+	echo "✅ 基础服务端口检查/放行完毕。"
 
-	# 3. 检查/激活防火墙
+	# 3. 放行指定的端口
+	echo "正在为当前【入站配置】放行指定端口 $PORT_TO_OPEN..."
+	if ! ufw status | grep -qw "$PORT_TO_OPEN/tcp"; then
+		ufw allow $PORT_TO_OPEN/tcp >/dev/null
+		if [ $? -ne 0 ]; then echo "❌ ufw 端口 $PORT_TO_OPEN 放行失败。"; exit 1; fi
+		echo "✅ 端口 $PORT_TO_OPEN 已成功放行。"
+	else
+		echo "端口 $PORT_TO_OPEN 规则已存在，跳过。"
+	fi
+	
+
+	# 4. 检查/激活防火墙
 	if ! ufw status | grep -q "Status: active"; then
-		echo "ufw 状态：未激活。正在尝试激活..."
+		echo "ufw 状态：未激活。正在强制激活..."
+		# --force 选项可以无需交互直接激活
 		ufw --force enable
 		if [ $? -ne 0 ]; then echo "❌ ufw 激活失败。"; exit 1; fi
+		echo "✅ ufw 已成功激活。"
+	else
+		echo "ufw 状态已经是激活状态。"
 	fi
-	echo "✅ 端口 $PORT_TO_OPEN 已成功放行/检查。"
-	`, port) // 仅需传递一次 port 参数给 Shell 变量定义
 
-	// 使用 exec.CommandContext 运行命令
+	echo "🎉 所有防火墙配置已完成。"
+
+	`, port) // 将函数传入的 port 参数填充到 Shell 脚本中
+
+	// 使用 exec.CommandContext 运行完整的 shell 脚本
 	cmd := exec.CommandContext(context.Background(), "/bin/bash", "-c", shellCommand)
 	
-	// 捕获命令的输出
+	// 捕获命令的标准输出和标准错误
 	output, err := cmd.CombinedOutput()
 	
-	// 记录日志，以便诊断
+	// 无论成功与否，都记录完整的 Shell 执行日志，便于调试
 	logOutput := string(output)
-	logger.Infof("执行 ufw 端口放行命令（端口 %d）结果：\n%s", port, logOutput)
+	logger.Infof("执行 ufw 端口放行脚本（目标端口 %d）的完整输出：\n%s", port, logOutput)
 
 	if err != nil {
-		// 返回详细的错误信息，包括 Shell 脚本的输出
-		return fmt.Errorf("执行 ufw 端口放行脚本失败: %v, Shell 输出: %s", err, logOutput)
+		// 如果脚本执行出错 (例如 exit 1)，则返回包含详细输出的错误信息
+		return fmt.Errorf("执行 ufw 端口放行脚本时发生错误: %v, Shell 输出: %s", err, logOutput)
 	}
+
     return nil
 }
 
