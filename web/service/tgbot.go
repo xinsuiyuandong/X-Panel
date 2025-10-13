@@ -4707,12 +4707,13 @@ func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
 	return "", errors.New("所有新闻来源均获取失败，请检查网络或 API 状态")
 }
 
-// 【新增辅助函数】: 发送贴纸到指定的聊天 ID，并返回消息对象（用于获取 ID）
+// 【新增的辅助函数】: 发送贴纸到指定的聊天 ID，并返回消息对象（用于获取 ID）
 func (t *Tgbot) SendStickerToTgbot(chatId int64, fileId string) (*telego.Message, error) {
-	// 使用 telego.WithSticker() 简化 File ID 发送
-	sticker := tu.Sticker(tu.ID(chatId), tu.File(fileId))
+	// 使用 tu.FileID() 来传递贴纸的 File ID
+	sticker := tu.Sticker(tu.ID(chatId), tu.FileID(fileId))
 	
-	msg, err := t.bot.SendSticker(sticker)
+	// 使用全局变量 bot 调用 SendSticker
+	msg, err := bot.SendSticker(sticker)
 	if err != nil {
 		logger.Errorf("发送贴纸失败到聊天 ID %d: %v", chatId, err)
 		return nil, err
