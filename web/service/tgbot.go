@@ -87,8 +87,15 @@ var (
 
 var userStates = make(map[int64]string)
 
-// 【新增常量】: 用于抽奖动画的贴纸 File ID (这是一个通用的加载/思考动画贴纸)
-const LOTTERY_STICKER_ID = "CAACAgIAAxkBAAIDxWX-R5hGfI9xXb6Q-iJ2XG8275TfAAI-BQACx0LhSb86q20xK0-rMwQ" 
+// 〔中文注释〕: 贴纸的发送顺序将在运行时被随机打乱。
+const LOTTERY_STICKER_IDS = [3]string{
+	// STICKER_ID_1: 思考中/加载中 (经典)
+	"CAACAgIAAxkBAAIDxWX-R5hGfI9xXb6Q-iJ2XG8275TfAAI-BQACx0LhSb86q20xK0-rMwQ", 
+	// STICKER_ID_2: 兔子敲键盘/忙碌中
+	"CAACAgIAAxkBAAIBv2X3F9c_pS8i0tF5N0Q-vF0Jc-oUAAJPAgACVwJpS2rN0xV8dFm2MwQ",
+	// STICKER_ID_3: 【替换】手持手机加载/等待
+	"CAACAgIAAxkBAAIDy2X-R5jGfI9xXb6Q-iJ2XG8275TfAAI_BQACx0LhST4-nI5XJ1GOMwQ",
+}
 
 type LoginStatus byte
 
@@ -1749,15 +1756,28 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
         // 【关键】: 不传入键盘参数，自动移除旧键盘
         )
 
-		// 〔中文注释〕: 发送一个新的消息（动画贴纸），作为视觉上的动态进度提示。
-		stickerMessage, err := t.SendStickerToTgbot(chatId, LOTTERY_STICKER_ID)
-		var stickerMessageID int // 用于存储贴纸消息的 ID，以便后续删除
-		if err != nil {
-			logger.Warningf("发送抽奖动画贴纸失败: %v", err)
-			// 即使失败，也继续执行，不中断流程
-		} else {
-			// 成功发送后，记录下贴纸消息的 ID
-			stickerMessageID = stickerMessage.MessageID
+		// --- 【发送动态贴纸（实现随机、容错、不中断）】 ---
+		var stickerMessageID int // 用于存储成功发送的贴纸消息 ID
+		
+        // 〔中文注释〕: 1. 将数组转换为可操作的切片
+		stickerIDsSlice := LOTTERY_STICKER_IDS[:] 
+
+		// 〔中文注释〕: 2. 随机化贴纸的发送顺序，确保每次动画不同。
+		// 注意: 依赖于文件头部导入的 rng "math/rand"
+		rng.Shuffle(len(stickerIDsSlice), func(i, j int) {
+			stickerIDsSlice[i], stickerIDsSlice[j] = stickerIDsSlice[j], stickerIDsSlice[i]
+		})
+        
+		// 〔中文注释〕: 3. 遍历随机化后的贴纸 ID，尝试发送，直到成功为止。
+		for _, stickerID := range stickerIDsSlice {
+			stickerMessage, err := t.SendStickerToTgbot(chatId, stickerID)
+			if err == nil {
+				// 成功发送，记录 ID 并跳出循环。
+				stickerMessageID = stickerMessage.MessageID
+				break
+			}
+			// 如果失败，记录日志并尝试下一个 ID。
+			logger.Warningf("尝试发送贴纸 %s 失败: %v", stickerID, err)
 		}
     
         // 【保持】: 程序在此处暂停 5 秒，用户可以看到动画。
@@ -1765,7 +1785,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 		// 【新增：5秒后，删除动画贴纸】
 		if stickerMessageID != 0 {
-			// 〔中文注释〕: 抽奖结束后，删除刚才发送的动态贴纸消息，保持界面整洁。
+			// 〔中文注释〕: 抽奖结束后，删除刚才成功发送的动态贴纸消息。
 			t.deleteMessageTgBot(chatId, stickerMessageID)
 		}
     
