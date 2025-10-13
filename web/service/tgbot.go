@@ -1754,8 +1754,8 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.editMessageTgBot(
 			chatId,
 			messageId, 
-			     "⏳ **抽奖结果生成中...**\n\n请耐心等待 5 秒......\n\n〔X-Panel 小白哥〕马上为您揭晓！",
-                 // 【关键】: 不传入键盘参数，自动移除旧键盘
+			"⏳ **抽奖结果生成中...**\n\n请耐心等待 5 秒......\n\n〔X-Panel 小白哥〕马上为您揭晓！",
+			// 【关键】: 不传入键盘参数，自动移除旧键盘
 		)
 
 		// --- 【发送动态贴纸（实现随机、容错、不中断）】 ---
@@ -1784,7 +1784,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
     
 		// 【保持】: 程序在此处暂停 5 秒，用户可以看到动画。
 		time.Sleep(5000 * time.Millisecond) 
-
+		
 		// 【新增：5秒后，删除动画贴纸】
 		if stickerMessageID != 0 {
 			// 〔中文注释〕: 抽奖结束后，删除刚才成功发送的动态贴纸消息。
