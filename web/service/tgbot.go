@@ -1772,7 +1772,8 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
         
 		// 〔中文注释〕: 3. 遍历随机化后的贴纸 ID，尝试发送，直到成功为止。
 		for _, stickerID := range stickerIDsSlice {
-			stickerMessage, err := t.SendStickerToTgbot(chatId, stickerID)
+		//	stickerMessage, err := t.SendStickerToTgbot(chatId, stickerID)
+			stickerMessage, err := t.SendAnimationToTgbot(chatId, stickerID)
 			if err == nil {
 				// 成功发送，记录 ID 并跳出循环。
 				stickerMessageID = stickerMessage.MessageID
@@ -4708,19 +4709,23 @@ func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
 }
 
 // 【新增的辅助函数】: 发送贴纸到指定的聊天 ID，并返回消息对象（用于获取 ID）
-func (t *Tgbot) SendStickerToTgbot(chatId int64, fileId string) (*telego.Message, error) {
-	// 必须使用 SendStickerParams 结构体，并传入 context
-	params := telego.SendStickerParams{
+// 【重构后的函数】：使用 SendAnimation，提供更稳定的动态贴纸发送能力。
+func (t *Tgbot) SendAnimationToTgbot(chatId int64, fileId string) (*telego.Message, error) {
+	// 使用 Params 结构体，并传入 context
+	params := telego.SendAnimationParams{
 		ChatID: tu.ID(chatId),
-		// 对于现有 File ID 字符串，必须封装在 telego.InputFile 结构中。
-		Sticker: telego.InputFile{FileID: fileId}, 
+		// 关键：将 File ID 封装在 telego.InputFile 结构中，作为 Animation 参数传入。
+		Animation: telego.InputFile{FileID: fileId}, 
+		// 【重要】: 添加一个空的 Caption，有助于某些客户端将 TGS 文件识别为 Animation。
+		Caption: " ", 
 	}
 	
-	// 使用全局变量 bot 调用 SendSticker，并传入 context.Background() 和参数指针
-	msg, err := bot.SendSticker(context.Background(), &params)
+	// 使用全局变量 bot 调用 SendAnimation
+	msg, err := bot.SendAnimation(context.Background(), &params)
 	
 	if err != nil {
-		logger.Errorf("发送贴纸失败到聊天 ID %d: %v", chatId, err)
+		// 注意：日志信息已改为 Animation
+		logger.Errorf("发送动画（贴纸）失败到聊天 ID %d: %v", chatId, err)
 		return nil, err
 	}
 	
