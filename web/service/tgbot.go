@@ -89,12 +89,12 @@ var userStates = make(map[int64]string)
 
 // 〔中文注释〕: 贴纸的发送顺序将在运行时被随机打乱。
 var LOTTERY_STICKER_IDS = [3]string{
-	// STICKER_ID_1: 思考中/加载中 (经典)
+	// STICKER_ID_1: 官方 Telegram Loading 动画 (经典)
 	"CAACAgIAAxkBAAIDxWX-R5hGfI9xXb6Q-iJ2XG8275TfAAI-BQACx0LhSb86q20xK0-rMwQ", 
-	// STICKER_ID_2: 兔子敲键盘/忙碌中
+	// STICKER_ID_2: 官方 Telegram 思考/忙碌动画
 	"CAACAgIAAxkBAAIBv2X3F9c_pS8i0tF5N0Q-vF0Jc-oUAAJPAgACVwJpS2rN0xV8dFm2MwQ",
-	// STICKER_ID_3: 【替换】手持手机加载/等待
-	"CAACAgIAAxkBAAIDy2X-R5jGfI9xXb6Q-iJ2XG8275TfAAI_BQACx0LhST4-nI5XJ1GOMwQ",
+	// STICKER_ID_3: 官方 Telegram 进度条动画
+	"CAACAgIAAxkBAAIB2GX3GNmXz18D2c9S-vF1X8X8ZgU9AALBAQACVwJpS_jH35KkK3y3MwQ",
 }
 
 type LoginStatus byte
@@ -2249,7 +2249,7 @@ func (t *Tgbot) runLotteryDraw() (prize string, message string) {
 // 〔中文注释〕: 新增函数，用于发送抽奖游戏邀请。
 func (t *Tgbot) sendLotteryGameInvitation() {
 	// 〔中文注释〕: 构建邀请消息和内联键盘。
-	msg := "-----🎉 福利区 🎉-----\n\n✨ **每日幸运抽奖游戏**\n\n-->您想试试今天的手气吗？"
+	msg := "-------🎉 福利区 🎉-------\n\n✨ **每日幸运抽奖游戏**\n\n-->您想试试今天的手气吗？"
 
 	// 〔中文注释〕: "lottery_play" 和 "lottery_skip" 将作为回调数据，用于后续处理。
 	inlineKeyboard := tu.InlineKeyboard(
