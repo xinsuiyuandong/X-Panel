@@ -88,7 +88,7 @@ var (
 var userStates = make(map[int64]string)
 
 // 〔中文注释〕: 贴纸的发送顺序将在运行时被随机打乱。
-const LOTTERY_STICKER_IDS = [3]string{
+var LOTTERY_STICKER_IDS = [3]string{
 	// STICKER_ID_1: 思考中/加载中 (经典)
 	"CAACAgIAAxkBAAIDxWX-R5hGfI9xXb6Q-iJ2XG8275TfAAI-BQACx0LhSb86q20xK0-rMwQ", 
 	// STICKER_ID_2: 兔子敲键盘/忙碌中
@@ -4718,15 +4718,4 @@ func (t *Tgbot) SendStickerToTgbot(chatId int64, fileId string) (*telego.Message
 		return nil, err
 	}
 	return msg, nil
-}
-
-// 【新增辅助函数】: 删除指定消息（用于删除动画贴纸）
-func (t *Tgbot) deleteMessageTgBot(chatId int64, messageId int) {
-	deleteMsg := tu.DeleteMessage(tu.ID(chatId), messageId)
-	
-	err := t.bot.DeleteMessage(deleteMsg)
-	if err != nil {
-		// 删除失败通常是权限问题，记录日志但不中断后续流程
-		logger.Warningf("删除消息 %d 失败，在聊天 ID %d 中: %v", messageId, chatId, err)
-	}
 }
