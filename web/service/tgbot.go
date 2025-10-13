@@ -87,6 +87,9 @@ var (
 
 var userStates = make(map[int64]string)
 
+// 【新增常量】: 用于抽奖动画的贴纸 File ID (这是一个通用的加载/思考动画贴纸)
+const LOTTERY_STICKER_ID = "CAACAgIAAxkBAAIDxWX-R5hGfI9xXb6Q-iJ2XG8275TfAAI-BQACx0LhSb86q20xK0-rMwQ" 
+
 type LoginStatus byte
 
 const (
@@ -1732,19 +1735,39 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 	// 〔中文注释〕: 新增 - 处理用户点击 "玩" 抽奖游戏
 	case "lottery_play":
+		chatId := callbackQuery.Message.GetChat().ID // 【确保 chatId 在函数开始时被初始化】
+		messageId := callbackQuery.Message.GetMessageID() // 获取原消息 ID
+		
 		// 〔中文注释〕: 首先，回应 TG 的回调请求，告诉用户机器人已收到操作。
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "〔X-Panel 小白哥〕正在为您摇奖，请稍后......")
 
 		// 这条消息会永久停留在聊天窗口，作为等待提示。
         t.editMessageTgBot(
-            callbackQuery.Message.GetChat().ID, 
-            callbackQuery.Message.GetMessageID(), 
+            chatId, 
+            messageId, 
         "⏳ **抽奖结果生成中...**\n\n请耐心等待 5 秒......\n\n〔X-Panel 小白哥〕马上为您揭晓！",
         // 【关键】: 不传入键盘参数，自动移除旧键盘
         )
+
+		// 〔中文注释〕: 发送一个新的消息（动画贴纸），作为视觉上的动态进度提示。
+		stickerMessage, err := t.SendStickerToTgbot(chatId, LOTTERY_STICKER_ID)
+		var stickerMessageID int // 用于存储贴纸消息的 ID，以便后续删除
+		if err != nil {
+			logger.Warningf("发送抽奖动画贴纸失败: %v", err)
+			// 即使失败，也继续执行，不中断流程
+		} else {
+			// 成功发送后，记录下贴纸消息的 ID
+			stickerMessageID = stickerMessage.MessageID
+		}
     
-        // 【保持】: 程序在此处暂停 5 秒
-        time.Sleep(5000 * time.Millisecond) 
+        // 【保持】: 程序在此处暂停 5 秒，用户可以看到动画。
+        time.Sleep(5000 * time.Millisecond) 
+
+		// 【新增：5秒后，删除动画贴纸】
+		if stickerMessageID != 0 {
+			// 〔中文注释〕: 抽奖结束后，删除刚才发送的动态贴纸消息，保持界面整洁。
+			t.deleteMessageTgBot(chatId, stickerMessageID)
+		}
     
         // 程序将在 5 秒后，继续执行下面的逻辑：
 		userID := callbackQuery.From.ID
@@ -4660,4 +4683,28 @@ func (t *Tgbot) getNewsBriefingWithFallback() (string, error) {
 
 	// 所有来源都失败，返回一个友好的错误信息
 	return "", errors.New("所有新闻来源均获取失败，请检查网络或 API 状态")
+}
+
+// 【新增辅助函数】: 发送贴纸到指定的聊天 ID，并返回消息对象（用于获取 ID）
+func (t *Tgbot) SendStickerToTgbot(chatId int64, fileId string) (*telego.Message, error) {
+	// 使用 telego.WithSticker() 简化 File ID 发送
+	sticker := tu.Sticker(tu.ID(chatId), tu.File(fileId))
+	
+	msg, err := t.bot.SendSticker(sticker)
+	if err != nil {
+		logger.Errorf("发送贴纸失败到聊天 ID %d: %v", chatId, err)
+		return nil, err
+	}
+	return msg, nil
+}
+
+// 【新增辅助函数】: 删除指定消息（用于删除动画贴纸）
+func (t *Tgbot) deleteMessageTgBot(chatId int64, messageId int) {
+	deleteMsg := tu.DeleteMessage(tu.ID(chatId), messageId)
+	
+	err := t.bot.DeleteMessage(deleteMsg)
+	if err != nil {
+		// 删除失败通常是权限问题，记录日志但不中断后续流程
+		logger.Warningf("删除消息 %d 失败，在聊天 ID %d 中: %v", messageId, chatId, err)
+	}
 }
