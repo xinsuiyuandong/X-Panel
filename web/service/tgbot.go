@@ -1759,7 +1759,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 			if hasWon {
 				// 〔中文注释〕: 如果已经中奖，则告知用户并结束。
-				t.editMessageTgBot(chatId, callbackQuery.Message.GetMessageID(), "您今天已经中过奖啦，请明天再来！贪心可是不好的哦~")
+				t.editMessageTgBot(chatId, callbackQuery.Message.GetMessageID(), "您今天已经中过奖啦，请明天再来！\n\n贪心可是不好的哦~")
 				return
 			}
 
@@ -1769,7 +1769,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			// 〔中文注释〕: 如果中奖了（不是 "未中奖" 或 "错误"）。
 			if prize != "未中奖" && prize != "错误" {
 			// 〔中文注释〕: 拼接最终的中奖消息，包含兑奖说明。
-			finalMessage := resultMessage + "\n\n**兑奖说明**：请截图此消息，并联系管理员进行兑奖。\n\n〔X-Panel 面板〕交流群：https://t.me/XUI_CN"
+			finalMessage := resultMessage + "\n\n**兑奖说明**：请截图此消息，\n\n并联系管理员进行兑奖。\n\n〔X-Panel 面板〕交流群：\n\n--->> https://t.me/XUI_CN"
 					
 			// 〔中文注释〕: 记录中奖结果 (调用您在 database 中实现的函数)。
 			err := database.RecordUserWin(userID, prize)
@@ -2169,33 +2169,33 @@ func (t *Tgbot) runLotteryDraw() (prize string, message string) {
     }
 	roll := n.Int64()
 
-	// 〔中文注释〕: 设置不同奖项的中奖概率。
-	// 一等奖: 1/1000 (0.1%)
-	if roll < 1 { 
+	// 〔中文注释〕: 设置不同奖项的中奖概率。总中奖概率：3%+8%+12%+20%=43% 。
+	// 一等奖: 30/1000 (3%)
+	if roll < 30 { 
 		prize = "一等奖"
 		message = "🎉 **天选之人！恭喜您抽中【一等奖】！** 🎉\n\n请联系管理员兑换神秘大奖！"
 		return
 	}
-    // 二等奖: 10/1000 (1%)
-	if roll < 11 { 
+    // 二等奖: 80/1000 (8%)，累计上限 110
+	if roll < 110 { 
 		prize = "二等奖"
 		message = "🎊 **欧气满满！恭喜您抽中【二等奖】！** 🎊\n\n请联系管理员兑换牛逼奖品！"
 		return
 	}
-    // 三等奖: 50/1000 (5%)
-	if roll < 61 { 
+    // 三等奖: 120/1000 (12%)，累计上限 230
+	if roll < 230 { 
 		prize = "三等奖"
 		message = "🎁 **运气不错！恭喜您抽中【三等奖】！** 🎁\n\n请联系管理员兑换小惊喜！"
 		return
 	}
-    // 安慰奖: 200/1000 (20%)
-	if roll < 261 { 
+    // 安慰奖: 200/1000 (20%)，累计上限 430
+	if roll < 430 { 
 		prize = "安慰奖"
 		message = "👍 **重在参与！恭喜您抽中【安慰奖】！** 👍\n\n请联系管理员兑换鼓励奖！"
 		return
 	}
 
-	// 〔中文注释〕: 如果未中任何奖项。
+	// 〔中文注释〕: 如果未中任何奖项。未中奖概率 57% 。
 	prize = "未中奖"
 	message = "😕 **谢谢参与**倒霉的宝子。\n\n很遗憾，本次您未中奖，明天再来试试吧！"
 	return
@@ -2204,15 +2204,15 @@ func (t *Tgbot) runLotteryDraw() (prize string, message string) {
 // 〔中文注释〕: 新增函数，用于发送抽奖游戏邀请。
 func (t *Tgbot) sendLotteryGameInvitation() {
 	// 〔中文注释〕: 构建邀请消息和内联键盘。
-	msg := "🎰 **每日幸运抽奖游戏**\n\n-->您想试试今天的手气吗？"
+	msg := "-----🎉 福利区 🎉-----\n\n✨ **每日幸运抽奖游戏**\n\n-->您想试试今天的手气吗？"
 
 	// 〔中文注释〕: "lottery_play" 和 "lottery_skip" 将作为回调数据，用于后续处理。
 	inlineKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("玩，我要赢奖品/萝莉！！！").WithCallbackData(t.encodeQuery("lottery_play")),
+			tu.InlineKeyboardButton("🤩玩，我要赢奖品/萝莉！！！").WithCallbackData(t.encodeQuery("lottery_play")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("劳资不玩，我要看美图......").WithCallbackData(t.encodeQuery("lottery_skip")),
+			tu.InlineKeyboardButton("❌劳资不玩，我要看美图......").WithCallbackData(t.encodeQuery("lottery_skip")),
 		),
 	)
 
