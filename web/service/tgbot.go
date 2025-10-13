@@ -1742,19 +1742,21 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 	// 〔中文注释〕: 新增 - 处理用户点击 "玩" 抽奖游戏
 	case "lottery_play":
+		// 确保本次 Shuffle 是随机的。
+		rng.Seed(time.Now().UnixNano()) 
 		chatId := callbackQuery.Message.GetChat().ID // 【确保 chatId 在函数开始时被初始化】
 		messageId := callbackQuery.Message.GetMessageID() // 获取原消息 ID
 		
 		// 〔中文注释〕: 首先，回应 TG 的回调请求，告诉用户机器人已收到操作。
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "〔X-Panel 小白哥〕正在为您摇奖，请稍后......")
-
+		
 		// 这条消息会永久停留在聊天窗口，作为等待提示。
-        t.editMessageTgBot(
-            chatId, 
-            messageId, 
-        "⏳ **抽奖结果生成中...**\n\n请耐心等待 5 秒......\n\n〔X-Panel 小白哥〕马上为您揭晓！",
-        // 【关键】: 不传入键盘参数，自动移除旧键盘
-        )
+		t.editMessageTgBot(
+			chatId,
+			messageId, 
+			     "⏳ **抽奖结果生成中...**\n\n请耐心等待 5 秒......\n\n〔X-Panel 小白哥〕马上为您揭晓！",
+                 // 【关键】: 不传入键盘参数，自动移除旧键盘
+		)
 
 		// --- 【发送动态贴纸（实现随机、容错、不中断）】 ---
 		var stickerMessageID int // 用于存储成功发送的贴纸消息 ID
@@ -1780,8 +1782,8 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			logger.Warningf("尝试发送贴纸 %s 失败: %v", stickerID, err)
 		}
     
-        // 【保持】: 程序在此处暂停 5 秒，用户可以看到动画。
-        time.Sleep(5000 * time.Millisecond) 
+		// 【保持】: 程序在此处暂停 5 秒，用户可以看到动画。
+		time.Sleep(5000 * time.Millisecond) 
 
 		// 【新增：5秒后，删除动画贴纸】
 		if stickerMessageID != 0 {
