@@ -1848,19 +1848,19 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	 case "oneclick_reality":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 正在创建 Vless + TCP + Reality 节点...")
-		 t.SendMsgToTgbot(chatId, "🚀 正在远程创建----->>>>\n\n【Vless + TCP + Reality】节点，请稍候...")
+		 t.SendMsgToTgbot(chatId, "🚀 正在远程创建  ------->>>>\n\n【Vless + TCP + Reality】节点，请稍候......")
 		 t.remoteCreateOneClickInbound("reality", chatId)
 
 	 case "oneclick_xhttp_reality":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "⚡ 正在创建 Vless + XHTTP + Reality 节点...")
-		 t.SendMsgToTgbot(chatId, "⚡ 正在远程创建----->>>>\n\n【Vless + XHTTP + Reality】节点，请稍候...")
+		 t.SendMsgToTgbot(chatId, "⚡ 正在远程创建  ------->>>>\n\n【Vless + XHTTP + Reality】节点，请稍候......")
 		 t.remoteCreateOneClickInbound("xhttp_reality", chatId)	
 
 	 case "oneclick_tls":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🛡️ 正在创建 Vless Encryption + XHTTP + TLS 节点...")
-		 t.SendMsgToTgbot(chatId, "🛡️ 正在远程创建----->>>>\n\n【Vless Encryption + XHTTP + TLS】节点，请稍候...")
+		 t.SendMsgToTgbot(chatId, "🛡️ 正在远程创建  ------->>>>\n\n【Vless Encryption + XHTTP + TLS】节点，请稍候......")
 		 t.remoteCreateOneClickInbound("tls", chatId)
 
 	 case "oneclick_switch_vision":
@@ -3377,7 +3377,7 @@ func (t *Tgbot) remoteCreateOneClickInbound(configType string, chatId int64) {
 	} else if configType == "tls" {
 		newInbound, ufwWarning, err = t.buildTlsInbound()
 	} else if configType == "switch_vision" { // 【新增】: 处理开发中的选项
-		t.SendMsgToTgbot(chatId, "此协议组合的功能还在开发中 ............")
+		t.SendMsgToTgbot(chatId, "此协议组合的功能还在开发中 ............暂不可用...")
 		return // 【中文注释】: 直接返回，不执行任何创建操作
 	} else {
 		err = errors.New("未知的配置类型")
@@ -3833,7 +3833,7 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 
 	// --- 3. 构造包含所有信息并严格遵循格式的描述消息 ---
 	baseCaption := fmt.Sprintf(
-		"入站备注（用户 Email）：\n\n----->>  `%s`\n\n对应端口号：\n\n----->>  `%s`\n\n协议类型：\n\n`%s`\n\n设备限制：0（无限制）\n\n生成时间：\n\n`%s`",
+		"入站备注（用户 Email）：\n\n------->>>  `%s`\n\n对应端口号：\n\n------->>>  `%d`\n\n协议类型：\n\n`%s`\n\n设备限制：0（无限制）\n\n生成时间：\n\n`%s`",
 		inbound.Remark,
 		inbound.Port,
 		linkType,
