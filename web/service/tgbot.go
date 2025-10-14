@@ -1848,25 +1848,25 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	 case "oneclick_reality":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🚀 正在创建 Vless + TCP + Reality 节点...")
-		 t.SendMsgToTgbot(chatId, "🚀 正在远程创建【Vless + TCP + Reality】节点，请稍候...")
+		 t.SendMsgToTgbot(chatId, "🚀 正在远程创建----->>>>\n\n【Vless + TCP + Reality】节点，请稍候...")
 		 t.remoteCreateOneClickInbound("reality", chatId)
 
 	 case "oneclick_xhttp_reality":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "⚡ 正在创建 Vless + XHTTP + Reality 节点...")
-		 t.SendMsgToTgbot(chatId, "⚡ 正在远程创建【Vless + XHTTP + Reality】节点，请稍候...")
+		 t.SendMsgToTgbot(chatId, "⚡ 正在远程创建----->>>>\n\n【Vless + XHTTP + Reality】节点，请稍候...")
 		 t.remoteCreateOneClickInbound("xhttp_reality", chatId)	
 
 	 case "oneclick_tls":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🛡️ 正在创建 Vless Encryption + XHTTP + TLS 节点...")
-		 t.SendMsgToTgbot(chatId, "🛡️ 正在远程创建【Vless Encryption + XHTTP + TLS】节点，请稍候...")
+		 t.SendMsgToTgbot(chatId, "🛡️ 正在远程创建----->>>>\n\n【Vless Encryption + XHTTP + TLS】节点，请稍候...")
 		 t.remoteCreateOneClickInbound("tls", chatId)
 
 	 case "oneclick_switch_vision":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ...........")
-		 t.SendMsgToTgbot(chatId, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ........，暂不可用...")
+		 t.SendMsgToTgbot(chatId, "🌀 Switch + Vision Seed 协议组合的功能还在开发中 ........")
 		 t.remoteCreateOneClickInbound("switch_vision", chatId)	
 
 	 case "subconverter_install":
@@ -3833,9 +3833,9 @@ func (t *Tgbot) SendOneClickConfig(inbound *model.Inbound, inFromPanel bool, tar
 
 	// --- 3. 构造包含所有信息并严格遵循格式的描述消息 ---
 	baseCaption := fmt.Sprintf(
-		"入站备注：\n\n`%s`\n\n用户 Email：\n\n`%s`\n\n协议类型：\n\n`%s`\n\n设备限制：0（无限制）\n\n生成时间：\n\n`%s`",
+		"入站备注（用户 Email）：\n\n----->>  `%s`\n\n对应端口号：\n\n----->>  `%s`\n\n协议类型：\n\n`%s`\n\n设备限制：0（无限制）\n\n生成时间：\n\n`%s`",
 		inbound.Remark,
-		inbound.Remark, // 默认使用 Remark 作为 Email
+		inbound.Port,
 		linkType,
 		now,
 	)
@@ -4076,13 +4076,6 @@ func (t *Tgbot) saveLinkToHistory(linkType string, link string) {
 	database.Checkpoint()
 }
 
-// 需要的 imports（合并到文件顶部）：
-// "fmt"
-// "strings"
-// th "github.com/mymmrac/telego/telegohandler"
-// tu "github.com/mymmrac/telego/telegoutil"
-// "github.com/mymmrac/telego"
-
 func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) error {
     // 1) 确保 Message 可访问 —— 注意必须调用 cq.Message.Message() 而不是直接访问 .Message
     if cq.Message == nil || cq.Message.Message == nil {
@@ -4121,7 +4114,7 @@ func (t *Tgbot) handleCallbackQuery(ctx *th.Context, cq telego.CallbackQuery) er
         case "tls":
             creationMessage = "🛡️ Vless Encryption + XHTTP + TLS"
 		case "switch_vision": // 【新增】: 为占位按钮提供单独的提示
-			t.SendMsgToTgbot(chatIDInt64, "此协议组合的功能还在开发中 ............")
+			t.SendMsgToTgbot(chatIDInt64, "此协议组合的功能还在开发中 ............暂不可用...")
 			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(cq.ID).WithText("开发中..."))
 			return nil
         default:
