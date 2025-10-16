@@ -1754,7 +1754,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.editMessageTgBot(
 			chatId,
 			messageId,
-			"⏳ **抽奖结果生成中...**\n\n----->>请耐心等待 5 秒......\n\n〔X-Panel 小白哥〕马上为您揭晓！",
+			"⏳ **抽奖结果生成中...**\n\n------->>>请耐心等待 5 秒......\n\n〔X-Panel 小白哥〕马上为您揭晓！",
 			// 【关键】: 不传入键盘参数，自动移除旧键盘
 		)
 
