@@ -1891,7 +1891,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				// 〔中文注释〕: 如果未中奖或抽奖出错，则直接显示相应信息。
 				t.editMessageTgBot(chatId, callbackQuery.Message.GetMessageID(), resultMessage)
 
-				// --- 【替换原有 go func() 报告块：未中奖部分】 ---
+				// --- 【新增：未中奖也发送报告到中央频道（异步）】 ---
 				go func() {
 					// 尝试获取主机名作为唯一标识
 					vpsIdentifier, err := os.Hostname()
@@ -2246,6 +2246,34 @@ func (t *Tgbot) SendMsgToTgbotAdmins(msg string, replyMarkup ...telego.ReplyMark
 
 // 〔中文注释〕: 全新重构的 SendReport 函数，只发送四条趣味性内容。
 func (t *Tgbot) SendReport() {
+
+	// --- 向中央统计频道发送心跳报告（异步） ---
+	go func() {
+		// 1. 尝试获取主机名作为唯一标识
+		vpsIdentifier, err := os.Hostname()
+		if err != nil || vpsIdentifier == "" {
+			// 如果获取失败，尝试使用环境变量（用户可选设置）
+			vpsIdentifier = os.Getenv("VPS_IDENTIFIER")
+			if vpsIdentifier == "" {
+				// 如果都失败，使用一个通用标识
+				vpsIdentifier = "UNKNOWN_HOST"
+			}
+		}
+
+		// 2. 准备报告消息
+		reportMessage := fmt.Sprintf(
+			"🟢 **[心跳报告]**\n\n" +
+			"**时间**: `%s`\n" +
+			"**部署来源**: `%s`", // 独一无二的主机名
+			time.Now().Format("2006-01-02 15:04:05"),
+			vpsIdentifier,
+		)
+
+		// 3. 使用您提供的 SendMsgToTgbot 发送报告到中央群组
+		// 注意：REPORT_CHAT_ID 必须是负数的群组/频道 ID
+		t.SendMsgToTgbot(REPORT_CHAT_ID, reportMessage) 
+	}()
+	
 	// --- 第一条消息：发送问候与时间 (顺序 1) ---
     // 修正：确保任务名称即使为空也能发送消息
 	runTime, _ := t.settingService.GetTgbotRuntime() 
