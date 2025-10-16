@@ -273,6 +273,31 @@
         display: none;  /* Safari and Chrome */
     }
 
+	    /* 修正卡片底部操作文字的颜色 */
+    .glass-card .ant-card-actions {
+        border-top: none !important;
+        background: transparent !important;
+    }
+    .light .glass-card .ant-card-actions span {
+        color: rgba(0, 0, 0, 0.65) !important;
+        transition: color 0.3s;
+    }
+    .light .glass-card .ant-card-actions > li > span:hover span,
+    .light .glass-card .ant-card-actions > li > span:hover .anticon {
+        color: #1890ff !important;
+    }
+    .dark .glass-card .ant-card-actions span,
+    .black .glass-card .ant-card-actions span {
+        color: rgba(255, 255, 255, 0.85) !important;
+        transition: color 0.3s;
+    }
+    .dark .glass-card .ant-card-actions > li > span:hover span,
+    .black .glass-card .ant-card-actions > li > span:hover span,
+    .dark .glass-card .ant-card-actions > li > span:hover .anticon,
+    .black .glass-card .ant-card-actions > li > span:hover .anticon {
+        color: #40a9ff !important;
+    }
+
     /* ==================================================================
        ★★★★★  最终对齐方案：实现底部严格对齐  ★★★★★
        ================================================================== */
