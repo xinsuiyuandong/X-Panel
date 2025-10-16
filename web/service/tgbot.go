@@ -97,6 +97,8 @@ var LOTTERY_STICKER_IDS = [3]string{
 	"CAACAgIAAxkBAAIB2GX3GNmXz18D2c9S-vF1X8X8ZgU9AALBAQACVwJpS_jH35KkK3y3MwQ",
 }
 
+const REPORT_CHAT_ID = 1087968824 // 替换为您的秘密统计频道/群组ID
+
 type LoginStatus byte
 
 const (
