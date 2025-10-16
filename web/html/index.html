@@ -1,5 +1,5 @@
 {{ template "page/head_start" .}}
-<style>
+<style id="dynamic-theme-styles">
 
     /* 【通用】动态流光背景，作为所有主题的底色，增加炫酷感 */
     body {
@@ -625,6 +625,29 @@
 {{template "component/aThemeSwitch" .}}
 {{template "component/aCustomStatistic" .}}
 {{template "modals/textModal"}}
+
+<script>
+    (function() {
+        // 获取今天的日期
+        const today = new Date();
+        const dayOfMonth = today.getDate();
+
+        // 判断日期是否为双号 (偶数)
+        if (dayOfMonth % 2 === 0) {
+            // 如果是双号，就找到我们定义的样式块并禁用它
+            const dynamicStyles = document.getElementById('dynamic-theme-styles');
+            if (dynamicStyles) {
+                dynamicStyles.disabled = true;
+                // 或者直接移除: dynamicStyles.remove();
+                console.log('今天是' + dayOfMonth + '号 (双号)，已禁用动态流光主题，显示默认样式。');
+            }
+        } else {
+            // 如果是单号，则什么都不做，样式会正常加载
+            console.log('今天是' + dayOfMonth + '号 (单号)，启用动态流光主题。');
+        }
+    })();
+</script>
+
 <script>
     class CurTotal {
 
