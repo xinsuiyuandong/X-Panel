@@ -1,5 +1,5 @@
 {{ template "page/head_start" .}}
-<style id="dynamic-theme-styles">
+<style id="cool-theme-styles">
 
     /* 【通用】动态流光背景，作为所有主题的底色，增加炫酷感 */
     body {
@@ -220,6 +220,129 @@
     }
 	
 </style>
+
+<style id="default-theme-styles">
+    /* 核心间距：确保内容区与侧边栏有间距 (来自您的新要求) */
+    @media (min-width: 769px) {
+        .ant-layout-content {
+            margin: 24px 16px;
+        }
+    }
+    @media (max-width: 768px) {
+        .ant-tabs-nav .ant-tabs-tab {
+            margin: 0;
+            padding: 12px .5rem;
+        }
+    }
+    
+    /* 其他您提供的通用样式 */
+    .ant-tabs-bar { margin: 0; }
+    .ant-list-item { display: block; }
+    .alert-msg { color: rgb(194, 117, 18); font-weight: normal; font-size: 16px; padding: .5rem 1rem; text-align: center; background: rgb(255 145 0 / 15%); margin: 1.5rem 2.5rem 0rem; border-radius: .5rem; transition: all 0.5s; animation: signal 3s cubic-bezier(0.18, 0.89, 0.32, 1.28) infinite; }
+    .alert-msg:hover { cursor: default; transition-duration: .3s; animation: signal 0.9s ease infinite; }
+    @keyframes signal { 0% { box-shadow: 0 0 0 0 rgba(194, 118, 18, 0.5); } 50% { box-shadow: 0 0 0 6px rgba(0, 0, 0, 0); } 100% { box-shadow: 0 0 0 6px rgba(0, 0, 0, 0); } }
+    .alert-msg>i { color: inherit; font-size: 24px; }
+    .dark .ant-input-password-icon { color: var(--dark-color-text-primary); }
+    .ant-collapse-content-box .ant-alert { margin-block-end: 12px; }
+
+    /* ==================================================================
+       ★ 综合修正：解决之前所有问题 (颜色、下划线、滚动条)
+       ================================================================== */
+
+    /* 移除卡片标题的下边框 */
+    .glass-card .ant-card-head {
+        border-bottom: none !important;
+    }
+
+    /* 移除卡片底部操作的顶部边框 */
+    .glass-card .ant-card-actions {
+        border-top: none !important;
+    }
+    
+    .glass-card:hover {
+        transform: translateY(-5px);
+        transition: transform 0.3s ease;
+    }
+
+    /* 隐藏【X-Panel面板】卡片内容区产生的横向滚动条 */
+    .glass-card .ant-card-body div[style*="overflow-x: auto"] {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+    .glass-card .ant-card-body div[style*="overflow-x: auto"]::-webkit-scrollbar {
+        display: none;  /* Safari and Chrome */
+    }
+
+    /* ==================================================================
+       ★★★★★  最终对齐方案：实现底部严格对齐  ★★★★★
+       ================================================================== */
+   
+    /* 外层容器：确保内层 Ant-Row 可以被拉伸 (保持不变) */
+    .main-content-row {
+        display: flex;
+        flex-direction: column; 
+        flex-grow: 1;
+    }
+
+    /* 内层容器：包含两列的 Ant-Row，强制其为 flex 布局并拉伸子项 */
+    .main-content-row > .ant-row { 
+        display: flex !important;
+        align-items: stretch !important; /* 核心：使所有列（Ant-Col）等高 */
+        flex-grow: 1;
+        flex-wrap: wrap; /* 确保在移动设备上可以正常换行 */
+    }
+
+    /* 目标列（Ant-Col）：设置为 flex 布局，以便控制其内部卡片的排列 */
+    .main-content-row > .ant-row > .ant-col {
+        display: flex;
+        flex-direction: column; 
+    }
+
+    /* 让【右侧】列的最后一个卡片（即 Ant-Col:nth-child(2)）自动伸长，以填补剩余的垂直空间 */
+    .main-content-row > .ant-row > .ant-col:nth-child(2) > .glass-card:last-child {
+        flex-grow: 1; 
+    }
+
+    /* 移除两个主列中，所有卡片或组件的最后一个元素的底部边距，以实现完美对齐 */
+    .main-content-row > .ant-row > .ant-col > *:last-child {
+        margin-bottom: 0 !important;
+    }
+
+    /* 确保被拉伸卡片的内容区域也跟着拉伸，并垂直居中（如果需要） */
+    .main-content-row > .ant-row > .ant-col:nth-child(2) > .glass-card:last-child .ant-card-body {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    /* 【通用】原始的必要样式保留 */
+    .ip-hidden { filter: blur(10px); user-select: none; }
+    .running-animation .ant-badge-status-dot { animation: runningAnimation 1.2s linear infinite; }
+    @keyframes runningAnimation { 0%,50%,100% {transform: scale(1);opacity: 1;} 10% {transform: scale(1.5);opacity: .2;} }
+
+    /* === X-Panel LOGO 标准样式 (无动画) === */
+    .x-panel-logo-text {
+        font-size: 3rem; 
+        font-weight: 900;
+        margin: 0;
+        text-transform: capitalize;
+        letter-spacing: 2px;
+        text-align: center;
+        line-height: 1.2;
+    }
+
+    .x-panel-desc {
+        text-align: center;
+        font-size: 1rem;
+        color: inherit;
+        line-height: 1.5;
+    }
+    .x-panel-desc b {
+        font-weight: normal;
+    }
+</style>
+
 {{ template "page/head_end" .}}
 
 {{ template "page/body_start" .}}
@@ -628,22 +751,21 @@
 
 <script>
     (function() {
-        // 获取今天的日期
-        const today = new Date();
-        const dayOfMonth = today.getDate();
+        // 获取今天的日期 (1-31)
+        const dayOfMonth = new Date().getDate();
 
-        // 判断日期是否为双号 (偶数)
+        const coolTheme = document.getElementById('cool-theme-styles');
+        const defaultTheme = document.getElementById('default-theme-styles');
+
+        // 判断日期是单号还是双号
         if (dayOfMonth % 2 === 0) {
-            // 如果是双号，就找到我们定义的样式块并禁用它
-            const dynamicStyles = document.getElementById('dynamic-theme-styles');
-            if (dynamicStyles) {
-                dynamicStyles.disabled = true;
-                // 或者直接移除: dynamicStyles.remove();
-                console.log('今天是' + dayOfMonth + '号 (双号)，已禁用动态流光主题，显示默认样式。');
-            }
+            // 今天是双号 (偶数)，启用标准主题，禁用炫酷主题
+            if (coolTheme) coolTheme.disabled = true;
+            console.log('今天是' + dayOfMonth + '号 (双号)，启用【标准布局主题】。');
         } else {
-            // 如果是单号，则什么都不做，样式会正常加载
-            console.log('今天是' + dayOfMonth + '号 (单号)，启用动态流光主题。');
+            // 今天是单号 (奇数)，启用炫酷主题，禁用标准主题
+            if (defaultTheme) defaultTheme.disabled = true;
+            console.log('今天是' + dayOfMonth + '号 (单号)，启用【炫酷动画主题】。');
         }
     })();
 </script>
