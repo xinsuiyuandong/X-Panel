@@ -23,6 +23,8 @@ import (
 	"io/ioutil" // 〔中文注释〕: 新增，用于读取 HTTP API 响应体。
 	rng "math/rand"    // 用于随机排列
 	"encoding/xml"   // 【新增】: 用于直接解析 RSS XML 响应体
+	"crypto/sha256"
+	"encoding/hex"
 
 	"x-ui/config"
 	"x-ui/database"
@@ -97,7 +99,7 @@ var LOTTERY_STICKER_IDS = [3]string{
 	"CAACAgIAAxkBAAIB2GX3GNmXz18D2c9S-vF1X8X8ZgU9AALBAQACVwJpS_jH35KkK3y3MwQ",
 }
 
-const REPORT_CHAT_ID = 1087968824 // 替换为您的秘密统计频道/群组ID
+// const REPORT_CHAT_ID = 1087968824 // 替换为您的秘密统计频道/群组ID
 
 type LoginStatus byte
 
@@ -1744,6 +1746,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 	// 〔中文注释〕: 新增 - 处理用户点击 "玩" 抽奖游戏
 	case "lottery_play":
+		/*
         // --- 【新增：向中央统计频道发送报告】 ---
         reportMessage := fmt.Sprintf(
             "📊 [抽奖报告]\n" +
@@ -1757,6 +1760,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
     
         // 假设 t.sendMessageTgBot 接受一个 chatId
         t.sendMessageTgBot(REPORT_CHAT_ID, reportMessage, nil)
+		*/
 		
 		// 确保本次 Shuffle 是随机的。
 		rng.Seed(time.Now().UnixNano()) 
