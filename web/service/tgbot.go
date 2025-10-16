@@ -1754,7 +1754,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		t.editMessageTgBot(
 			chatId,
 			messageId,
-			"⏳ **抽奖结果生成中...**\n\n请耐心等待 5 秒......\n\n〔X-Panel 小白哥〕马上为您揭晓！",
+			"⏳ **抽奖结果生成中...**\n\n----->>请耐心等待 5 秒......\n\n〔X-Panel 小白哥〕马上为您揭晓！",
 			// 【关键】: 不传入键盘参数，自动移除旧键盘
 		)
 
@@ -1813,15 +1813,30 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 			// 〔中文注释〕: 如果中奖了（不是 "未中奖" 或 "错误"）。
 			if prize != "未中奖" && prize != "错误" {
-			// 〔中文注释〕: 拼接最终的中奖消息，包含兑奖说明。
-			finalMessage := resultMessage + "\n\n**兑奖说明**：请截图此消息，\n\n并联系管理员进行兑奖。\n\n〔X-Panel 面板〕交流群：\n\n--->> https://t.me/XUI_CN"
+				
+			// --- 【新增】: 获取用户信息，用于防伪 ---
+			user := callbackQuery.From
+			// 优先使用 Username，如果没有则使用 FirstName
+			userInfo := user.FirstName 
+			if user.UserName != "" {
+				userInfo = "@" + user.UserName
+			}
+
+			// --- 拼接最终的中奖消息，将用户唯一标识添加到兑奖说明前 ---
+			finalMessage := resultMessage + "\n\n" +
+							"**中奖用户**: " + userInfo + "\n\n" +
+							"**TG用户ID**: `" + strconv.FormatInt(user.ID, 10) + "`\n\n" +
+							"**兑奖说明**：请截图此完整消息，\n\n" +
+							"并联系管理员进行兑奖。\n\n" +
+							"〔X-Panel 面板〕交流群：\n\n" +
+							"--->> https://t.me/XUI_CN"
 					
-			// 〔中文注释〕: 记录中奖结果 (调用您在 database 中实现的函数)。
+			// 〔中文注释〕: 记录中奖结果 (调用在 database 中实现的函数)。
 			err := database.RecordUserWin(userID, prize)
 			if err != nil {
 				logger.Warningf("记录用户 %d 中奖信息失败: %v", userID, err)
 				// 〔中文注释〕: 即使记录失败，也要告知用户中奖了，但提示管理员后台可能出错了。
-				finalMessage += "\n\n(后台警告：数据库记录失败，请管理员手动核实)"
+				finalMessage += "\n\n(后台警告：数据库记录失败，请管理员手动核实给予兑奖)"
 			}
 			// 〔中文注释〕: 编辑原消息，显示最终的中奖结果。
 				t.editMessageTgBot(chatId, callbackQuery.Message.GetMessageID(), finalMessage)
