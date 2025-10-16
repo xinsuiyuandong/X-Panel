@@ -1848,9 +1848,9 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				            "**中奖时间**: " + winningTime + "\n\n" +
 				            "**防伪码 (Hash)**: `" + validationHash + "`\n\n" +
 							"**兑奖说明**：请截图此完整消息，\n\n" +
-							"并联系管理员进行兑奖。\n\n" +
-							"〔X-Panel 面板〕交流群：\n\n" +
-							"--->> https://t.me/XUI_CN"
+							"并联系交流群内管理员进行兑奖。\n\n" +
+							"------------->>>>〔X-Panel 面板〕交流群：\n\n" +
+							"------------->>>> https://t.me/XUI_CN"
 
 			// --- 【向中央统计频道发送报告（异步）】 ---
 			go func() {
