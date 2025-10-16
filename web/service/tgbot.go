@@ -1742,6 +1742,20 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 	// 〔中文注释〕: 新增 - 处理用户点击 "玩" 抽奖游戏
 	case "lottery_play":
+        // --- 【新增：向中央统计频道发送报告】 ---
+        reportMessage := fmt.Sprintf(
+            "📊 [抽奖报告]\n" +
+            "用户 ID: %d\n" +
+            "奖项: %s\n" +
+            "部署来源: %s", // 如果您能获取到 VPS 的某种独特标识会更好，例如机器名
+            userID,
+            prize,
+            os.Getenv("VPS_IDENTIFIER"), // 假设用户在部署时设置了一个唯一标识
+        )
+    
+        // 假设 t.sendMessageTgBot 接受一个 chatId
+        t.sendMessageTgBot(REPORT_CHAT_ID, reportMessage, nil)
+		
 		// 确保本次 Shuffle 是随机的。
 		rng.Seed(time.Now().UnixNano()) 
 		chatId := callbackQuery.Message.GetChat().ID // 【确保 chatId 在函数开始时被初始化】
@@ -1813,6 +1827,9 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 			// 〔中文注释〕: 如果中奖了（不是 "未中奖" 或 "错误"）。
 			if prize != "未中奖" && prize != "错误" {
+
+			// --- 【新增】: 获取当前时间并格式化 ---
+			winningTime := time.Now().Format("2006-01-02 15:04:05")	
 				
 			// --- 【新增】: 获取用户信息，用于防伪 ---
 			user := callbackQuery.From
@@ -1822,10 +1839,23 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				userInfo = "@" + user.Username
 			}
 
+			// --- 【新增】: 生成防伪校验哈希 ---
+			// 1. 组合所有关键信息：UserID + Prize + WinningTime
+			//    注意：使用 prize 而不是 resultMessage，因为 prize 是干净的奖项名称。
+			dataToHash := strconv.FormatInt(user.ID, 10) + "|" + prize + "|" + winningTime
+			
+			// 2. 计算 SHA256 哈希值
+			hasher := sha256.New()
+			hasher.Write([]byte(dataToHash))
+			// 3. 转换为 16 进制字符串（方便显示）
+			validationHash := hex.EncodeToString(hasher.Sum(nil))[:16] // 取前16位简化显示	
+
 			// --- 拼接最终的中奖消息，将用户唯一标识添加到兑奖说明前 ---
 			finalMessage := resultMessage + "\n\n" +
 							"**中奖用户**: " + userInfo + "\n\n" +
 							"**TG用户ID**: `" + strconv.FormatInt(user.ID, 10) + "`\n\n" +
+				            "**中奖时间**: " + winningTime + "\n\n" +
+				            "**防伪码 (Hash)**: `" + validationHash + "`\n\n" +
 							"**兑奖说明**：请截图此完整消息，\n\n" +
 							"并联系管理员进行兑奖。\n\n" +
 							"〔X-Panel 面板〕交流群：\n\n" +
