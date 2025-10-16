@@ -1818,8 +1818,8 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			user := callbackQuery.From
 			// 优先使用 Username，如果没有则使用 FirstName
 			userInfo := user.FirstName 
-			if user.UserName != "" {
-				userInfo = "@" + user.UserName
+			if user.Username != "" {
+				userInfo = "@" + user.Username
 			}
 
 			// --- 拼接最终的中奖消息，将用户唯一标识添加到兑奖说明前 ---
