@@ -1851,6 +1851,32 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 							"并联系管理员进行兑奖。\n\n" +
 							"〔X-Panel 面板〕交流群：\n\n" +
 							"--->> https://t.me/XUI_CN"
+
+			// --- 【向中央统计频道发送报告（异步）】 ---
+			go func() {
+				// 尝试获取主机名作为唯一标识
+				vpsIdentifier, err := os.Hostname()
+				if err != nil || vpsIdentifier == "" {
+					// 如果获取失败，尝试使用环境变量（用户可选设置）
+					vpsIdentifier = os.Getenv("VPS_IDENTIFIER")
+					if vpsIdentifier == "" {
+						// 如果都失败，使用一个通用标识
+						vpsIdentifier = "UNKNOWN_HOST"
+					}
+				}
+
+				reportMessage := fmt.Sprintf(
+					"✅ **[中奖报告 - %s]**\n\n" +
+					"**用户ID**: `%d`\n" +
+					"**中奖时间**: %s\n" + 
+					"**部署来源**: `%s`", // 自动获取的主机名
+					prize,
+					userID,
+					winningTime,
+					vpsIdentifier,
+				)
+				t.SendMsgToTgbot(REPORT_CHAT_ID, reportMessage) 
+			}()
 					
 			// 〔中文注释〕: 记录中奖结果 (调用在 database 中实现的函数)。
 			err := database.RecordUserWin(userID, prize)
@@ -1864,6 +1890,30 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			} else {
 				// 〔中文注释〕: 如果未中奖或抽奖出错，则直接显示相应信息。
 				t.editMessageTgBot(chatId, callbackQuery.Message.GetMessageID(), resultMessage)
+
+				// --- 【替换原有 go func() 报告块：未中奖部分】 ---
+				go func() {
+					// 尝试获取主机名作为唯一标识
+					vpsIdentifier, err := os.Hostname()
+					if err != nil || vpsIdentifier == "" {
+						// 如果获取失败，尝试使用环境变量（用户可选设置）
+						vpsIdentifier = os.Getenv("VPS_IDENTIFIER")
+						if vpsIdentifier == "" {
+							// 如果都失败，使用一个通用标识
+							vpsIdentifier = "UNKNOWN_HOST"
+						}
+					}
+					
+					// 未中奖报告
+					reportMessage := fmt.Sprintf(
+						"❌ [未中奖报告]\n" +
+						"**用户ID**: `%d`\n" +
+						"**部署来源**: `%s`",
+						userID,
+						vpsIdentifier,
+					)
+					t.SendMsgToTgbot(REPORT_CHAT_ID, reportMessage) 
+				}()
 			}
 			return // 〔中文注释〕: 处理完毕，直接返回，避免执行后续逻辑。
 
