@@ -273,7 +273,7 @@
         display: none;  /* Safari and Chrome */
     }
 
-	    /* 修正卡片底部操作文字的颜色 */
+	/* 修正卡片底部操作文字的颜色 */
     .glass-card .ant-card-actions {
         border-top: none !important;
         background: transparent !important;
@@ -296,6 +296,20 @@
     .dark .glass-card .ant-card-actions > li > span:hover .anticon,
     .black .glass-card .ant-card-actions > li > span:hover .anticon {
         color: #40a9ff !important;
+    }
+
+	/* 通用字体颜色覆盖 */
+    .light .glass-card * {
+        color: #2c3e50 !important;
+    }
+    .dark .glass-card *,
+    .black .glass-card * {
+        color: #ecf0f1 !important;
+    }
+    .light .glass-card .ant-statistic-content-value,
+    .dark .glass-card .ant-statistic-content-value,
+    .black .glass-card .ant-statistic-content-value {
+        color: inherit !important;
     }
 
     /* ==================================================================
