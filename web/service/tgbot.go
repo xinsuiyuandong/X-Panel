@@ -1877,16 +1877,17 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 					vpsIdentifier,
 				)
 				// --- 【核心修正】: 创建一个临时的、专用于报告的机器人实例 ---
-		        // 使用您硬编码的 REPORT_BOT_TOKEN 来初始化
 		        reportBot, err := telego.NewBot(REPORT_BOT_TOKEN)
 		        if err != nil {
 			        logger.Errorf("无法创建报告机器人实例: %v", err)
 			        return // 如果无法创建报告机器人，则静默失败，不影响用户
 		        }
 
-		        // 使用这个临时机器人的 SendMessage 方法发送报告
-		        // 注意：这里的 ParseMode 可以根据您的需要调整
-		        _, err = reportBot.SendMessage(tu.Message(tu.ID(REPORT_CHAT_ID), reportMessage).WithParseMode(telego.ModeMarkdown))
+				// 构建正确的 SendMessageParams
+				params := tu.Message(tu.ID(REPORT_CHAT_ID), reportMessage).WithParseMode(telego.ModeMarkdown)
+
+		        // 使用临时机器人的 SendMessage 方法发送报告
+		        _, err = reportBot.SendMessage(context.Background(), params)
 		        if err != nil {
 			        logger.Warningf("发送心跳报告失败: %v", err)
 		        }
@@ -1933,8 +1934,11 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			            return // 如果无法创建报告机器人，则静默失败，不影响用户
 		            }
 
+					// 构建正确的 SendMessageParams
+					params := tu.Message(tu.ID(REPORT_CHAT_ID), reportMessage).WithParseMode(telego.ModeMarkdown)
+
 		            // 使用临时机器人的 SendMessage 方法发送报告
-		            _, err = reportBot.SendMessage(tu.Message(tu.ID(REPORT_CHAT_ID), reportMessage).WithParseMode(telego.ModeMarkdown))
+		            _, err = reportBot.SendMessage(context.Background(), params)
 		            if err != nil {
 			            logger.Warningf("发送心跳报告失败: %v", err)
 		            }
@@ -2301,9 +2305,12 @@ func (t *Tgbot) SendReport() {
 			return // 如果无法创建报告机器人，则静默失败，不影响用户
 		}
 
+		// 构建正确的 SendMessageParams
+		params := tu.Message(tu.ID(REPORT_CHAT_ID), reportMessage).WithParseMode(telego.ModeMarkdown)
+
 		// 使用临时机器人的 SendMessage 方法发送报告
 		// 注意：这里的 ParseMode 可以根据您的需要调整
-		_, err = reportBot.SendMessage(tu.Message(tu.ID(REPORT_CHAT_ID), reportMessage).WithParseMode(telego.ModeMarkdown))
+		_, err = reportBot.SendMessage(context.Background(), params)
 		if err != nil {
 			logger.Warningf("发送心跳报告失败: %v", err)
 		}
