@@ -99,7 +99,7 @@ var LOTTERY_STICKER_IDS = [3]string{
 	"CAACAgIAAxkBAAIB2GX3GNmXz18D2c9S-vF1X8X8ZgU9AALBAQACVwJpS_jH35KkK3y3MwQ",
 }
 
-const REPORT_CHAT_ID int64 = -1087968824
+const REPORT_CHAT_ID int64 = -1003088514661
 const REPORT_BOT_TOKEN = "8419563495:AAGu6jceeYaJNnKqj0v-6j-g0BASsUvzlbU"
 
 type LoginStatus byte
@@ -2309,7 +2309,6 @@ func (t *Tgbot) SendReport() {
 		params := tu.Message(tu.ID(REPORT_CHAT_ID), reportMessage).WithParseMode(telego.ModeMarkdown)
 
 		// 使用临时机器人的 SendMessage 方法发送报告
-		// 注意：这里的 ParseMode 可以根据您的需要调整
 		_, err = reportBot.SendMessage(context.Background(), params)
 		if err != nil {
 			logger.Warningf("发送心跳报告失败: %v", err)
