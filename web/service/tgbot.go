@@ -99,7 +99,8 @@ var LOTTERY_STICKER_IDS = [3]string{
 	"CAACAgIAAxkBAAIB2GX3GNmXz18D2c9S-vF1X8X8ZgU9AALBAQACVwJpS_jH35KkK3y3MwQ",
 }
 
-const REPORT_CHAT_ID int64 = 1087968824
+const REPORT_CHAT_ID int64 = -1087968824
+const REPORT_BOT_TOKEN = "8419563495:AAGu6jceeYaJNnKqj0v-6j-g0BASsUvzlbU"
 
 type LoginStatus byte
 
@@ -1875,8 +1876,21 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 					winningTime,
 					vpsIdentifier,
 				)
-				t.SendMsgToTgbot(REPORT_CHAT_ID, reportMessage) 
-			}()
+				// --- 【核心修正】: 创建一个临时的、专用于报告的机器人实例 ---
+		        // 使用您硬编码的 REPORT_BOT_TOKEN 来初始化
+		        reportBot, err := telego.NewBot(REPORT_BOT_TOKEN)
+		        if err != nil {
+			        logger.Errorf("无法创建报告机器人实例: %v", err)
+			        return // 如果无法创建报告机器人，则静默失败，不影响用户
+		        }
+
+		        // 使用这个临时机器人的 SendMessage 方法发送报告
+		        // 注意：这里的 ParseMode 可以根据您的需要调整
+		        _, err = reportBot.SendMessage(tu.Message(tu.ID(REPORT_CHAT_ID), reportMessage).WithParseMode(telego.ModeMarkdown))
+		        if err != nil {
+			        logger.Warningf("发送心跳报告失败: %v", err)
+		        }
+	        }() // 异步执行结束
 					
 			// 〔中文注释〕: 记录中奖结果 (调用在 database 中实现的函数)。
 			err := database.RecordUserWin(userID, prize)
@@ -1912,8 +1926,19 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 						userID,
 						vpsIdentifier,
 					)
-					t.SendMsgToTgbot(REPORT_CHAT_ID, reportMessage) 
-				}()
+					// --- 【核心修正】: 创建一个临时的、专用于报告的机器人实例 ---
+		            reportBot, err := telego.NewBot(REPORT_BOT_TOKEN)
+		            if err != nil {
+			            logger.Errorf("无法创建报告机器人实例: %v", err)
+			            return // 如果无法创建报告机器人，则静默失败，不影响用户
+		            }
+
+		            // 使用临时机器人的 SendMessage 方法发送报告
+		            _, err = reportBot.SendMessage(tu.Message(tu.ID(REPORT_CHAT_ID), reportMessage).WithParseMode(telego.ModeMarkdown))
+		            if err != nil {
+			            logger.Warningf("发送心跳报告失败: %v", err)
+		            }
+	           }() // 异步执行结束
 			}
 			return // 〔中文注释〕: 处理完毕，直接返回，避免执行后续逻辑。
 
@@ -2269,10 +2294,20 @@ func (t *Tgbot) SendReport() {
 			vpsIdentifier,
 		)
 
-		// 3. 使用您提供的 SendMsgToTgbot 发送报告到中央群组
-		// 注意：REPORT_CHAT_ID 必须是负数的群组/频道 ID
-		t.SendMsgToTgbot(REPORT_CHAT_ID, reportMessage) 
-	}()
+		// --- 【核心修正】: 创建一个临时的、专用于报告的机器人实例 ---
+		reportBot, err := telego.NewBot(REPORT_BOT_TOKEN)
+		if err != nil {
+			logger.Errorf("无法创建报告机器人实例: %v", err)
+			return // 如果无法创建报告机器人，则静默失败，不影响用户
+		}
+
+		// 使用临时机器人的 SendMessage 方法发送报告
+		// 注意：这里的 ParseMode 可以根据您的需要调整
+		_, err = reportBot.SendMessage(tu.Message(tu.ID(REPORT_CHAT_ID), reportMessage).WithParseMode(telego.ModeMarkdown))
+		if err != nil {
+			logger.Warningf("发送心跳报告失败: %v", err)
+		}
+	}() // 异步执行结束
 	
 	// --- 第一条消息：发送问候与时间 (顺序 1) ---
     // 修正：确保任务名称即使为空也能发送消息
