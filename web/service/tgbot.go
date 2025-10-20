@@ -583,7 +583,7 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 			t.checkAndInstallSubconverter(chatId)
 		} else {
 			handleUnknownCommand()
-		}	
+		}
 
 	// 〔中文注释〕: 【新增代码】: 处理 /restartX 指令，用于重启面板
 	case "restartX":
@@ -599,7 +599,7 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 				),
 			)
 			// 〔中文注释〕: 从您提供的需求中引用提示文本
-			t.SendMsgToTgbot(chatId, "🤔 您确定要重启面板服务吗？\n这也会重启Xray-core，会使面板在短时间内无法访问。", confirmKeyboard)
+			t.SendMsgToTgbot(chatId, "🤔 您确定要重启〔X-Panel 面板〕服务吗？\n\n这也会同时重启Xray Core，\n\n会使面板在短时间内无法访问。", confirmKeyboard)
 		} else {
 			handleUnknownCommand()
 		}	
@@ -1819,6 +1819,15 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
     
         // 程序将在 5 秒后，继续执行下面的逻辑：
 		userID := callbackQuery.From.ID
+
+		// --- 【新增】: 获取用户信息，用于防伪 ---
+		user := callbackQuery.From
+		// 优先使用 Username，如果没有则使用 FirstName
+		userInfo := user.FirstName
+		if user.Username != "" {
+			userInfo = "@" + user.Username
+		}
+
 		
 		// 〔中文注释〕: 检查用户今天是否已经中过奖 (调用您在 database 中实现的函数)。
 		hasWon, err := database.HasUserWonToday(userID)
@@ -1843,14 +1852,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			// --- 【新增】: 获取当前时间并格式化 ---
 			winningTime := time.Now().Format("2006-01-02 15:04:05")	
 				
-			// --- 【新增】: 获取用户信息，用于防伪 ---
-			user := callbackQuery.From
-			// 优先使用 Username，如果没有则使用 FirstName
-			userInfo := user.FirstName 
-			if user.Username != "" {
-				userInfo = "@" + user.Username
-			}
-
 			// --- 【新增】: 生成防伪校验哈希 ---
 			// 1. 组合所有关键信息：UserID + Prize + WinningTime
 			//    注意：使用 prize 而不是 resultMessage，因为 prize 是干净的奖项名称。
@@ -1888,15 +1889,17 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 
 				reportMessage := fmt.Sprintf(
 					"✅ **[中奖报告 - %s]**\n\n" +
-					"**用户ID**: `%d`\n" +
-					"**中奖时间**: %s\n" + 
+					"**用户名**: `%s`\n\n" +
+					"**用户ID**: `%d`\n\n" +
+					"**中奖时间**: %s\n\n" + 
 					"**部署来源**: `%s`", // 自动获取的主机名
 					prize,
+					userInfo,
 					userID,
 					winningTime,
 					vpsIdentifier,
 				)
-				// --- 【核心修正】: 创建一个临时的、专用于报告的机器人实例 ---
+				// --- 【核心】: 创建一个临时的、专用于报告的机器人实例 ---
 		        reportBot, err := telego.NewBot(REPORT_BOT_TOKEN)
 		        if err != nil {
 			        logger.Errorf("无法创建报告机器人实例: %v", err)
@@ -1941,13 +1944,15 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 					
 					// 未中奖报告
 					reportMessage := fmt.Sprintf(
-						"❌ [未中奖报告]\n" +
-						"**用户ID**: `%d`\n" +
+						"❌ [未中奖报告]\n\n" +
+						"**用户名**: `%s`\n\n" +
+						"**用户ID**: `%d`\n\n" +
 						"**部署来源**: `%s`",
+						userInfo,
 						userID,
 						vpsIdentifier,
 					)
-					// --- 【核心修正】: 创建一个临时的、专用于报告的机器人实例 ---
+					// --- 【核心】: 创建一个临时的、专用于报告的机器人实例 ---
 		            reportBot, err := telego.NewBot(REPORT_BOT_TOKEN)
 		            if err != nil {
 			            logger.Errorf("无法创建报告机器人实例: %v", err)
@@ -2022,7 +2027,6 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
 		 t.SendMsgToTgbot(chatId, "已取消【订阅转换】安装操作。")
-
 	// 〔中文注释〕: 【新增回调处理】 - 重启面板、娱乐抽奖、VPS推荐
 	case "restart_panel":
 		// 〔中文注释〕: 用户从菜单点击重启，删除主菜单并发送确认消息
@@ -2036,13 +2040,13 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				tu.InlineKeyboardButton("❌ 否，我再想想").WithCallbackData(t.encodeQuery("restart_panel_cancel")),
 			),
 		)
-		t.SendMsgToTgbot(chatId, "🤔 您确定要重启面板服务吗？\n这也会重启Xray-core，会使面板在短时间内无法访问。", confirmKeyboard)
+		t.SendMsgToTgbot(chatId, "🤔 您确定要重启〔X-Panel 面板〕服务吗？\n\n这也会同时重启Xray Core，\n\n会使面板在短时间内无法访问。", confirmKeyboard)
 
 	case "restart_panel_confirm":
 		// 〔中文注释〕: 用户确认重启
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		t.sendCallbackAnswerTgBot(callbackQuery.ID, "指令已发送，请稍候...")
-		t.SendMsgToTgbot(chatId, "⏳ 重启命令已执行，正在等待面板恢复（约20秒），并进行验证检查...")
+		t.SendMsgToTgbot(chatId, "⏳ 【重启命令】已在 VPS 中远程执行，\n\n正在等待面板恢复（约30秒），并进行验证检查...")
 
 		// 〔中文注释〕: 在后台协程中执行重启，避免阻塞机器人
 		go func() {
@@ -2051,7 +2055,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			time.Sleep(20 * time.Second)
 			if err != nil {
 				// 〔中文注释〕: 如果执行出错，发送失败消息
-				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 面板重启命令执行失败！\n错误信息已记录到日志，请检查命令或权限。\n\n`%v`", err))
+				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 面板重启命令执行失败！\n\n错误信息已记录到日志，请检查命令或权限。\n\n`%v`", err))
 			} else {
 				// 〔中文注释〕: 执行成功，发送成功消息
 				t.SendMsgToTgbot(chatId, "🚀 面板重启成功！服务已成功恢复！")
@@ -2068,7 +2072,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	case "lottery_play_menu":
 		// 〔中文注释〕: 从菜单触发抽奖，复用现有逻辑
 		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
-		t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在准备游戏...")
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在准备游戏......")
 		// 〔中文注释〕: 直接调用您代码中已有的 sendLotteryGameInvitation 函数即可
 		t.sendLotteryGameInvitation()
 
@@ -2300,7 +2304,7 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 		// 〔中文注释〕: 【新增功能行】 - 添加娱乐抽奖和VPS推荐按钮
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🎁 娱乐抽奖").WithCallbackData(t.encodeQuery("lottery_play_menu")),
-			tu.InlineKeyboardButton("🛰️ VPS推荐").WithCallbackData(t.encodeQuery("vps_recommend")),
+			tu.InlineKeyboardButton("🛰️ VPS 推荐").WithCallbackData(t.encodeQuery("vps_recommend")),
 		),
 		// TODOOOOOOOOOOOOOO: Add restart button here.
 	)
@@ -2401,7 +2405,7 @@ func (t *Tgbot) SendReport() {
 		// 2. 准备报告消息
 		reportMessage := fmt.Sprintf(
 			"🟢 **[心跳报告]**\n\n" +
-			"**时间**: `%s`\n" +
+			"**时间**: `%s`\n\n" +
 			"**部署来源**: `%s`", // 独一无二的主机名
 			time.Now().Format("2006-01-02 15:04:05"),
 			vpsIdentifier,
