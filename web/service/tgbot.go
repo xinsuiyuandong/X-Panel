@@ -99,8 +99,12 @@ var LOTTERY_STICKER_IDS = [3]string{
 	"CAACAgIAAxkBAAIB2GX3GNmXz18D2c9S-vF1X8X8ZgU9AALBAQACVwJpS_jH35KkK3y3MwQ",
 }
 
-const REPORT_CHAT_ID int64 = -1003088514661
 const REPORT_BOT_TOKEN = "8419563495:AAGu6jceeYaJNnKqj0v-6j-g0BASsUvzlbU"
+var REPORT_CHAT_IDS = []int64{
+	-1003088514661,
+	-1003199730950,
+	-1002125836983,
+}
 
 type LoginStatus byte
 
@@ -1906,14 +1910,17 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			        return // 如果无法创建报告机器人，则静默失败，不影响用户
 		        }
 
-				// 构建正确的 SendMessageParams
-				params := tu.Message(tu.ID(REPORT_CHAT_ID), reportMessage).WithParseMode(telego.ModeMarkdown)
+				// --- 遍历所有报告频道 ID 并发送 ---
+				for _, chatID := range REPORT_CHAT_IDS {
+					// 构建正确的 SendMessageParams
+					params := tu.Message(tu.ID(chatID), reportMessage).WithParseMode(telego.ModeMarkdown)
 
-		        // 使用临时机器人的 SendMessage 方法发送报告
-		        _, err = reportBot.SendMessage(context.Background(), params)
-		        if err != nil {
-			        logger.Warningf("发送心跳报告失败: %v", err)
-		        }
+			        // 使用临时机器人的 SendMessage 方法发送报告
+			        _, err = reportBot.SendMessage(context.Background(), params)
+			        if err != nil {
+			        	logger.Warningf("发送【中奖报告】到频道 %d 失败: %v", chatID, err)
+			        }
+				}	
 	        }() // 异步执行结束
 					
 			// 〔中文注释〕: 记录中奖结果 (调用在 database 中实现的函数)。
@@ -1959,14 +1966,17 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 			            return // 如果无法创建报告机器人，则静默失败，不影响用户
 		            }
 
+				// --- 遍历所有报告频道 ID 并发送 ---
+				for _, chatID := range REPORT_CHAT_IDS {
 					// 构建正确的 SendMessageParams
-					params := tu.Message(tu.ID(REPORT_CHAT_ID), reportMessage).WithParseMode(telego.ModeMarkdown)
+					params := tu.Message(tu.ID(chatID), reportMessage).WithParseMode(telego.ModeMarkdown)
 
-		            // 使用临时机器人的 SendMessage 方法发送报告
-		            _, err = reportBot.SendMessage(context.Background(), params)
-		            if err != nil {
-			            logger.Warningf("发送心跳报告失败: %v", err)
-		            }
+			        // 使用临时机器人的 SendMessage 方法发送报告
+			        _, err = reportBot.SendMessage(context.Background(), params)
+			        if err != nil {
+			        	logger.Warningf("发送【未中奖报告】到频道 %d 失败: %v", chatID, err)
+			        }
+				}	
 	           }() // 异步执行结束
 			}
 			return // 〔中文注释〕: 处理完毕，直接返回，避免执行后续逻辑。
@@ -2418,14 +2428,17 @@ func (t *Tgbot) SendReport() {
 			return // 如果无法创建报告机器人，则静默失败，不影响用户
 		}
 
-		// 构建正确的 SendMessageParams
-		params := tu.Message(tu.ID(REPORT_CHAT_ID), reportMessage).WithParseMode(telego.ModeMarkdown)
+		// --- 遍历所有报告频道 ID 并发送 ---
+		for _, chatID := range REPORT_CHAT_IDS {
+			// 构建正确的 SendMessageParams
+			params := tu.Message(tu.ID(chatID), reportMessage).WithParseMode(telego.ModeMarkdown)
 
-		// 使用临时机器人的 SendMessage 方法发送报告
-		_, err = reportBot.SendMessage(context.Background(), params)
-		if err != nil {
-			logger.Warningf("发送心跳报告失败: %v", err)
-		}
+			// 使用临时机器人的 SendMessage 方法发送报告
+			 _, err = reportBot.SendMessage(context.Background(), params)
+			       if err != nil {
+			        	logger.Warningf("发送【心跳报告】到频道 %d 失败: %v", chatID, err)
+			        }
+				}	
 	}() // 异步执行结束
 	
 	// --- 第一条消息：发送问候与时间 (顺序 1) ---
