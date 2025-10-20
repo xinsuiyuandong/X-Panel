@@ -227,6 +227,7 @@ func (t *Tgbot) Start(i18nFS embed.FS) error {
 			{Command: "id", Description: t.I18nBot("tgbot.commands.idDesc")},
 			{Command: "oneclick", Description: "🚀 一键配置节点 (有可选项)"},
 			{Command: "subconverter", Description: "🔄 检测或安装订阅转换"},
+			{Command: "restartX", Description: "♻️ 重启〔X-Panel 面板〕"},
 		},
 	})
 	if err != nil {
@@ -580,6 +581,25 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 		onlyMessage = true
 		if isAdmin {
 			t.checkAndInstallSubconverter(chatId)
+		} else {
+			handleUnknownCommand()
+		}	
+
+	// 〔中文注释〕: 【新增代码】: 处理 /restartX 指令，用于重启面板
+	case "restartX":
+		onlyMessage = true
+		if isAdmin {
+			// 〔中文注释〕: 发送重启确认消息
+			confirmKeyboard := tu.InlineKeyboard(
+				tu.InlineKeyboardRow(
+					tu.InlineKeyboardButton("✅ 是，立即重启").WithCallbackData(t.encodeQuery("restart_panel_confirm")),
+				),
+				tu.InlineKeyboardRow(
+					tu.InlineKeyboardButton("❌ 否，我再想想").WithCallbackData(t.encodeQuery("restart_panel_cancel")),
+				),
+			)
+			// 〔中文注释〕: 从您提供的需求中引用提示文本
+			t.SendMsgToTgbot(chatId, "🤔 您确定要重启面板服务吗？\n这也会重启Xray-core，会使面板在短时间内无法访问。", confirmKeyboard)
 		} else {
 			handleUnknownCommand()
 		}	
@@ -2001,7 +2021,90 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 	 case "cancel_sub_install":
 		 t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
 		 t.sendCallbackAnswerTgBot(callbackQuery.ID, "已取消")
-		 t.SendMsgToTgbot(chatId, "已取消【订阅转换】安装操作。")		
+		 t.SendMsgToTgbot(chatId, "已取消【订阅转换】安装操作。")
+
+	// 〔中文注释〕: 【新增回调处理】 - 重启面板、娱乐抽奖、VPS推荐
+	case "restart_panel":
+		// 〔中文注释〕: 用户从菜单点击重启，删除主菜单并发送确认消息
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "请确认操作")
+		confirmKeyboard := tu.InlineKeyboard(
+			tu.InlineKeyboardRow(
+				tu.InlineKeyboardButton("✅ 是，立即重启").WithCallbackData(t.encodeQuery("restart_panel_confirm")),
+			),
+			tu.InlineKeyboardRow(
+				tu.InlineKeyboardButton("❌ 否，我再想想").WithCallbackData(t.encodeQuery("restart_panel_cancel")),
+			),
+		)
+		t.SendMsgToTgbot(chatId, "🤔 您确定要重启面板服务吗？\n这也会重启Xray-core，会使面板在短时间内无法访问。", confirmKeyboard)
+
+	case "restart_panel_confirm":
+		// 〔中文注释〕: 用户确认重启
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "指令已发送，请稍候...")
+		t.SendMsgToTgbot(chatId, "⏳ 重启命令已执行，正在等待面板恢复（约20秒），并进行验证检查...")
+
+		// 〔中文注释〕: 在后台协程中执行重启，避免阻塞机器人
+		go func() {
+			err := t.serverService.RestartPanel()
+			// 〔中文注释〕: 等待20秒，让面板有足够的时间重启
+			time.Sleep(20 * time.Second)
+			if err != nil {
+				// 〔中文注释〕: 如果执行出错，发送失败消息
+				t.SendMsgToTgbot(chatId, fmt.Sprintf("❌ 面板重启命令执行失败！\n错误信息已记录到日志，请检查命令或权限。\n\n`%v`", err))
+			} else {
+				// 〔中文注释〕: 执行成功，发送成功消息
+				t.SendMsgToTgbot(chatId, "🚀 面板重启成功！服务已成功恢复！")
+			}
+		}()
+
+	case "restart_panel_cancel":
+		// 〔中文注释〕: 用户取消重启
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "操作已取消")
+		// 〔中文注释〕: 发送一个临时消息提示用户，3秒后自动删除
+		t.SendMsgToTgbotDeleteAfter(chatId, "已取消重启操作。", 3)
+
+	case "lottery_play_menu":
+		// 〔中文注释〕: 从菜单触发抽奖，复用现有逻辑
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "正在准备游戏...")
+		// 〔中文注释〕: 直接调用您代码中已有的 sendLotteryGameInvitation 函数即可
+		t.sendLotteryGameInvitation()
+
+	case "vps_recommend":
+		// 〔中文注释〕: 发送您指定的VPS推荐信息
+		t.deleteMessageTgBot(chatId, callbackQuery.Message.GetMessageID())
+		t.sendCallbackAnswerTgBot(callbackQuery.ID, "请查看VPS推荐列表")
+		vpsMessage := `✰若需要购买VPS，以下可供选择（包含AFF）✰
+
+1、搬瓦工GIA高端线路，仅推荐购买GIA套餐：
+https://bandwagonhost.com/aff.php?aff=75015
+
+2、Dmit高端GIA线路：
+https://www.dmit.io/aff.php?aff=9326
+
+3、Sharon亚太优化线路机：
+https://gomami.io/aff.php?aff=174
+
+4、Bagevm优质落地鸡（原生IP全解锁）：
+https://www.bagevm.com/aff.php?aff=754
+
+5、白丝云【4837线路】实惠量大管饱：
+https://cloudsilk.io/aff.php?aff=706
+
+6、RackNerd极致性价比机器：
+https://my.racknerd.com/aff.php?aff=15268&pid=912`
+		// 〔中文注释〕: 发送消息时禁用链接预览，使界面更整洁
+		params := tu.Message(
+			tu.ID(chatId),
+			vpsMessage,
+		).WithLinkPreviewOptions(&telego.LinkPreviewOptions{IsDisabled: true})
+
+		_, err := bot.SendMessage(context.Background(), params)
+		if err != nil {
+			logger.Warning("发送VPS推荐消息失败:", err)
+		}	
 	}
 }
 
@@ -2166,10 +2269,11 @@ func checkAdmin(tgId int64) bool {
 func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 	numericKeyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.SortedTrafficUsageReport")).WithCallbackData(t.encodeQuery("get_sorted_traffic_usage_report")),
+			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.serverUsage")).WithCallbackData(t.encodeQuery("get_usage")),
+			tu.InlineKeyboardButton("♻️ 重启面板").WithCallbackData(t.encodeQuery("restart_panel")),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.serverUsage")).WithCallbackData(t.encodeQuery("get_usage")),
+			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.SortedTrafficUsageReport")).WithCallbackData(t.encodeQuery("get_sorted_traffic_usage_report")),
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.ResetAllTraffics")).WithCallbackData(t.encodeQuery("reset_all_traffics")),
 		),
 		tu.InlineKeyboardRow(
@@ -2192,6 +2296,11 @@ func (t *Tgbot) SendAnswer(chatId int64, msg string, isAdmin bool) {
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.oneClick")).WithCallbackData(t.encodeQuery("oneclick_options")),
 			tu.InlineKeyboardButton(t.I18nBot("tgbot.buttons.subconverter")).WithCallbackData(t.encodeQuery("subconverter_install")),
+		),
+		// 〔中文注释〕: 【新增功能行】 - 添加娱乐抽奖和VPS推荐按钮
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🎁 娱乐抽奖").WithCallbackData(t.encodeQuery("lottery_play_menu")),
+			tu.InlineKeyboardButton("🛰️ VPS推荐").WithCallbackData(t.encodeQuery("vps_recommend")),
 		),
 		// TODOOOOOOOOOOOOOO: Add restart button here.
 	)
