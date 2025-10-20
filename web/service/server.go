@@ -1252,3 +1252,40 @@ func (s *ServerService) OpenPort(port string) {
 		}
 	}()
 }
+
+// ... 此处是您现有的 OpenPort 函数代码，保持不变 ...
+func (s *ServerService) OpenPort(port string) {
+	go func() {
+		// ...
+	}()
+}
+
+
+// 〔中文注释〕: 【新增函数】 - 重启面板服务
+// 这个函数会执行 /usr/bin/x-ui restart 命令来重启整个面板服务。
+func (s *ServerService) RestartPanel() error {
+	// 〔中文注释〕: 定义脚本的绝对路径，确保执行的命令是正确的。
+	scriptPath := "/usr/bin/x-ui"
+
+	// 〔中文注释〕: 检查脚本文件是否存在，增加健壮性。
+	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+		errMsg := fmt.Sprintf("关键脚本文件 `%s` 未找到，无法执行重启。", scriptPath)
+		logger.Error(errMsg)
+		return fmt.Errorf(errMsg)
+	}
+	
+	// 〔中文注释〕: 定义要执行的命令和参数。
+	cmd := exec.Command(scriptPath, "restart")
+
+	// 〔中文注释〕: 执行命令并捕获组合输出（标准输出和标准错误）。
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// 〔中文注释〕: 如果命令执行失败，记录详细日志并返回错误。
+		logger.Errorf("执行 '%s restart' 失败: %v, 输出: %s", scriptPath, err, string(output))
+		return fmt.Errorf("命令执行失败: %v", err)
+	}
+
+	// 〔中文注释〕: 如果命令成功执行，记录成功的日志。
+	logger.Infof("'%s restart' 命令已成功执行。", scriptPath)
+	return nil
+}
