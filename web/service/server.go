@@ -1253,14 +1253,6 @@ func (s *ServerService) OpenPort(port string) {
 	}()
 }
 
-// ... 此处是您现有的 OpenPort 函数代码，保持不变 ...
-func (s *ServerService) OpenPort(port string) {
-	go func() {
-		// ...
-	}()
-}
-
-
 // 〔中文注释〕: 【新增函数】 - 重启面板服务
 // 这个函数会执行 /usr/bin/x-ui restart 命令来重启整个面板服务。
 func (s *ServerService) RestartPanel() error {
