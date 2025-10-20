@@ -1915,11 +1915,11 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 					// 构建正确的 SendMessageParams
 					params := tu.Message(tu.ID(chatID), reportMessage).WithParseMode(telego.ModeMarkdown)
 
-			        // 使用临时机器人的 SendMessage 方法发送报告
-			        _, err = reportBot.SendMessage(context.Background(), params)
-			        if err != nil {
-			        	logger.Warningf("发送【中奖报告】到频道 %d 失败: %v", chatID, err)
-			        }
+					// 使用临时机器人的 SendMessage 方法发送报告
+					_, err = reportBot.SendMessage(context.Background(), params)
+					if err != nil {
+						logger.Warningf("发送【中奖报告】到频道 %d 失败: %v", chatID, err)
+					}
 				}	
 	        }() // 异步执行结束
 					
