@@ -599,7 +599,7 @@ func (t *Tgbot) answerCommand(message *telego.Message, chatId int64, isAdmin boo
 				),
 			)
 			// 〔中文注释〕: 从您提供的需求中引用提示文本
-			t.SendMsgToTgbot(chatId, "🤔 您确定要重启〔X-Panel 面板〕服务吗？\n\n这也会同时重启Xray Core，\n\n会使面板在短时间内无法访问。", confirmKeyboard)
+			t.SendMsgToTgbot(chatId, "🤔 您确定要重启〔X-Panel 面板〕服务吗？\n\n这也会同时重启 Xray Core，\n\n会使面板在短时间内无法访问。", confirmKeyboard)
 		} else {
 			handleUnknownCommand()
 		}	
@@ -2040,7 +2040,7 @@ func (t *Tgbot) answerCallback(callbackQuery *telego.CallbackQuery, isAdmin bool
 				tu.InlineKeyboardButton("❌ 否，我再想想").WithCallbackData(t.encodeQuery("restart_panel_cancel")),
 			),
 		)
-		t.SendMsgToTgbot(chatId, "🤔 您确定要重启〔X-Panel 面板〕服务吗？\n\n这也会同时重启Xray Core，\n\n会使面板在短时间内无法访问。", confirmKeyboard)
+		t.SendMsgToTgbot(chatId, "🤔 您确定要重启〔X-Panel 面板〕服务吗？\n\n这也会同时重启 Xray Core，\n\n会使面板在短时间内无法访问。", confirmKeyboard)
 
 	case "restart_panel_confirm":
 		// 〔中文注释〕: 用户确认重启
