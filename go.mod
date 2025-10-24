@@ -11,14 +11,14 @@ require (
 	github.com/goccy/go-json v0.10.5
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/mymmrac/telego v1.3.0
+	github.com/mymmrac/telego v1.3.1
 	github.com/nicksnyder/go-i18n/v2 v2.6.0
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shirou/gopsutil/v4 v4.25.9
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
-	github.com/valyala/fasthttp v1.67.0
+	github.com/valyala/fasthttp v1.68.0
 	github.com/xlzd/gotp v0.1.0
 	github.com/xtls/xray-core v1.251015.0
 	go.uber.org/atomic v1.11.0
@@ -55,7 +55,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
-	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/klauspost/compress v1.18.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
@@ -96,8 +96,8 @@ require (
 	golang.org/x/tools v0.38.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20250521234502-f333402bd9cb // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251014184007-4626949a642f // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
-	gvisor.dev/gvisor v0.0.0-20251015025612-b3f000ac172f // indirect
+	gvisor.dev/gvisor v0.0.0-20251024014813-f611d7f195b7 // indirect
 	lukechampine.com/blake3 v1.4.1 // indirect
 )
