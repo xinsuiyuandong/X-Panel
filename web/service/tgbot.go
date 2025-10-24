@@ -3640,7 +3640,7 @@ func (t *Tgbot) checkAndInstallSubconverter(chatId int64) {
 					tu.InlineKeyboardButton("❌ 否，取消").WithCallbackData("cancel_sub_install"),
 				),
 			)
-			t.SendMsgToTgbot(chatId, "⚠️ 服务检测失败，可能尚未安装。\n\n您想现在执行〔订阅转换〕安装指令吗？\n\n**【重要】**请确保服务器防火墙已放行 `8000` 和 `15268` 端口。", confirmKeyboard)
+			t.SendMsgToTgbot(chatId, "⚠️ 服务检测失败，可能尚未安装。\n\n------>>>>您想现在执行〔订阅转换〕安装指令吗？\n\n**【重要】**请确保服务器防火墙已放行 `8000` 和 `15268` 端口。", confirmKeyboard)
 		}
 	}()
 }
