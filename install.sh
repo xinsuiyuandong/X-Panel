@@ -175,17 +175,7 @@ gen_random_string() {
 config_after_install() {
     echo -e "${yellow}安装/更新完成！ 为了您的面板安全，建议修改面板设置 ${plain}"
     echo ""
-
-    # 【新增逻辑】判断是否为交互环境
-    # -t 0 表示当前脚本是否连接到终端（手动执行时为 true，机器人/非交互环境为 false）
-    if [ -t 0 ]; then
-        # 【交互模式】→ 手动在 VPS 输入，保留原流程
-        read -p "$(echo -e "${green}想继续修改吗？${red}选择“n”以保留旧设置${plain} [y/n]？--->>请输入：")" config_confirm
-    else
-        # 【非交互模式】→ 机器人触发时，自动选择 n，避免卡住
-        config_confirm="n"
-    fi
-
+    read -p "$(echo -e "${green}想继续修改吗？${red}选择“n”以保留旧设置${plain} [y/n]？--->>请输入：")" config_confirm
     if [[ "${config_confirm}" == "y" || "${config_confirm}" == "Y" ]]; then
         read -p "请设置您的用户名: " config_account
         echo -e "${yellow}您的用户名将是: ${config_account}${plain}"
@@ -234,7 +224,6 @@ config_after_install() {
     echo ""
     /usr/local/x-ui/x-ui migrate
 }
-
 
 echo ""
 install_x-ui() {
@@ -383,15 +372,7 @@ ssh_forwarding
     cp -f x-ui.service /etc/systemd/system/
     systemctl daemon-reload
     systemctl enable x-ui
-    # 核心分流逻辑：判断是否为交互式终端环境 (即用户手动执行)
-    if [ -t 0 ]; then
-        echo -e "${green}检测到为交互式终端（手动模式），自动启动 x-ui 服务...${plain}"
-        systemctl start x-ui # <-- 仅在手动模式下执行启动，保障手动用户体验
-    else
-        echo -e "${yellow}检测到为非交互式环境（机器人模式），跳过脚本启动，等待 Go 程序接管重启...${plain}"
-        # 强制停止，防止 systemctl enable 导致意外启动
-        systemctl stop x-ui >/dev/null 2>&1 
-    fi
+    systemctl start x-ui
     systemctl stop warp-go >/dev/null 2>&1
     wg-quick down wgcf >/dev/null 2>&1
     ipv4=$(curl -s4m8 ip.p3terx.com -k | sed -n 1p)
@@ -440,7 +421,6 @@ ssh_forwarding
 # 设置VPS中的时区/时间为【上海时间】
 sudo timedatectl set-timezone Asia/Shanghai
 
-
 install_base
 install_x-ui $1
 echo ""
@@ -455,7 +435,7 @@ echo -e "----------------------------------------------"
 echo ""
 sleep 2
 echo -e "${green}安装/更新完成，若在使用过程中有任何问题${plain}"
-echo -e "${yellow}请先描述清楚所遇问题加〔X-Panel面板〕中文交流群${plain}"
+echo -e "${yellow}请先描述清楚所遇问题加〔X-Panel面板〕交流群${plain}"
 echo -e "${yellow}在TG群中${red} https://t.me/XUI_CN ${yellow}截图进行反馈${plain}"
 echo ""
 echo -e "----------------------------------------------"
@@ -472,9 +452,13 @@ echo -e "${green}1、搬瓦工GIA高端线路：${yellow}https://bandwagonhost.c
 echo ""
 echo -e "${green}2、Dmit高端GIA线路：${yellow}https://www.dmit.io/aff.php?aff=9326${plain}"
 echo ""
-echo -e "${green}3、白丝云〔4837线路〕实惠量大管饱：${yellow}https://cloudsilk.io/aff.php?aff=706${plain}"
+echo -e "${green}3、Sharon亚太优化线路机：${yellow}https://gomami.io/aff.php?aff=174${plain}"
 echo ""
-echo -e "${green}4、RackNerd性价比机器：${yellow}https://my.racknerd.com/aff.php?aff=15268&pid=912${plain}"
+echo -e "${green}4、Bagevm优质落地鸡（原生IP全解锁）：${yellow}https://www.bagevm.com/aff.php?aff=754${plain}"
+echo ""
+echo -e "${green}5、白丝云〔4837线路〕实惠量大管饱：${yellow}https://cloudsilk.io/aff.php?aff=706${plain}"
+echo ""
+echo -e "${green}6、RackNerd极致性价比机器：${yellow}https://my.racknerd.com/aff.php?aff=15268&pid=912${plain}"
 echo ""
 echo -e "----------------------------------------------"
 echo ""
