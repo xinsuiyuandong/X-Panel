@@ -963,17 +963,17 @@ ssl_cert_issue() {
         exit 1
         ;;
     esac
-    if [ $? -ne 0 ]; then 
-        LOGE "安装 socat 或 dig 工具 失败，请检查日志"
-        exit 1 
-     else 
-         LOGI "安装 socat 和 dig 工具 成功..." 
-     fi 
+    if [ $? -ne 0 ]; then
+         LOGE "安装 socat 或 dig 工具 失败，请检查日志"
+         exit 1
+    else 
+         LOGI "安装 socat 和 dig 工具 成功..."
+    fi 
  
-     # 在这里获取域名，我们需要验证它 
-     local domain="" 
-     read -rp "请输入您的域名: " domain 
-     LOGD "您的域名是: ${domain}, 正在检查..." 
+     # 在这里获取域名，我们需要验证它
+     local domain=""
+     read -rp "请输入您的域名: " domain
+     LOGD "您的域名是: ${domain}, 正在检查..."
 
     # --- 新增：域名解析验证 ---
     LOGD "正在获取本机公共 IP..."
