@@ -154,33 +154,18 @@ install() {
 }
 
 update() {
-    # 【新增逻辑】判断是否为交互环境
-    if [ -t 0 ]; then
-        # 【交互模式】→ 手动在 VPS 输入，保留原有逻辑
-        confirm "$(echo -e "${green}该功能将强制安装最新版本，并且数据不会丢失。${red}你想继续吗？${plain}---->>请输入")" "y"
-        if [[ $? != 0 ]]; then
-            LOGE "已取消"
-            if [[ $# == 0 ]]; then
-                before_show_menu
-            fi
-            return 0
+    confirm "$(echo -e "${green}该功能将强制安装最新版本，并且数据不会丢失。${red}你想继续吗？${plain}---->>请输入")" "y"
+    if [[ $? != 0 ]]; then
+        LOGE "已取消"
+        if [[ $# == 0 ]]; then
+            before_show_menu
         fi
-        bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/x-panel/main/install.sh)
-        if [[ $? == 0 ]]; then
-            LOGI "更新完成，面板已自动重启"
-            exit 0 # <-- 保持 exit 0，供手动用户流程结束
-        fi
-    else
-        # 【非交互模式】→ 机器人触发时，自动跳过交互，直接安装
-        echo -e "${green}检测到为非交互环境，自动开始更新...${plain}"
-        bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/x-panel/main/install.sh) <<<"n"
-        if [[ $? == 0 ]]; then
-            LOGI "自动更新完成，等待 Go 程序接管重启..."
-            return 0 # <-- 关键修正：用 return 0 代替 exit 0 (成功)
-        else
-            LOGE "自动更新失败，通知 Go 程序更新失败..."
-            return 1 # <-- 关键修正：用 return 1 代替 exit 1 (失败)
-        fi
+        return 0
+    fi
+    bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/x-panel/main/install.sh)
+    if [[ $? == 0 ]]; then
+        LOGI "更新完成，面板已自动重启"
+        exit 0
     fi
 }
 
@@ -913,7 +898,7 @@ ssl_cert_issue_main() {
         else 
             echo "可用域名：" 
             echo "$domains" 
-            read -rp "请选择要为面板设置路径的域名：" domain 
+            read -rp "请选择要为面板设置证书路径的域名：" domain 
  
             if echo "$domains" | grep -qw "$domain"; then 
                 local webCertFile="/root/cert/${domain}/fullchain.pem" 
@@ -921,7 +906,7 @@ ssl_cert_issue_main() {
  
                 if [[ -f "${webCertFile}" && -f "${webKeyFile}" ]]; then 
                     /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
-                    echo "已为域名设置面板路径：$domain" 
+                    echo "已为域名设置面板证书路径：$domain" 
                     echo "  - 证书文件：$webCertFile" 
                     echo "  - 私钥文件：$webKeyFile" 
                     restart 
@@ -955,36 +940,71 @@ ssl_cert_issue() {
         fi 
     fi 
  
-    # 安装 socat
-    case "${release}" in 
-    ubuntu | debian | armbian) 
-        apt update && apt install socat -y 
-        ;; 
-    centos | rhel | almalinux | rocky | ol) 
-        yum -y update && yum -y install socat 
-        ;; 
-    fedora | amzn | virtuozzo) 
-        dnf -y update && dnf -y install socat 
-        ;; 
-    arch | manjaro | parch) 
-        pacman -Sy --noconfirm socat 
-        ;; 
-    *) 
-        echo -e "${red}不支持的操作系统。请检查脚本并手动安装必要的软件包。${plain}\n" 
-        exit 1 
-        ;; 
-    esac 
-    if [ $? -ne 0 ]; then 
-        LOGE "安装 socat 失败，请检查日志"
-        exit 1 
-     else 
-         LOGI "安装 socat 成功..." 
-     fi 
- 
-     # 在这里获取域名，我们需要验证它 
-     local domain="" 
-     read -rp "请输入您的域名: " domain 
-     LOGD "您的域名是: ${domain}, 正在检查..." 
+    # 安装 socat 和 dnsutils/bind-utils (用于 dig)
+    case "${release}" in 
+    ubuntu | debian | armbian) 
+        # 添加了 dnsutils 用于 dig 命令
+        apt update && apt install socat dnsutils -y 
+        ;; 
+    centos | rhel | almalinux | rocky | ol) 
+        # 添加了 bind-utils 用于 dig 命令
+        yum -y update && yum -y install socat bind-utils
+        ;; 
+    fedora | amzn | virtuozzo) 
+        # 添加了 bind-utils 用于 dig 命令
+        dnf -y update && dnf -y install socat bind-utils
+        ;; 
+    arch | manjaro | parch) 
+        # 添加了 dnsutils 用于 dig 命令
+        pacman -Sy --noconfirm socat dnsutils
+        ;; 
+    *) 
+        echo -e "${red}不支持的操作系统。请检查脚本并手动安装必要的软件包。${plain}\n" 
+        exit 1 
+        ;; 
+    esac 
+    if [ $? -ne 0 ]; then 
+        LOGE "安装 socat 或 dig 工具 失败，请检查日志"
+        exit 1 
+     else 
+         LOGI "安装 socat 和 dig 工具 成功..." 
+     fi 
+ 
+     # 在这里获取域名，我们需要验证它 
+     local domain="" 
+     read -rp "请输入您的域名: " domain 
+     LOGD "您的域名是: ${domain}, 正在检查..." 
+
+    # --- 新增：域名解析验证 ---
+    LOGD "正在获取本机公共 IP..."
+    public_ip=$(curl -s4m8 http://ip.sb -k)
+    
+    if [ -z "$public_ip" ]; then
+        LOGE "获取本机公共 IP 失败，请检查网络连接！"
+        exit 1
+    fi
+    LOGI "本机公共 IP: ${public_ip}"
+
+    LOGD "正在查询域名 ${domain} 的 DNS ----->>> A 记录..."
+    # 确保只获取A记录，并取第一个
+    domain_ip=$(dig +short $domain A | head -n 1) 
+
+    if [ -z "$domain_ip" ]; then
+        LOGE "未能查询到域名 ${domain} 的 A 记录。"
+        LOGE "请确保您的域名已在 DNS 服务商处添加了 A 记录，并指向本机 IP。"
+        LOGE "提示：如果您使用的是 Cloudflare，请确保【小黄云】（代理）已关闭。"
+        exit 1
+    fi
+    LOGI "域名 ${domain} 解析到 IP: ${domain_ip}"
+
+    if [ "$public_ip" != "$domain_ip" ]; then
+        LOGE "域名 ${domain} 解析的 IP (${domain_ip}) 与本机 IP (${public_ip}) 不符！"
+        LOGE "请检查您的 DNS A 记录设置是否正确。"
+        LOGE "提示：如果您使用的是 Cloudflare，请确保【小黄云】（代理）已关闭。"
+        exit 1
+    fi
+
+    LOGI "域名解析验证成功，继续执行证书申请..."
  
      # 检查是否已存在证书 
      local currentCert=$(~/.acme.sh/acme.sh --list | tail -1 | awk '{print $1}') 
@@ -1026,31 +1046,9 @@ ssl_cert_issue() {
          LOGE "签发证书成功，正在安装证书..." 
      fi 
  
-     reloadCmd="x-ui restart" 
- 
-     LOGI "ACME 的默认 --reloadcmd 是: ${yellow}x-ui restart" 
-     LOGI "此命令将在每次证书签发和续订时运行。" 
-     read -rp "您想修改 ACME 的 --reloadcmd 吗? (y/n): " setReloadcmd 
-     if [[ "$setReloadcmd" == "y" || "$setReloadcmd" == "Y" ]]; then 
-         echo -e "\n${green}\t1.${plain} 预设: systemctl reload nginx ; x-ui restart" 
-         echo -e "${green}\t2.${plain} 输入您自己的命令" 
-         echo -e "${green}\t0.${plain} 保留默认的 reloadcmd" 
-         read -rp "请选择一个选项: " choice 
-         case "$choice" in 
-         1) 
-             LOGI "Reloadcmd 是: systemctl reload nginx ; x-ui restart" 
-             reloadCmd="systemctl reload nginx ; x-ui restart" 
-             ;; 
-         2)  
-             LOGD "建议将 x-ui restart 放在末尾，这样如果其他服务失败，它不会引发错误" 
-             read -rp "请输入您的 reloadcmd (例如: systemctl reload nginx ; x-ui restart): " reloadCmd 
-             LOGI "您的 reloadcmd 是: ${reloadCmd}" 
-             ;; 
-         *) 
-             LOGI "保留默认的 reloadcmd" 
-             ;; 
-         esac 
-     fi
+     # --- 自动设置 reloadCmd ---
+     reloadCmd="x-ui restart" 
+     LOGI "ACME 的 --reloadcmd 已自动设置为: ${yellow}x-ui restart"
      
      # 安装证书
      ~/.acme.sh/acme.sh --installcert -d ${domain} \
@@ -1079,31 +1077,26 @@ ssl_cert_issue() {
          chmod 755 $certPath/* 
      fi 
  
-     # 成功安装证书后提示用户设置面板路径
-     read -rp "您想为面板设置此证书吗？ (y/n): " setPanel 
-     if [[ "$setPanel" == "y" || "$setPanel" == "Y" ]]; then 
-         local webCertFile="/root/cert/${domain}/fullchain.pem" 
-         local webKeyFile="/root/cert/${domain}/privkey.pem" 
- 
-         if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then 
-             /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
-             LOGI "已为域名设置面板路径: $domain" 
-             echo ""
-             LOGI "  - 证书文件: $webCertFile" 
-             LOGI "  - 私钥文件: $webKeyFile" 
-             echo ""
-             echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}" 
-             echo ""
-             echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
-             echo ""
-             restart 
-         else 
-             LOGE "错误：未找到域名的证书或私钥文件: $domain。" 
-         fi 
-     else 
-         LOGI "跳过面板路径设置。" 
-     fi 
- } 
+     # ---  自动为面板设置证书路径  ---
+     local webCertFile="/root/cert/${domain}/fullchain.pem" 
+     local webKeyFile="/root/cert/${domain}/privkey.pem" 
+ 
+     if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then 
+         /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
+         LOGI "已为域名自动设置面板证书路径: $domain" 
+         echo ""
+         LOGI "  - 证书文件: $webCertFile" 
+         LOGI "  - 私钥文件: $webKeyFile" 
+         echo ""
+         echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}" 
+         echo ""
+         echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器打开即可${plain}"
+         echo ""
+         restart 
+     else 
+         LOGE "错误：未找到域名的证书或私钥文件: $domain。" 
+     fi 
+ }
 ssl_cert_issue_CF() { 
      local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
      local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
@@ -1176,31 +1169,11 @@ ssl_cert_issue_CF() {
              exit 1 
          fi 
  
-         reloadCmd="x-ui restart" 
- 
-         LOGI "ACME 的默认 --reloadcmd 是: ${yellow}x-ui restart" 
-         LOGI "此命令将在每次证书颁发和续订时运行。" 
-         read -rp "您想修改 ACME 的 --reloadcmd 吗？ (y/n): " setReloadcmd 
-         if [[ "$setReloadcmd" == "y" || "$setReloadcmd" == "Y" ]]; then 
-             echo -e "\n${green}\t1.${plain} 预设: systemctl reload nginx ; x-ui restart" 
-             echo -e "${green}\t2.${plain} 输入您自己的命令" 
-             echo -e "${green}\t0.${plain} 保留默认的 reloadcmd" 
-             read -rp "请选择一个选项: " choice 
-             case "$choice" in 
-             1) 
-                 LOGI "Reloadcmd 是: systemctl reload nginx ; x-ui restart" 
-                 reloadCmd="systemctl reload nginx ; x-ui restart" 
-                 ;; 
-             2)  
-                 LOGD "建议将 x-ui restart 放在末尾，这样如果其他服务失败，它不会引发错误" 
-                 read -rp "请输入您的 reloadcmd (例如: systemctl reload nginx ; x-ui restart): " reloadCmd 
-                 LOGI "您的 reloadcmd 是: ${reloadCmd}" 
-                 ;; 
-             *) 
-                 LOGI "保留默认的 reloadcmd" 
-                 ;; 
-             esac 
-         fi 
+         # --- 自动设置 reloadCmd ---
+         reloadCmd="x-ui restart" 
+         LOGI "ACME 的 --reloadcmd 已自动设置为: ${yellow}x-ui restart"
+
+         # 执行“安装证书”流程
          ~/.acme.sh/acme.sh --installcert -d ${CF_Domain} -d *.${CF_Domain} \
             --key-file ${certPath}/privkey.pem \
             --fullchain-file ${certPath}/fullchain.pem \
@@ -1224,34 +1197,30 @@ ssl_cert_issue_CF() {
              chmod 755 ${certPath}/* 
          fi 
  
-         # 成功安装证书后提示用户设置面板路径
-         read -rp "您想为面板设置此证书吗？ (y/n): " setPanel 
-         if [[ "$setPanel" == "y" || "$setPanel" == "Y" ]]; then 
-             local webCertFile="${certPath}/fullchain.pem" 
-             local webKeyFile="${certPath}/privkey.pem" 
- 
-             if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then 
-                 /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
-                 LOGI "已为域名设置面板路径: $CF_Domain" 
-                 echo ""
-                 LOGI "  - 证书文件: $webCertFile" 
-                 LOGI "  - 私钥文件: $webKeyFile" 
-                 echo ""
-                 echo -e "${green}登录访问面板URL: https://${CF_Domain}:${existing_port}${green}${existing_webBasePath}${plain}" 
-                 echo ""
-                 echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器即可${plain}"
-                 echo ""
-                 restart 
-             else 
-                 LOGE "错误：未找到域名的证书或私钥文件: $CF_Domain。" 
-             fi 
+         # --- 自动为面板设置证书路径 ---
+         local webCertFile="${certPath}/fullchain.pem" 
+         local webKeyFile="${certPath}/privkey.pem" 
+
+         if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then 
+             /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webKeyFile "$webKeyFile" 
+             LOGI "已为域名自动设置面板证书路径: $CF_Domain" 
+             echo ""
+             LOGI "  - 证书文件: $webCertFile" 
+             LOGI "  - 私钥文件: $webKeyFile" 
+             echo ""
+             echo -e "${green}登录访问面板URL: https://${CF_Domain}:${existing_port}${green}${existing_webBasePath}${plain}" 
+             echo ""
+             echo -e "${green}PS：若您要登录访问面板，请复制上面的地址到浏览器打开即可${plain}"
+             echo ""
+             restart     # 自动重启面板以应用证书
          else 
-             LOGI "跳过面板路径设置。" 
+             LOGE "错误：未找到域名的证书或私钥文件: $CF_Domain。" 
          fi 
+
      else 
          show_menu 
      fi 
- } 
+ }
 
 warp_cloudflare() {
     echo -e "${green}\t1.${plain} 安装 WARP socks5 代理"
@@ -1809,9 +1778,13 @@ ${green}1、搬瓦工GIA高端线路：${yellow}https://bandwagonhost.com/aff.ph
 
 ${green}2、Dmit高端GIA线路：${yellow}https://www.dmit.io/aff.php?aff=9326${plain}
 
-${green}3、白丝云〔4837线路〕实惠量大管饱：${yellow}https://cloudsilk.io/aff.php?aff=706${plain}
+${green}3、Sharon亚太优化线路机：${yellow}https://gomami.io/aff.php?aff=174${plain}
 
-${green}4、RackNerd性价比机器：${yellow}https://my.racknerd.com/aff.php?aff=15268&pid=912${plain}
+${green}4、Bagevm优质落地鸡（原生IP全解锁）：${yellow}https://www.bagevm.com/aff.php?aff=754${plain}
+
+${green}5、白丝云〔4837线路〕实惠量大管饱：${yellow}https://cloudsilk.io/aff.php?aff=706${plain}
+
+${green}6、RackNerd极致性价比机器：${yellow}https://my.racknerd.com/aff.php?aff=15268&pid=912${plain}
 
 ----------------------------------------------
 "
@@ -1946,7 +1919,7 @@ if [[ $# > 0 ]]; then
         ;;
     "subconverter")
         check_install 0 && subconverter 0
-        ;;
+        ;;    
     *) show_usage ;;
     esac
 else
