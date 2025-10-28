@@ -941,7 +941,7 @@ ssl_cert_issue() {
     fi 
  
     # 安装 socat 和 dnsutils/bind-utils (用于 dig)
-    case "${release}" in
+    case "${release}" in
     ubuntu | debian | armbian)
         # 添加了 dnsutils 用于 dig 命令
         apt update && apt install socat dnsutils -y 
