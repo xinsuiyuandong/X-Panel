@@ -1095,8 +1095,9 @@ ssl_cert_issue() {
          restart 
      else 
          LOGE "错误：未找到域名的证书或私钥文件: $domain。" 
-     fi 
- }
+     fi
+}
+
 ssl_cert_issue_CF() { 
      local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
      local existing_port=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'port（端口号）: .+' | awk '{print $2}') 
@@ -1219,8 +1220,8 @@ ssl_cert_issue_CF() {
 
      else 
          show_menu 
-     fi 
- }
+     fi
+}
 
 warp_cloudflare() {
     echo -e "${green}\t1.${plain} 安装 WARP socks5 代理"
