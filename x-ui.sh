@@ -944,25 +944,25 @@ ssl_cert_issue() {
     case "${release}" in
     ubuntu | debian | armbian)
         # 添加了 dnsutils 用于 dig 命令
-        apt update && apt install socat dnsutils -y 
-        ;;
+        apt update && apt install socat dnsutils -y
+        ;;
     centos | rhel | almalinux | rocky | ol)
         # 添加了 bind-utils 用于 dig 命令
-        yum -y update && yum -y install socat bind-utils
-        ;;
+        yum -y update && yum -y install socat bind-utils
+        ;;
     fedora | amzn | virtuozzo)
         # 添加了 bind-utils 用于 dig 命令
-        dnf -y update && dnf -y install socat bind-utils
-        ;;
+        dnf -y update && dnf -y install socat bind-utils
+        ;;
     arch | manjaro | parch)
         # 添加了 dnsutils 用于 dig 命令
-        pacman -Sy --noconfirm socat dnsutils
-        ;; 
-    *) 
-        echo -e "${red}不支持的操作系统。请检查脚本并手动安装必要的软件包。${plain}\n" 
-        exit 1 
-        ;; 
-    esac 
+        pacman -Sy --noconfirm socat dnsutils
+        ;;
+    *)
+        echo -e "${red}不支持的操作系统。请检查脚本并手动安装必要的软件包。${plain}\n"
+        exit 1
+        ;;
+    esac
     if [ $? -ne 0 ]; then 
         LOGE "安装 socat 或 dig 工具 失败，请检查日志"
         exit 1 
@@ -1157,7 +1157,7 @@ ssl_cert_issue_CF() {
              LOGI "证书颁发成功，正在安装..." 
          fi
          
-          # 安装证书
+         # 为证书创建一个目录
          certPath="/root/cert/${CF_Domain}" 
          if [ -d "$certPath" ]; then 
              rm -rf ${certPath} 
