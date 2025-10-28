@@ -1082,7 +1082,7 @@ ssl_cert_issue() {
      local webKeyFile="/root/cert/${domain}/privkey.pem" 
  
      if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
-         /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
+     /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webCertKey "$webKeyFile" 
          LOGI "已为域名自动设置面板证书路径: $domain" 
          echo ""
          LOGI "  - 证书文件: $webCertFile" 
@@ -1203,7 +1203,7 @@ ssl_cert_issue_CF() {
          local webKeyFile="${certPath}/privkey.pem" 
 
          if [[ -f "$webCertFile" && -f "$webKeyFile" ]]; then
-             /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webKeyFile "$webKeyFile" 
+         /usr/local/x-ui/x-ui cert -webCert "$webCertFile" -webKeyFile "$webKeyFile" 
              LOGI "已为域名自动设置面板证书路径: $CF_Domain" 
              echo ""
              LOGI "  - 证书文件: $webCertFile" 
