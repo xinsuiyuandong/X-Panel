@@ -941,20 +941,20 @@ ssl_cert_issue() {
     fi 
  
     # 安装 socat 和 dnsutils/bind-utils (用于 dig)
-    case "${release}" in 
-    ubuntu | debian | armbian) 
+    case "${release}" in
+    ubuntu | debian | armbian)
         # 添加了 dnsutils 用于 dig 命令
         apt update && apt install socat dnsutils -y 
-        ;; 
-    centos | rhel | almalinux | rocky | ol) 
+        ;;
+    centos | rhel | almalinux | rocky | ol)
         # 添加了 bind-utils 用于 dig 命令
         yum -y update && yum -y install socat bind-utils
-        ;; 
-    fedora | amzn | virtuozzo) 
+        ;;
+    fedora | amzn | virtuozzo)
         # 添加了 bind-utils 用于 dig 命令
         dnf -y update && dnf -y install socat bind-utils
-        ;; 
-    arch | manjaro | parch) 
+        ;;
+    arch | manjaro | parch)
         # 添加了 dnsutils 用于 dig 命令
         pacman -Sy --noconfirm socat dnsutils
         ;; 
