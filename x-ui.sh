@@ -38,7 +38,7 @@ echo -e "——————————————————————"
 echo -e "当前服务器的操作系统为:${red} $release${plain}"
 echo ""
 xui_version=$(/usr/local/x-ui/x-ui -v)
-last_version=$(curl -Ls "https://api.github.com/repos/xinsuiyuandong/x-panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+last_version=$(curl -Ls "https://api.github.com/repos/xeefei/x-panel/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 echo -e "${green}当前代理面板的版本为: ${red}〔X-Panel面板〕v${xui_version}${plain}"
 echo ""
 echo -e "${yellow}〔X-Panel面板〕最新版为---------->>> ${last_version}${plain}"
@@ -143,7 +143,7 @@ before_show_menu() {
 }
 
 install() {
-    bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/x-panel/main/install.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/main/install.sh)
     if [[ $? == 0 ]]; then
         if [[ $# == 0 ]]; then
             start
@@ -162,7 +162,7 @@ update() {
         fi
         return 0
     fi
-    bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/x-panel/main/install.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/main/install.sh)
     if [[ $? == 0 ]]; then
         LOGI "更新完成，面板已自动重启"
         exit 0
@@ -180,7 +180,7 @@ update_menu() {
         return 0
     fi
     
-    wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/xinsuiyuandong/x-panel/main/x-ui.sh
+    wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/xeefei/x-panel/main/x-ui.sh
     chmod +x /usr/local/x-ui/x-ui.sh
     chmod +x /usr/bin/x-ui
     
@@ -202,7 +202,7 @@ custom_version() {
         exit 1
     fi
 
-    download_link="https://raw.githubusercontent.com/xinsuiyuandong/x-panel/master/install.sh"
+    download_link="https://raw.githubusercontent.com/xeefei/x-panel/master/install.sh"
 
     # Use the entered panel version in the download link
     install_command="bash <(curl -Ls $download_link) v$panel_version"
@@ -236,7 +236,7 @@ uninstall() {
     echo ""
     echo -e "卸载成功\n"
     echo "如果您需要再次安装此面板，可以使用以下命令:"
-    echo -e "${green}bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/x-panel/master/install.sh)${plain}"
+    echo -e "${green}bash <(curl -Ls https://raw.githubusercontent.com/xeefei/x-panel/master/install.sh)${plain}"
     echo ""
     # Trap the SIGTERM signal
     trap delete_script SIGTERM
@@ -559,7 +559,7 @@ enable_bbr() {
 }
 
 update_shell() {
-    wget -O /usr/bin/x-ui -N --no-check-certificate https://github.com/xinsuiyuandong/x-panel/raw/main/x-ui.sh
+    wget -O /usr/bin/x-ui -N --no-check-certificate https://github.com/xeefei/x-panel/raw/main/x-ui.sh
     if [[ $? != 0 ]]; then
         echo ""
         LOGE "下载脚本失败，请检查机器是否可以连接至 GitHub"
@@ -1024,7 +1024,6 @@ ssl_cert_issue() {
     echo ""
 
     # 检查是否已存在证书
-    echo ""
     local currentCert=$(~/.acme.sh/acme.sh --list | tail -1 | awk '{print $1}')
     if [ "${currentCert}" == "${domain}" ]; then
         local certInfo=$(~/.acme.sh/acme.sh --list)
@@ -1046,7 +1045,6 @@ ssl_cert_issue() {
     fi
 
     # 获取独立服务器的端口号
-    echo ""
     local WebPort=80
     read -rp "请选择要使用的端口 (默认为 80): " WebPort
     if [[ ${WebPort} -gt 65535 || ${WebPort} -lt 1 ]]; then
@@ -1071,7 +1069,6 @@ ssl_cert_issue() {
     echo ""
     reloadCmd="x-ui restart"
     LOGI "ACME 的 --reloadcmd 已自动设置为: ${yellow}x-ui restart"
-    echo ""
     
     # 安装证书
     echo ""
@@ -1301,12 +1298,12 @@ subconverter() {
 echo ""
 echo -e "${green}==============================================="
 echo -e "〔订阅转换〕一键部署"
-echo -e "1. 自动安装/部署Nginx"
+echo -e "1. 自动安装/部署 Nginx"
 echo -e "2. 自动调用面板的证书"
-echo -e "3. 自动部署Sublink服务"
-echo -e "4. 自动配置Nginx反向代理"
+echo -e "3. 自动部署 Sublink 服务"
+echo -e "4. 自动配置 Nginx 反向代理"
 echo -e "5. 可直观在前端页面配置订阅"
-echo -e "作者：〔X-Panel面板〕专属定制"
+echo -e "作者：〔X-Panel 面板〕专属定制"
 echo -e "===============================================${plain}"
 echo ""
     local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
